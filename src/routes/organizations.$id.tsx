@@ -19,9 +19,10 @@ function OrgDetail() {
     <div>
       <PageHeader
         title={org.name}
-        subtitle={<><Link to="/organizations" className="hover:underline">Organizations</Link> · {org.id}</> as unknown as string}
+        subtitle={<><Link to="/organizations" className="hover:underline">Organizations</Link> · {org.id}</>}
         actions={<><ProductBadge product={org.product} /><Btn disabled={!can("organizations", "update")}>Edit</Btn></>}
       />
+
 
       <SectionTitle>Configuration</SectionTitle>
       <Card className="p-4 grid grid-cols-2 gap-x-6">

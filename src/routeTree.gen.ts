@@ -9,38 +9,386 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TokensRouteImport } from './routes/tokens'
+import { Route as RateConfigRouteImport } from './routes/rate-config'
+import { Route as RateCellsRouteImport } from './routes/rate-cells'
+import { Route as PoliciesRouteImport } from './routes/policies'
+import { Route as PaymentLedgerRouteImport } from './routes/payment-ledger'
+import { Route as OrganizationsRouteImport } from './routes/organizations'
+import { Route as MissingSubmissionsRouteImport } from './routes/missing-submissions'
+import { Route as IndividualsRouteImport } from './routes/individuals'
+import { Route as EnrollmentWindowsRouteImport } from './routes/enrollment-windows'
+import { Route as EnrollmentResponsesRouteImport } from './routes/enrollment-responses'
+import { Route as EnrolleeBalanceRouteImport } from './routes/enrollee-balance'
+import { Route as CommissionRouteImport } from './routes/commission'
+import { Route as CarriersRouteImport } from './routes/carriers'
+import { Route as BillingGroupsRouteImport } from './routes/billing-groups'
+import { Route as AuditRouteImport } from './routes/audit'
+import { Route as AccountAdjustmentsRouteImport } from './routes/account-adjustments'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OrganizationsIdRouteImport } from './routes/organizations.$id'
+import { Route as IndividualsIdRouteImport } from './routes/individuals.$id'
 
+const TokensRoute = TokensRouteImport.update({
+  id: '/tokens',
+  path: '/tokens',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RateConfigRoute = RateConfigRouteImport.update({
+  id: '/rate-config',
+  path: '/rate-config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RateCellsRoute = RateCellsRouteImport.update({
+  id: '/rate-cells',
+  path: '/rate-cells',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PoliciesRoute = PoliciesRouteImport.update({
+  id: '/policies',
+  path: '/policies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentLedgerRoute = PaymentLedgerRouteImport.update({
+  id: '/payment-ledger',
+  path: '/payment-ledger',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrganizationsRoute = OrganizationsRouteImport.update({
+  id: '/organizations',
+  path: '/organizations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MissingSubmissionsRoute = MissingSubmissionsRouteImport.update({
+  id: '/missing-submissions',
+  path: '/missing-submissions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndividualsRoute = IndividualsRouteImport.update({
+  id: '/individuals',
+  path: '/individuals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnrollmentWindowsRoute = EnrollmentWindowsRouteImport.update({
+  id: '/enrollment-windows',
+  path: '/enrollment-windows',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnrollmentResponsesRoute = EnrollmentResponsesRouteImport.update({
+  id: '/enrollment-responses',
+  path: '/enrollment-responses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnrolleeBalanceRoute = EnrolleeBalanceRouteImport.update({
+  id: '/enrollee-balance',
+  path: '/enrollee-balance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommissionRoute = CommissionRouteImport.update({
+  id: '/commission',
+  path: '/commission',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarriersRoute = CarriersRouteImport.update({
+  id: '/carriers',
+  path: '/carriers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingGroupsRoute = BillingGroupsRouteImport.update({
+  id: '/billing-groups',
+  path: '/billing-groups',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditRoute = AuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountAdjustmentsRoute = AccountAdjustmentsRouteImport.update({
+  id: '/account-adjustments',
+  path: '/account-adjustments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrganizationsIdRoute = OrganizationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => OrganizationsRoute,
+} as any)
+const IndividualsIdRoute = IndividualsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => IndividualsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account-adjustments': typeof AccountAdjustmentsRoute
+  '/audit': typeof AuditRoute
+  '/billing-groups': typeof BillingGroupsRoute
+  '/carriers': typeof CarriersRoute
+  '/commission': typeof CommissionRoute
+  '/enrollee-balance': typeof EnrolleeBalanceRoute
+  '/enrollment-responses': typeof EnrollmentResponsesRoute
+  '/enrollment-windows': typeof EnrollmentWindowsRoute
+  '/individuals': typeof IndividualsRouteWithChildren
+  '/missing-submissions': typeof MissingSubmissionsRoute
+  '/organizations': typeof OrganizationsRouteWithChildren
+  '/payment-ledger': typeof PaymentLedgerRoute
+  '/policies': typeof PoliciesRoute
+  '/rate-cells': typeof RateCellsRoute
+  '/rate-config': typeof RateConfigRoute
+  '/tokens': typeof TokensRoute
+  '/individuals/$id': typeof IndividualsIdRoute
+  '/organizations/$id': typeof OrganizationsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account-adjustments': typeof AccountAdjustmentsRoute
+  '/audit': typeof AuditRoute
+  '/billing-groups': typeof BillingGroupsRoute
+  '/carriers': typeof CarriersRoute
+  '/commission': typeof CommissionRoute
+  '/enrollee-balance': typeof EnrolleeBalanceRoute
+  '/enrollment-responses': typeof EnrollmentResponsesRoute
+  '/enrollment-windows': typeof EnrollmentWindowsRoute
+  '/individuals': typeof IndividualsRouteWithChildren
+  '/missing-submissions': typeof MissingSubmissionsRoute
+  '/organizations': typeof OrganizationsRouteWithChildren
+  '/payment-ledger': typeof PaymentLedgerRoute
+  '/policies': typeof PoliciesRoute
+  '/rate-cells': typeof RateCellsRoute
+  '/rate-config': typeof RateConfigRoute
+  '/tokens': typeof TokensRoute
+  '/individuals/$id': typeof IndividualsIdRoute
+  '/organizations/$id': typeof OrganizationsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account-adjustments': typeof AccountAdjustmentsRoute
+  '/audit': typeof AuditRoute
+  '/billing-groups': typeof BillingGroupsRoute
+  '/carriers': typeof CarriersRoute
+  '/commission': typeof CommissionRoute
+  '/enrollee-balance': typeof EnrolleeBalanceRoute
+  '/enrollment-responses': typeof EnrollmentResponsesRoute
+  '/enrollment-windows': typeof EnrollmentWindowsRoute
+  '/individuals': typeof IndividualsRouteWithChildren
+  '/missing-submissions': typeof MissingSubmissionsRoute
+  '/organizations': typeof OrganizationsRouteWithChildren
+  '/payment-ledger': typeof PaymentLedgerRoute
+  '/policies': typeof PoliciesRoute
+  '/rate-cells': typeof RateCellsRoute
+  '/rate-config': typeof RateConfigRoute
+  '/tokens': typeof TokensRoute
+  '/individuals/$id': typeof IndividualsIdRoute
+  '/organizations/$id': typeof OrganizationsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/account-adjustments'
+    | '/audit'
+    | '/billing-groups'
+    | '/carriers'
+    | '/commission'
+    | '/enrollee-balance'
+    | '/enrollment-responses'
+    | '/enrollment-windows'
+    | '/individuals'
+    | '/missing-submissions'
+    | '/organizations'
+    | '/payment-ledger'
+    | '/policies'
+    | '/rate-cells'
+    | '/rate-config'
+    | '/tokens'
+    | '/individuals/$id'
+    | '/organizations/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/account-adjustments'
+    | '/audit'
+    | '/billing-groups'
+    | '/carriers'
+    | '/commission'
+    | '/enrollee-balance'
+    | '/enrollment-responses'
+    | '/enrollment-windows'
+    | '/individuals'
+    | '/missing-submissions'
+    | '/organizations'
+    | '/payment-ledger'
+    | '/policies'
+    | '/rate-cells'
+    | '/rate-config'
+    | '/tokens'
+    | '/individuals/$id'
+    | '/organizations/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/account-adjustments'
+    | '/audit'
+    | '/billing-groups'
+    | '/carriers'
+    | '/commission'
+    | '/enrollee-balance'
+    | '/enrollment-responses'
+    | '/enrollment-windows'
+    | '/individuals'
+    | '/missing-submissions'
+    | '/organizations'
+    | '/payment-ledger'
+    | '/policies'
+    | '/rate-cells'
+    | '/rate-config'
+    | '/tokens'
+    | '/individuals/$id'
+    | '/organizations/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountAdjustmentsRoute: typeof AccountAdjustmentsRoute
+  AuditRoute: typeof AuditRoute
+  BillingGroupsRoute: typeof BillingGroupsRoute
+  CarriersRoute: typeof CarriersRoute
+  CommissionRoute: typeof CommissionRoute
+  EnrolleeBalanceRoute: typeof EnrolleeBalanceRoute
+  EnrollmentResponsesRoute: typeof EnrollmentResponsesRoute
+  EnrollmentWindowsRoute: typeof EnrollmentWindowsRoute
+  IndividualsRoute: typeof IndividualsRouteWithChildren
+  MissingSubmissionsRoute: typeof MissingSubmissionsRoute
+  OrganizationsRoute: typeof OrganizationsRouteWithChildren
+  PaymentLedgerRoute: typeof PaymentLedgerRoute
+  PoliciesRoute: typeof PoliciesRoute
+  RateCellsRoute: typeof RateCellsRoute
+  RateConfigRoute: typeof RateConfigRoute
+  TokensRoute: typeof TokensRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tokens': {
+      id: '/tokens'
+      path: '/tokens'
+      fullPath: '/tokens'
+      preLoaderRoute: typeof TokensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rate-config': {
+      id: '/rate-config'
+      path: '/rate-config'
+      fullPath: '/rate-config'
+      preLoaderRoute: typeof RateConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rate-cells': {
+      id: '/rate-cells'
+      path: '/rate-cells'
+      fullPath: '/rate-cells'
+      preLoaderRoute: typeof RateCellsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/policies': {
+      id: '/policies'
+      path: '/policies'
+      fullPath: '/policies'
+      preLoaderRoute: typeof PoliciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment-ledger': {
+      id: '/payment-ledger'
+      path: '/payment-ledger'
+      fullPath: '/payment-ledger'
+      preLoaderRoute: typeof PaymentLedgerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/organizations': {
+      id: '/organizations'
+      path: '/organizations'
+      fullPath: '/organizations'
+      preLoaderRoute: typeof OrganizationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/missing-submissions': {
+      id: '/missing-submissions'
+      path: '/missing-submissions'
+      fullPath: '/missing-submissions'
+      preLoaderRoute: typeof MissingSubmissionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/individuals': {
+      id: '/individuals'
+      path: '/individuals'
+      fullPath: '/individuals'
+      preLoaderRoute: typeof IndividualsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/enrollment-windows': {
+      id: '/enrollment-windows'
+      path: '/enrollment-windows'
+      fullPath: '/enrollment-windows'
+      preLoaderRoute: typeof EnrollmentWindowsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/enrollment-responses': {
+      id: '/enrollment-responses'
+      path: '/enrollment-responses'
+      fullPath: '/enrollment-responses'
+      preLoaderRoute: typeof EnrollmentResponsesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/enrollee-balance': {
+      id: '/enrollee-balance'
+      path: '/enrollee-balance'
+      fullPath: '/enrollee-balance'
+      preLoaderRoute: typeof EnrolleeBalanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/commission': {
+      id: '/commission'
+      path: '/commission'
+      fullPath: '/commission'
+      preLoaderRoute: typeof CommissionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carriers': {
+      id: '/carriers'
+      path: '/carriers'
+      fullPath: '/carriers'
+      preLoaderRoute: typeof CarriersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing-groups': {
+      id: '/billing-groups'
+      path: '/billing-groups'
+      fullPath: '/billing-groups'
+      preLoaderRoute: typeof BillingGroupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit': {
+      id: '/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account-adjustments': {
+      id: '/account-adjustments'
+      path: '/account-adjustments'
+      fullPath: '/account-adjustments'
+      preLoaderRoute: typeof AccountAdjustmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +396,65 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/organizations/$id': {
+      id: '/organizations/$id'
+      path: '/$id'
+      fullPath: '/organizations/$id'
+      preLoaderRoute: typeof OrganizationsIdRouteImport
+      parentRoute: typeof OrganizationsRoute
+    }
+    '/individuals/$id': {
+      id: '/individuals/$id'
+      path: '/$id'
+      fullPath: '/individuals/$id'
+      preLoaderRoute: typeof IndividualsIdRouteImport
+      parentRoute: typeof IndividualsRoute
+    }
   }
 }
 
+interface IndividualsRouteChildren {
+  IndividualsIdRoute: typeof IndividualsIdRoute
+}
+
+const IndividualsRouteChildren: IndividualsRouteChildren = {
+  IndividualsIdRoute: IndividualsIdRoute,
+}
+
+const IndividualsRouteWithChildren = IndividualsRoute._addFileChildren(
+  IndividualsRouteChildren,
+)
+
+interface OrganizationsRouteChildren {
+  OrganizationsIdRoute: typeof OrganizationsIdRoute
+}
+
+const OrganizationsRouteChildren: OrganizationsRouteChildren = {
+  OrganizationsIdRoute: OrganizationsIdRoute,
+}
+
+const OrganizationsRouteWithChildren = OrganizationsRoute._addFileChildren(
+  OrganizationsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountAdjustmentsRoute: AccountAdjustmentsRoute,
+  AuditRoute: AuditRoute,
+  BillingGroupsRoute: BillingGroupsRoute,
+  CarriersRoute: CarriersRoute,
+  CommissionRoute: CommissionRoute,
+  EnrolleeBalanceRoute: EnrolleeBalanceRoute,
+  EnrollmentResponsesRoute: EnrollmentResponsesRoute,
+  EnrollmentWindowsRoute: EnrollmentWindowsRoute,
+  IndividualsRoute: IndividualsRouteWithChildren,
+  MissingSubmissionsRoute: MissingSubmissionsRoute,
+  OrganizationsRoute: OrganizationsRouteWithChildren,
+  PaymentLedgerRoute: PaymentLedgerRoute,
+  PoliciesRoute: PoliciesRoute,
+  RateCellsRoute: RateCellsRoute,
+  RateConfigRoute: RateConfigRoute,
+  TokensRoute: TokensRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

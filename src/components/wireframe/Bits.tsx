@@ -1,17 +1,20 @@
+import * as React from "react";
 import { useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+
+export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="flex items-end justify-between mb-4">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-        {subtitle ? <p className="text-xs text-black/50 mt-0.5">{subtitle}</p> : null}
+        {subtitle ? <div className="text-xs text-black/50 mt-0.5">{subtitle}</div> : null}
       </div>
       {actions ? <div className="flex gap-2">{actions}</div> : null}
     </div>
   );
 }
+
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`bg-white border border-black/10 rounded-md ${className}`}>{children}</div>;
@@ -108,9 +111,10 @@ export function TRow({ children, onClick }: { children: ReactNode; onClick?: () 
   );
 }
 
-export function TCell({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+export function TCell({ children, className = "", onClick }: { children: ReactNode; className?: string; onClick?: (e: React.MouseEvent) => void }) {
+  return <td onClick={onClick} className={`px-3 py-2 ${className}`}>{children}</td>;
 }
+
 
 export function FilterBar({ children }: { children?: ReactNode }) {
   return (
