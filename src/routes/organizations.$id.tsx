@@ -102,11 +102,11 @@ function OrgDetail() {
 
       {/* Summary header */}
       <div className="grid grid-cols-6 gap-2 mb-4">
-        <SummaryChip label="Active Enrollees" value={activeEnrollees} onClick={() => navigate({ to: "/individuals", search: { org: id, status: "active" } as never })} />
-        <SummaryChip label="Total Enrollees" value={totalEnrollees} onClick={() => navigate({ to: "/individuals", search: { org: id } as never })} />
-        <SummaryChip label="Policies" value={policies} onClick={() => navigate({ to: "/policies", search: { org: id } as never })} />
-        <SummaryChip label="Collected This Cycle" value={formatCents(collectedCents)} onClick={() => navigate({ to: "/payment-ledger", search: { org: id } as never })} />
-        <SummaryChip label="Outstanding" value={formatCents(outstandingCents)} tone={outstandingCents > 0 ? "warn" : "ok"} onClick={() => navigate({ to: "/enrollee-balance", search: { org: id } as never })} />
+        <SummaryChip label="Active Enrollees" value={activeEnrollees} hint={`filter: org=${id} · active`} onClick={() => navigate({ to: "/individuals" })} />
+        <SummaryChip label="Total Enrollees" value={totalEnrollees} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/individuals" })} />
+        <SummaryChip label="Policies" value={policies} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/policies" })} />
+        <SummaryChip label="Collected This Cycle" value={formatCents(collectedCents)} hint={`${currentCycle} · org=${id}`} onClick={() => navigate({ to: "/payment-ledger" })} />
+        <SummaryChip label="Outstanding" value={formatCents(outstandingCents)} tone={outstandingCents > 0 ? "warn" : "ok"} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/enrollee-balance" })} />
         <SummaryChip label="Open Windows" value={openWindows} />
       </div>
 
