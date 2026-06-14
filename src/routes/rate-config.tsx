@@ -3,8 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, TableShell, TRow, TCell, Btn } from "@/components/wireframe/Bits";
 import { RATE_CONFIG_DI, ORGS } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
-import { FilterRow, FilterSearch, FilterCombobox, ClearFiltersLink, SortableTHead, useSort, PageHeader as _PH } from "@/components/wireframe/Filters";
-import { PageHeader as PH2 } from "@/components/wireframe/Bits";
+import { FilterRow, FilterSearch, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 
 export const Route = createFileRoute("/rate-config")({ component: View });
 
@@ -28,14 +27,15 @@ function View() {
 
   const orgOptions = ORGS.filter((o) => o.product === "DI").map((o) => ({ value: o.id, label: o.name }));
 
-  const rows = useMemo(() => {
+  const rows = (() => {
     const s = search.trim().toLowerCase();
     const filtered = RATE_CONFIG_DI.filter((r) => {
       if (s && !r.carrier_product.toLowerCase().includes(s)) return false;
       return true;
     });
     return sort.applySort(filtered, (r, k) => (r as unknown as Record<string, string | number>)[k]);
-  }, [search, org, sort]);
+  })();
+  void useMemo;
 
   const active = search !== "" || org !== "all" || !sort.isDefault;
   const clearAll = () => { setSearch(""); setOrg("all"); sort.reset(); };
@@ -78,6 +78,3 @@ function View() {
     </div>
   );
 }
-
-// (re-export shim ignored)
-void _PH; void PH2;
