@@ -60,7 +60,7 @@ function IndividualsView() {
   const createDrawer = useDrawer();
   const searchParams = useSearch({ from: "/individuals/" });
   const isLTC = product === "LTC";
-  const planLabel = isLTC ? "Purchased Plan" : "Coverage Plan";
+  
 
   const [search, setSearch] = useState("");
   const [orgFilter, setOrgFilter] = useState<string>(searchParams.org ?? "all");
