@@ -143,6 +143,7 @@ function synthesize(org: typeof ORGS[number]) {
     ltd_benefit_pct: 60,
     std_benefit_pct: 66.7,
     next_sun_life_report_date: "2026-07-15",
+    contact_email: idx % 4 === 0 ? null : `hr@${slug}.example.com`,
     // Coverage / Billing
     contribution_type: cca ? "voluntary" : "employer_paid",
     pay_mode: "Monthly",
