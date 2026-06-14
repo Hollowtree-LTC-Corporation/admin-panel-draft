@@ -386,11 +386,36 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
 }
 
 
+function paymentMethodLabel(bg: ReturnType<typeof BILLING_GROUPS.find>): React.ReactNode {
+  const t = bg?.payment_method_type;
+  if (!t) return <span className="text-black/40">No method on file</span>;
+  if (t === "ach") return bg?.plaid_institution ? `ACH · ${bg.plaid_institution}` : "ACH (Bank Account)";
+  if (t === "card-payment") return bg?.card_last4 ? `Card ending ${bg.card_last4}` : "Credit Card";
+  if (t === "apple-pay") return "Apple Pay";
+  return String(t);
+}
+
 function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof BILLING_GROUPS.find>; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
   return (
     <SectionCard title="Payment & Billing" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
+        <RField label="Payment Method">
+          <span className="inline-flex items-center gap-1">
+            {paymentMethodLabel(bg)}
+            <Lock className="h-3 w-3 text-black/30" aria-label="Managed on billing group" />
+          </span>
+        </RField>
+        <RField label="Billing Group">
+          <Link to="/billing-groups" className="text-sm underline hover:text-[#0a3d3e]">{bg?.name ?? i.billing_group_id}</Link>
+        </RField>
+        <RField label="Balance">
+          <span className={i.last_payment_status === "Failed" ? "text-red-700 font-medium" : "text-emerald-700"}>
+            {formatCents(i.last_payment_status === "Failed" ? i.monthly_premium_cents : -250)}
+          </span>
+        </RField>
+        <div />
+
         <RField label="Last Payment Status">{paymentBadge(i.last_payment_status, i.retry_count)}</RField>
         <RField label="Retry Count" value={String(i.retry_count)} locked={editing} />
         <RField label="Failed Payment Reason" value={i.failed_payment_reason ?? "—"} locked={editing} />
@@ -402,16 +427,6 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
         </RField>
         <RField label="Failed Attempt Date" value={fmtDate(i.failed_attempt_date)} locked={editing} />
         <RField label="Next Retry Date" value={fmtDate(i.next_retry_date)} locked={editing} />
-
-        <RField label="Billing Group">
-          <Link to="/billing-groups" className="text-sm underline hover:text-[#0a3d3e]">{bg?.name ?? i.billing_group_id}</Link>
-        </RField>
-        <RField label="Balance">
-          <span className={i.last_payment_status === "Failed" ? "text-red-700 font-medium" : "text-emerald-700"}>
-            {formatCents(i.last_payment_status === "Failed" ? i.monthly_premium_cents : -250)}
-          </span>
-        </RField>
-      </Grid>
       <div className="mt-3">
         <Link to="/payment-ledger" className="text-xs text-[#0a3d3e] hover:underline inline-flex items-center gap-1">
           View full payment history <ChevronRight className="h-3 w-3" />
