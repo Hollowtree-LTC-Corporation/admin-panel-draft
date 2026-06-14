@@ -728,7 +728,12 @@ function SystemRefsSection({ i }: { i: Detail }) {
         <Ref label="Magic Link" value={i.magic_link} />
         <Ref label="Magic Link Portal" value={i.magic_link_portal} />
         <Ref label="Signature URL" value={i.signature_url} />
-        {i.product === "DI" && i.cca_portal_link && <Ref label="CCA Portal Link" value={i.cca_portal_link} />}
+        {i.active_date && (
+          <div className="mb-2">
+            <div className="text-[9px] uppercase tracking-wider text-black/40 mb-0.5 font-sans">Active Date <span className="text-black/30">(system)</span></div>
+            <div className="text-black/50 break-all">{fmtDate(i.active_date)}</div>
+          </div>
+        )}
       </div>
     </SectionCard>
   );
