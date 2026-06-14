@@ -764,20 +764,63 @@ function LinksRefsSection({ org, product, readOnly }: { org: OrgDetail; product:
 
 function PlanDetailsSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
   const e = useSectionEdit();
-  const note = "Plan terms displayed on the enrollment microsite. Changes here update enrollee-facing content.";
-  const pd = org.plan_details as Record<string, unknown>;
-  // Detect tier-nested LTC structure
+  const note = product === "DI"
+    ? "Plan terms displayed on the enrollment microsite. Each block corresponds to one carrier product."
+    : "Plan terms displayed on the enrollment microsite. Changes here update enrollee-facing content.";
+  const pd = (org.plan_details ?? {}) as Record<string, unknown>;
   const isTierNested = product === "LTC" && LTC_TIERS.some((t) => t in pd) && typeof pd[LTC_TIERS[0]] === "object";
+  const isDIShape = product === "DI" && ("ltd" in pd || "std" in pd);
 
   return (
     <SectionCard title="Plan Details" note={note} editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
-      {isTierNested ? (
+      {product === "DI" ? (
+        isDIShape ? (
+          <DIPlanDetails
+            details={pd as { ltd?: Record<string, string>; std?: Record<string, string> }}
+            includeStd={org.type_of_rate === "STD+LTD"}
+            editing={e.editing}
+          />
+        ) : (
+          <div className="text-sm text-black/50 italic">
+            Plan details not yet configured. Click edit to add LTD plan terms.
+          </div>
+        )
+      ) : isTierNested ? (
         <LtcTierPanels details={pd as Record<string, Record<string, string>>} editing={e.editing} />
       ) : (
         <FlatPlanDetails details={pd as Record<string, string>} editing={e.editing} />
       )}
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
+  );
+}
+
+function DIPlanDetails({ details, includeStd, editing }: { details: { ltd?: Record<string, string>; std?: Record<string, string> }; includeStd: boolean; editing: boolean }) {
+  return (
+    <div className="space-y-5">
+      <DISubBlock header="Long-Term Disability (LTD)" labels={LTD_LABELS} values={details.ltd ?? {}} editing={editing} />
+      {includeStd && (
+        <DISubBlock header="Short-Term Disability (STD)" labels={STD_LABELS} values={details.std ?? {}} editing={editing} />
+      )}
+    </div>
+  );
+}
+
+function DISubBlock({ header, labels, values, editing }: { header: string; labels: Record<string, string>; values: Record<string, string>; editing: boolean }) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-2 pb-1 border-b border-black/10">{header}</div>
+      <div className="space-y-2">
+        {Object.entries(labels).map(([key, label]) => (
+          <div key={key} className="grid grid-cols-[220px_1fr] gap-3 items-start">
+            <div className="text-xs font-semibold text-black/70 pt-2">{label}</div>
+            {editing
+              ? <Textarea defaultValue={values[key] ?? ""} className="text-sm min-h-[44px]" />
+              : <div className="text-sm text-black/80 leading-relaxed pt-1">{values[key] || <Empty />}</div>}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
