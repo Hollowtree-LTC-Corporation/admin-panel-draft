@@ -322,12 +322,9 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
     <SectionCard title="Coverage & Plan · DI" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
         <CoverageStatusField editing={editing} status={status} setStatus={setStatus} allowed={allowed} current={i.coverage_status} />
-        <RField label="DI Type" value={i.di_type === "STD+LTD" ? "STD+LTD" : "LTD Only"} />
         <RField label="Coverage Plan" value={unfunded ? "—" : i.coverage_plan} editing={editing}>
           <select defaultValue={i.coverage_plan} className={inputCls}>{DI_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
         </RField>
-        <RField label="Active Date" value={fmtDate(i.active_date)} />
-
         <RField label="Monthly Premium">
           {unfunded ? <span className="text-gray-400">—</span> : (
             <span className="inline-flex items-center gap-1">
@@ -336,18 +333,8 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
             </span>
           )}
         </RField>
-        {i.di_type === "STD+LTD" && (
-          <RField label="STD Premium" value={unfunded ? "—" : formatCents(i.std_premium_cents)} />
-        )}
-        <RField label="LTD Premium" value={unfunded ? "—" : formatCents(i.ltd_premium_cents)} />
         <RField label="Weekly Covered Benefit" value={unfunded ? "—" : formatCents(i.weekly_covered_benefit_cents)} />
-
-        <RField label="Monthly Benefit" value={unfunded ? "—" : formatCents(i.monthly_benefit_cents)} />
-        <RField label="Effective Date" value={fmtDate(i.effective_date)} editing={editing}>
-          <input type="date" defaultValue={i.effective_date ?? ""} className={inputCls} />
-        </RField>
-        <RField label="Canceled Date" value={fmtDate(i.canceled_date)} />
-        <RField label="Application Status" value={i.application_status} />
+        {i.canceled_date && <RField label="Canceled Date" value={fmtDate(i.canceled_date)} />}
       </Grid>
       {error && <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
       {mismatch && !editing && (
