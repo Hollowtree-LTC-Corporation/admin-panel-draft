@@ -124,7 +124,7 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     failed_attempt_date: base.last_payment_status === "Failed" ? `2025-06-0${(n % 9) + 1}` : null,
     failed_payment_reason: base.last_payment_status === "Failed" ? "Insufficient funds" : null,
     enrollment_deadline: n % 4 === 0 ? `2025-08-${10 + (n % 18)}` : null,
-    affiliations: !isLTC && (n === 1 || n === 9)
+    affiliations: !isLTC && org?.cca_group
       ? [{ id: "aff_cca", name: "CCA: Coastal Carriers Association" }]
       : isLTC && (n === 5 || n === 11)
         ? [{ id: "aff_trust_1", name: n === 5 ? "SEIU Trust" : "Teamsters Trust" }]
