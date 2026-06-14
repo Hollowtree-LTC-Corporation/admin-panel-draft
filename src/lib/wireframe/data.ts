@@ -44,14 +44,27 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
   const org = ORGS[i % ORGS.length];
   const isLTC = org.product === "LTC";
   const isSpouse = isLTC && n in SPOUSE_PAIRS;
+  const pair = COVERAGE_STAGE_PAIRS[i % COVERAGE_STAGE_PAIRS.length];
+  const cov = pair[0];
+  const hasPlan = cov !== "not_started" && cov !== "in_progress";
+  let effective_date: string | null = null;
+  if (cov === "active" || cov === "suspended" || cov === "lapsed") {
+    const month = (n * 3) % 16;
+    const y = 2025 + Math.floor(month / 12);
+    const m = (month % 12) + 1;
+    const d = ((n * 7) % 27) + 1;
+    effective_date = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  } else if (cov === "purchased") {
+    const d0 = 15 + (n % 30);
+    const m = d0 > 30 ? 7 : 6;
+    const day = d0 > 30 ? d0 - 30 : d0;
+    effective_date = `2026-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  } else if (cov === "in_progress") {
+    effective_date = n % 2 === 0 ? `2026-07-01` : null;
+  } else if (cov === "canceled") {
+    effective_date = `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-15`;
+  }
   return {
-    id: `ind_${n}`,
-    full_name: `Test Person ${n}`,
-    email: `person${n}@example.com`,
-    phone: `555-0${100 + n}`,
-    org_id: org.id,
-    org_name: org.name,
-    product: org.product as Product,
     const pair = COVERAGE_STAGE_PAIRS[i % COVERAGE_STAGE_PAIRS.length];
     const cov = pair[0];
     const hasPlan = cov !== "not_started" && cov !== "in_progress";
@@ -76,7 +89,6 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     } else if (cov === "canceled") {
       effective_date = `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-15`;
     }
-    return {
     id: `ind_${n}`,
     full_name: `Test Person ${n}`,
     email: `person${n}@example.com`,
