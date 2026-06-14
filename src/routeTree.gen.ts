@@ -15,7 +15,6 @@ import { Route as RateCellsRouteImport } from './routes/rate-cells'
 import { Route as PoliciesRouteImport } from './routes/policies'
 import { Route as PaymentLedgerRouteImport } from './routes/payment-ledger'
 import { Route as MissingSubmissionsRouteImport } from './routes/missing-submissions'
-import { Route as IndividualsRouteImport } from './routes/individuals'
 import { Route as EnrollmentWindowsRouteImport } from './routes/enrollment-windows'
 import { Route as EnrollmentResponsesRouteImport } from './routes/enrollment-responses'
 import { Route as EnrolleeBalanceRouteImport } from './routes/enrollee-balance'
@@ -26,6 +25,7 @@ import { Route as AuditRouteImport } from './routes/audit'
 import { Route as AccountAdjustmentsRouteImport } from './routes/account-adjustments'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrganizationsIndexRouteImport } from './routes/organizations.index'
+import { Route as IndividualsIndexRouteImport } from './routes/individuals.index'
 import { Route as OrganizationsIdRouteImport } from './routes/organizations.$id'
 import { Route as IndividualsIdRouteImport } from './routes/individuals.$id'
 
@@ -57,11 +57,6 @@ const PaymentLedgerRoute = PaymentLedgerRouteImport.update({
 const MissingSubmissionsRoute = MissingSubmissionsRouteImport.update({
   id: '/missing-submissions',
   path: '/missing-submissions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndividualsRoute = IndividualsRouteImport.update({
-  id: '/individuals',
-  path: '/individuals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EnrollmentWindowsRoute = EnrollmentWindowsRouteImport.update({
@@ -114,15 +109,20 @@ const OrganizationsIndexRoute = OrganizationsIndexRouteImport.update({
   path: '/organizations/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndividualsIndexRoute = IndividualsIndexRouteImport.update({
+  id: '/individuals/',
+  path: '/individuals/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrganizationsIdRoute = OrganizationsIdRouteImport.update({
   id: '/organizations/$id',
   path: '/organizations/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndividualsIdRoute = IndividualsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => IndividualsRoute,
+  id: '/individuals/$id',
+  path: '/individuals/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -135,7 +135,6 @@ export interface FileRoutesByFullPath {
   '/enrollee-balance': typeof EnrolleeBalanceRoute
   '/enrollment-responses': typeof EnrollmentResponsesRoute
   '/enrollment-windows': typeof EnrollmentWindowsRoute
-  '/individuals': typeof IndividualsRouteWithChildren
   '/missing-submissions': typeof MissingSubmissionsRoute
   '/payment-ledger': typeof PaymentLedgerRoute
   '/policies': typeof PoliciesRoute
@@ -144,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
+  '/individuals/': typeof IndividualsIndexRoute
   '/organizations/': typeof OrganizationsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -156,7 +156,6 @@ export interface FileRoutesByTo {
   '/enrollee-balance': typeof EnrolleeBalanceRoute
   '/enrollment-responses': typeof EnrollmentResponsesRoute
   '/enrollment-windows': typeof EnrollmentWindowsRoute
-  '/individuals': typeof IndividualsRouteWithChildren
   '/missing-submissions': typeof MissingSubmissionsRoute
   '/payment-ledger': typeof PaymentLedgerRoute
   '/policies': typeof PoliciesRoute
@@ -165,6 +164,7 @@ export interface FileRoutesByTo {
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
+  '/individuals': typeof IndividualsIndexRoute
   '/organizations': typeof OrganizationsIndexRoute
 }
 export interface FileRoutesById {
@@ -178,7 +178,6 @@ export interface FileRoutesById {
   '/enrollee-balance': typeof EnrolleeBalanceRoute
   '/enrollment-responses': typeof EnrollmentResponsesRoute
   '/enrollment-windows': typeof EnrollmentWindowsRoute
-  '/individuals': typeof IndividualsRouteWithChildren
   '/missing-submissions': typeof MissingSubmissionsRoute
   '/payment-ledger': typeof PaymentLedgerRoute
   '/policies': typeof PoliciesRoute
@@ -187,6 +186,7 @@ export interface FileRoutesById {
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
+  '/individuals/': typeof IndividualsIndexRoute
   '/organizations/': typeof OrganizationsIndexRoute
 }
 export interface FileRouteTypes {
@@ -201,7 +201,6 @@ export interface FileRouteTypes {
     | '/enrollee-balance'
     | '/enrollment-responses'
     | '/enrollment-windows'
-    | '/individuals'
     | '/missing-submissions'
     | '/payment-ledger'
     | '/policies'
@@ -210,6 +209,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
+    | '/individuals/'
     | '/organizations/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -222,7 +222,6 @@ export interface FileRouteTypes {
     | '/enrollee-balance'
     | '/enrollment-responses'
     | '/enrollment-windows'
-    | '/individuals'
     | '/missing-submissions'
     | '/payment-ledger'
     | '/policies'
@@ -231,6 +230,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
+    | '/individuals'
     | '/organizations'
   id:
     | '__root__'
@@ -243,7 +243,6 @@ export interface FileRouteTypes {
     | '/enrollee-balance'
     | '/enrollment-responses'
     | '/enrollment-windows'
-    | '/individuals'
     | '/missing-submissions'
     | '/payment-ledger'
     | '/policies'
@@ -252,6 +251,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
+    | '/individuals/'
     | '/organizations/'
   fileRoutesById: FileRoutesById
 }
@@ -265,14 +265,15 @@ export interface RootRouteChildren {
   EnrolleeBalanceRoute: typeof EnrolleeBalanceRoute
   EnrollmentResponsesRoute: typeof EnrollmentResponsesRoute
   EnrollmentWindowsRoute: typeof EnrollmentWindowsRoute
-  IndividualsRoute: typeof IndividualsRouteWithChildren
   MissingSubmissionsRoute: typeof MissingSubmissionsRoute
   PaymentLedgerRoute: typeof PaymentLedgerRoute
   PoliciesRoute: typeof PoliciesRoute
   RateCellsRoute: typeof RateCellsRoute
   RateConfigRoute: typeof RateConfigRoute
   TokensRoute: typeof TokensRoute
+  IndividualsIdRoute: typeof IndividualsIdRoute
   OrganizationsIdRoute: typeof OrganizationsIdRoute
+  IndividualsIndexRoute: typeof IndividualsIndexRoute
   OrganizationsIndexRoute: typeof OrganizationsIndexRoute
 }
 
@@ -318,13 +319,6 @@ declare module '@tanstack/react-router' {
       path: '/missing-submissions'
       fullPath: '/missing-submissions'
       preLoaderRoute: typeof MissingSubmissionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/individuals': {
-      id: '/individuals'
-      path: '/individuals'
-      fullPath: '/individuals'
-      preLoaderRoute: typeof IndividualsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/enrollment-windows': {
@@ -397,6 +391,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrganizationsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/individuals/': {
+      id: '/individuals/'
+      path: '/individuals'
+      fullPath: '/individuals/'
+      preLoaderRoute: typeof IndividualsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/organizations/$id': {
       id: '/organizations/$id'
       path: '/organizations/$id'
@@ -406,25 +407,13 @@ declare module '@tanstack/react-router' {
     }
     '/individuals/$id': {
       id: '/individuals/$id'
-      path: '/$id'
+      path: '/individuals/$id'
       fullPath: '/individuals/$id'
       preLoaderRoute: typeof IndividualsIdRouteImport
-      parentRoute: typeof IndividualsRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
-
-interface IndividualsRouteChildren {
-  IndividualsIdRoute: typeof IndividualsIdRoute
-}
-
-const IndividualsRouteChildren: IndividualsRouteChildren = {
-  IndividualsIdRoute: IndividualsIdRoute,
-}
-
-const IndividualsRouteWithChildren = IndividualsRoute._addFileChildren(
-  IndividualsRouteChildren,
-)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -436,14 +425,15 @@ const rootRouteChildren: RootRouteChildren = {
   EnrolleeBalanceRoute: EnrolleeBalanceRoute,
   EnrollmentResponsesRoute: EnrollmentResponsesRoute,
   EnrollmentWindowsRoute: EnrollmentWindowsRoute,
-  IndividualsRoute: IndividualsRouteWithChildren,
   MissingSubmissionsRoute: MissingSubmissionsRoute,
   PaymentLedgerRoute: PaymentLedgerRoute,
   PoliciesRoute: PoliciesRoute,
   RateCellsRoute: RateCellsRoute,
   RateConfigRoute: RateConfigRoute,
   TokensRoute: TokensRoute,
+  IndividualsIdRoute: IndividualsIdRoute,
   OrganizationsIdRoute: OrganizationsIdRoute,
+  IndividualsIndexRoute: IndividualsIndexRoute,
   OrganizationsIndexRoute: OrganizationsIndexRoute,
 }
 export const routeTree = rootRouteImport

@@ -3,7 +3,7 @@ import { PageHeader, TableShell, THead, TRow, TCell, Pill, Btn, FilterBar, Drawe
 import { INDIVIDUALS, ORGS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 
-export const Route = createFileRoute("/individuals")({ component: IndividualsView });
+export const Route = createFileRoute("/individuals/")({ component: IndividualsView });
 
 function IndividualsView() {
   const { product } = useStore();
