@@ -52,20 +52,53 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     org_id: org.id,
     org_name: org.name,
     product: org.product as Product,
-    coverage_status: COVERAGE_STAGE_PAIRS[i % COVERAGE_STAGE_PAIRS.length][0],
-    stage: COVERAGE_STAGE_PAIRS[i % COVERAGE_STAGE_PAIRS.length][1],
-    plan: isLTC ? PLANS_LTC[n % PLANS_LTC.length] : PLANS_DI[n % PLANS_DI.length],
-    monthly_premium_cents: 2500 + (n * 137) % 8000,
+    const pair = COVERAGE_STAGE_PAIRS[i % COVERAGE_STAGE_PAIRS.length];
+    const cov = pair[0];
+    const hasPlan = cov !== "not_started" && cov !== "in_progress";
+    // Deterministic effective date by status
+    let effective_date: string | null = null;
+    if (cov === "active" || cov === "suspended" || cov === "lapsed") {
+      // past: Jan 2025 – Apr 2026
+      const month = (n * 3) % 16; // 0..15 from Jan 2025
+      const y = 2025 + Math.floor(month / 12);
+      const m = (month % 12) + 1;
+      const d = ((n * 7) % 27) + 1;
+      effective_date = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    } else if (cov === "purchased") {
+      // near future within 30 days (June 14, 2026 baseline)
+      const d = 15 + (n % 30);
+      const m = d > 30 ? 7 : 6;
+      const day = d > 30 ? d - 30 : d;
+      effective_date = `2026-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    } else if (cov === "in_progress") {
+      // proposed effective date in some rows
+      effective_date = n % 2 === 0 ? `2026-07-01` : null;
+    } else if (cov === "canceled") {
+      effective_date = `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-15`;
+    }
+    return {
+    id: `ind_${n}`,
+    full_name: `Test Person ${n}`,
+    email: `person${n}@example.com`,
+    phone: `555-0${100 + n}`,
+    org_id: org.id,
+    org_name: org.name,
+    product: org.product as Product,
+    coverage_status: cov,
+    stage: pair[1],
+    plan: hasPlan ? (isLTC ? PLANS_LTC[n % PLANS_LTC.length] : PLANS_DI[n % PLANS_DI.length]) : null,
+    monthly_premium_cents: hasPlan ? 2500 + (n * 137) % 8000 : null,
+    effective_date,
     billing_group_id: `bg_${(n % 8) + 1}`,
     // DI fields
-    coverage_plan: PLANS_DI[n % PLANS_DI.length],
+    coverage_plan: hasPlan ? PLANS_DI[n % PLANS_DI.length] : null,
     monthly_benefit_cents: 300000 + (n % 5) * 50000,
     weekly_covered_benefit_cents: 80000 + (n % 4) * 10000,
     assigned_rep: ["Jamie Rep", "Casey Rep", "Morgan Rep"][n % 3],
     title: ["Manager", "Engineer", "Analyst", "Director"][n % 4],
     greeting: ["Mr.", "Ms.", "Mx."][n % 3],
     // LTC fields
-    purchased_plan: PLANS_LTC[n % PLANS_LTC.length],
+    purchased_plan: hasPlan ? PLANS_LTC[n % PLANS_LTC.length] : null,
     upgrade_applied_for: n % 5 === 0,
     interested_upgrading: n % 3 === 0,
     interested_spousal: n % 4 === 0,
