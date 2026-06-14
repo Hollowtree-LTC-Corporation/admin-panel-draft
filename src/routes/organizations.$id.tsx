@@ -666,7 +666,7 @@ function CoverageBillingSection({ org, readOnly }: { org: OrgDetail; readOnly: b
         <RField label="Contribution Type">
           {e.editing
             ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.contribution_type}
+            : titleCase(org.contribution_type === "buy_up" ? "Buy-Up" : org.contribution_type)}
         </RField>
         <RField label="TPA Fee">{e.editing ? <input className={inputCls} defaultValue={String(org.tpa_fee_cents / 100)} /> : `${formatCents(org.tpa_fee_cents)} / mo`}</RField>
         <RField label="Pay Mode">
