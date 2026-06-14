@@ -190,7 +190,7 @@ function IndividualsView() {
             );
           })}
           {filtered.length === 0 && (
-            <tr><td colSpan={isLTC ? 8 : 7} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
+            <tr><td colSpan={8} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
