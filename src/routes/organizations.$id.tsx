@@ -602,18 +602,33 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
 
 function DISettingsSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
   const e = useSectionEdit();
+  const hasStd = org.type_of_rate === "STD+LTD";
   return (
-    <SectionCard title="DI Settings" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+    <SectionCard title="DI Product" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
       <Grid2>
+        <div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Product Mix</div>
+          <div className="text-sm text-gray-900 font-medium">
+            {e.editing
+              ? <select className={inputCls} defaultValue={org.type_of_rate ?? "LTD"}>{["LTD","STD+LTD"].map((o) => <option key={o} value={o}>{productMixLabel(o)}</option>)}</select>
+              : productMixLabel(org.type_of_rate)}
+          </div>
+          <div className="text-[11px] text-black/50 mt-1 italic">
+            Drives plan details, rate config, and which premium fields apply to individuals.
+          </div>
+        </div>
+        <RField label="LTD Benefit %">{e.editing ? <input className={inputCls} defaultValue={String(org.ltd_benefit_pct)} /> : `${org.ltd_benefit_pct}%`}</RField>
         <RField label="DI Healthcare Type">
           {e.editing
             ? <select className={inputCls} defaultValue={org.di_healthcare_type}>{DI_HC_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
             : org.di_healthcare_type}
         </RField>
-        <RField label="LTD Benefit %">{e.editing ? <input className={inputCls} defaultValue={String(org.ltd_benefit_pct)} /> : `${org.ltd_benefit_pct}%`}</RField>
+        <RField label="STD Benefit %">
+          {hasStd
+            ? (e.editing ? <input className={inputCls} defaultValue={String(org.std_benefit_pct)} /> : `${org.std_benefit_pct}%`)
+            : <Empty />}
+        </RField>
         <RField label="Inbound Type">{e.editing ? <input className={inputCls} defaultValue={org.inbound_type} /> : org.inbound_type}</RField>
-        <RField label="STD Benefit %">{e.editing ? <input className={inputCls} defaultValue={String(org.std_benefit_pct)} /> : `${org.std_benefit_pct}%`}</RField>
-        <RField label="Type of Rate">{e.editing ? <input className={inputCls} defaultValue={org.type_of_rate ?? ""} /> : val(org.type_of_rate)}</RField>
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
