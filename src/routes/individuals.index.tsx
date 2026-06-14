@@ -47,10 +47,23 @@ function ridersFor(orgId: string): string {
   if (br) return "BR";
   return "—";
 }
+
+function paymentBadge(status: string | null, retry: number) {
+  if (!status) return <span className="text-black/40">—</span>;
+  if (status === "Successful") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">Paid</span>;
+  if (status === "Pending") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Pending</span>;
+  if (status === "Failed") {
+    const escalated = retry >= 3;
+    const cls = escalated ? "bg-red-200 text-red-800 font-medium" : "bg-red-100 text-red-700";
+    const label = retry > 0 ? `Failed (${retry})` : "Failed";
+    return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${cls}`}>{label}</span>;
+  }
+  return <span className="text-black/40">—</span>;
+}
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 
-type IndSearch = { org?: string; coverage?: string; stage?: string; type?: string; di_type?: string };
+type IndSearch = { org?: string; coverage?: string; stage?: string; type?: string; di_type?: string; payment?: string };
 
 export const Route = createFileRoute("/individuals/")({
   component: IndividualsView,
