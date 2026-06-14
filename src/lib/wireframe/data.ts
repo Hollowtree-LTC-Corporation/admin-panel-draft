@@ -21,7 +21,18 @@ export const BENEFIT_CLASSES = [
   { id: "bc_3", org_id: "org_5", name: "Default Class", gi_offer_cents: 150000, bronze: 50000, silver: 75000, gold: 100000, platinum: 150000, diamond: 200000, is_default: true },
 ];
 
-const STAGES = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"] as const;
+export const COVERAGE_STATUSES = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"] as const;
+export const STAGES = ["invited", "education", "selecting_plan", "medical_questions", "checkout", "completed"] as const;
+// 25 realistic (coverage_status, current_stage) pairings; cycled for >25 rows.
+const COVERAGE_STAGE_PAIRS: Array<[typeof COVERAGE_STATUSES[number], typeof STAGES[number]]> = [
+  ["not_started", "invited"], ["not_started", "invited"], ["not_started", "invited"],
+  ["in_progress", "education"], ["in_progress", "selecting_plan"], ["in_progress", "medical_questions"], ["in_progress", "checkout"], ["in_progress", "education"],
+  ["purchased", "completed"], ["purchased", "completed"], ["purchased", "completed"],
+  ["active", "completed"], ["active", "completed"], ["active", "completed"], ["active", "completed"], ["active", "completed"], ["active", "completed"], ["active", "completed"], ["active", "completed"],
+  ["suspended", "completed"], ["suspended", "completed"], ["suspended", "completed"],
+  ["canceled", "invited"], ["canceled", "selecting_plan"],
+  ["lapsed", "completed"],
+];
 const PLANS_DI = ["Bronze DI", "Silver DI", "Gold DI"];
 const PLANS_LTC = ["Bronze LTC", "Silver LTC", "Gold LTC", "Platinum LTC", "Diamond LTC"];
 
@@ -41,8 +52,8 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     org_id: org.id,
     org_name: org.name,
     product: org.product as Product,
-    stage: STAGES[n % STAGES.length],
-    coverage_status: ["active", "pending", "suspended", "lapsed"][n % 4],
+    coverage_status: COVERAGE_STAGE_PAIRS[i % COVERAGE_STAGE_PAIRS.length][0],
+    stage: COVERAGE_STAGE_PAIRS[i % COVERAGE_STAGE_PAIRS.length][1],
     plan: isLTC ? PLANS_LTC[n % PLANS_LTC.length] : PLANS_DI[n % PLANS_DI.length],
     monthly_premium_cents: 2500 + (n * 137) % 8000,
     billing_group_id: `bg_${(n % 8) + 1}`,
