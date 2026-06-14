@@ -46,7 +46,7 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
   const isSpouse = isLTC && n in SPOUSE_PAIRS;
   const pair = COVERAGE_STAGE_PAIRS[i % COVERAGE_STAGE_PAIRS.length];
   const cov = pair[0];
-  const hasPlan = cov !== "not_started" && cov !== "in_progress";
+  // hasPlan removed — list view handles display masking
   let effective_date: string | null = null;
   if (cov === "active" || cov === "suspended" || cov === "lapsed") {
     const month = (n * 3) % 16;

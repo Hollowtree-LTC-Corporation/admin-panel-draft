@@ -41,7 +41,7 @@ export const Route = createFileRoute("/individuals/")({
   }),
 });
 
-type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "monthly_premium_cents" | "billing_group_id" | "relationship_type";
+type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type";
 
 const COVERAGE_OPTIONS = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"];
 
@@ -133,9 +133,9 @@ function IndividualsView() {
             { key: "org_name", label: "Org" },
             { key: "coverage_status", label: "Coverage Status" },
             { key: "stage", label: "Stage" },
-            { key: "plan", label: planLabel },
+            { key: "plan", label: "Coverage Plan" },
+            { key: "effective_date", label: "Effective Date" },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
-            { key: "billing_group_id", label: "Billing Group" },
           ]}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}
@@ -160,9 +160,9 @@ function IndividualsView() {
                 <TCell>{i.org_name}</TCell>
                 <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
                 <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
-                <TCell>{isLTC ? i.purchased_plan : i.coverage_plan}</TCell>
-                <TCell>{formatCents(i.monthly_premium_cents)}</TCell>
-                <TCell className="text-black/60">{i.billing_group_id}</TCell>
+                <TCell>{unpurchased ? "—" : (isLTC ? i.purchased_plan : i.coverage_plan)}</TCell>
+                <TCell className={i.coverage_status === "in_progress" ? "text-black/40" : ""}>{formatDate(i.effective_date)}</TCell>
+                <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>
               </TRow>
             );
           })}
