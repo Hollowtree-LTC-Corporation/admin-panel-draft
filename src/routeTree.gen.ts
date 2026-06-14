@@ -14,7 +14,6 @@ import { Route as RateConfigRouteImport } from './routes/rate-config'
 import { Route as RateCellsRouteImport } from './routes/rate-cells'
 import { Route as PoliciesRouteImport } from './routes/policies'
 import { Route as PaymentLedgerRouteImport } from './routes/payment-ledger'
-import { Route as OrganizationsRouteImport } from './routes/organizations'
 import { Route as MissingSubmissionsRouteImport } from './routes/missing-submissions'
 import { Route as IndividualsRouteImport } from './routes/individuals'
 import { Route as EnrollmentWindowsRouteImport } from './routes/enrollment-windows'
@@ -26,6 +25,7 @@ import { Route as BillingGroupsRouteImport } from './routes/billing-groups'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as AccountAdjustmentsRouteImport } from './routes/account-adjustments'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OrganizationsIndexRouteImport } from './routes/organizations.index'
 import { Route as OrganizationsIdRouteImport } from './routes/organizations.$id'
 import { Route as IndividualsIdRouteImport } from './routes/individuals.$id'
 
@@ -52,11 +52,6 @@ const PoliciesRoute = PoliciesRouteImport.update({
 const PaymentLedgerRoute = PaymentLedgerRouteImport.update({
   id: '/payment-ledger',
   path: '/payment-ledger',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OrganizationsRoute = OrganizationsRouteImport.update({
-  id: '/organizations',
-  path: '/organizations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MissingSubmissionsRoute = MissingSubmissionsRouteImport.update({
@@ -114,10 +109,15 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrganizationsIndexRoute = OrganizationsIndexRouteImport.update({
+  id: '/organizations/',
+  path: '/organizations/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrganizationsIdRoute = OrganizationsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => OrganizationsRoute,
+  id: '/organizations/$id',
+  path: '/organizations/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const IndividualsIdRoute = IndividualsIdRouteImport.update({
   id: '/$id',
@@ -137,7 +137,6 @@ export interface FileRoutesByFullPath {
   '/enrollment-windows': typeof EnrollmentWindowsRoute
   '/individuals': typeof IndividualsRouteWithChildren
   '/missing-submissions': typeof MissingSubmissionsRoute
-  '/organizations': typeof OrganizationsRouteWithChildren
   '/payment-ledger': typeof PaymentLedgerRoute
   '/policies': typeof PoliciesRoute
   '/rate-cells': typeof RateCellsRoute
@@ -145,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
+  '/organizations/': typeof OrganizationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -158,7 +158,6 @@ export interface FileRoutesByTo {
   '/enrollment-windows': typeof EnrollmentWindowsRoute
   '/individuals': typeof IndividualsRouteWithChildren
   '/missing-submissions': typeof MissingSubmissionsRoute
-  '/organizations': typeof OrganizationsRouteWithChildren
   '/payment-ledger': typeof PaymentLedgerRoute
   '/policies': typeof PoliciesRoute
   '/rate-cells': typeof RateCellsRoute
@@ -166,6 +165,7 @@ export interface FileRoutesByTo {
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
+  '/organizations': typeof OrganizationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -180,7 +180,6 @@ export interface FileRoutesById {
   '/enrollment-windows': typeof EnrollmentWindowsRoute
   '/individuals': typeof IndividualsRouteWithChildren
   '/missing-submissions': typeof MissingSubmissionsRoute
-  '/organizations': typeof OrganizationsRouteWithChildren
   '/payment-ledger': typeof PaymentLedgerRoute
   '/policies': typeof PoliciesRoute
   '/rate-cells': typeof RateCellsRoute
@@ -188,6 +187,7 @@ export interface FileRoutesById {
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
+  '/organizations/': typeof OrganizationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -203,7 +203,6 @@ export interface FileRouteTypes {
     | '/enrollment-windows'
     | '/individuals'
     | '/missing-submissions'
-    | '/organizations'
     | '/payment-ledger'
     | '/policies'
     | '/rate-cells'
@@ -211,6 +210,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
+    | '/organizations/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -224,7 +224,6 @@ export interface FileRouteTypes {
     | '/enrollment-windows'
     | '/individuals'
     | '/missing-submissions'
-    | '/organizations'
     | '/payment-ledger'
     | '/policies'
     | '/rate-cells'
@@ -232,6 +231,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
+    | '/organizations'
   id:
     | '__root__'
     | '/'
@@ -245,7 +245,6 @@ export interface FileRouteTypes {
     | '/enrollment-windows'
     | '/individuals'
     | '/missing-submissions'
-    | '/organizations'
     | '/payment-ledger'
     | '/policies'
     | '/rate-cells'
@@ -253,6 +252,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
+    | '/organizations/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -267,12 +267,13 @@ export interface RootRouteChildren {
   EnrollmentWindowsRoute: typeof EnrollmentWindowsRoute
   IndividualsRoute: typeof IndividualsRouteWithChildren
   MissingSubmissionsRoute: typeof MissingSubmissionsRoute
-  OrganizationsRoute: typeof OrganizationsRouteWithChildren
   PaymentLedgerRoute: typeof PaymentLedgerRoute
   PoliciesRoute: typeof PoliciesRoute
   RateCellsRoute: typeof RateCellsRoute
   RateConfigRoute: typeof RateConfigRoute
   TokensRoute: typeof TokensRoute
+  OrganizationsIdRoute: typeof OrganizationsIdRoute
+  OrganizationsIndexRoute: typeof OrganizationsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -310,13 +311,6 @@ declare module '@tanstack/react-router' {
       path: '/payment-ledger'
       fullPath: '/payment-ledger'
       preLoaderRoute: typeof PaymentLedgerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/organizations': {
-      id: '/organizations'
-      path: '/organizations'
-      fullPath: '/organizations'
-      preLoaderRoute: typeof OrganizationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/missing-submissions': {
@@ -396,12 +390,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/organizations/': {
+      id: '/organizations/'
+      path: '/organizations'
+      fullPath: '/organizations/'
+      preLoaderRoute: typeof OrganizationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/organizations/$id': {
       id: '/organizations/$id'
-      path: '/$id'
+      path: '/organizations/$id'
       fullPath: '/organizations/$id'
       preLoaderRoute: typeof OrganizationsIdRouteImport
-      parentRoute: typeof OrganizationsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/individuals/$id': {
       id: '/individuals/$id'
@@ -425,18 +426,6 @@ const IndividualsRouteWithChildren = IndividualsRoute._addFileChildren(
   IndividualsRouteChildren,
 )
 
-interface OrganizationsRouteChildren {
-  OrganizationsIdRoute: typeof OrganizationsIdRoute
-}
-
-const OrganizationsRouteChildren: OrganizationsRouteChildren = {
-  OrganizationsIdRoute: OrganizationsIdRoute,
-}
-
-const OrganizationsRouteWithChildren = OrganizationsRoute._addFileChildren(
-  OrganizationsRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountAdjustmentsRoute: AccountAdjustmentsRoute,
@@ -449,12 +438,13 @@ const rootRouteChildren: RootRouteChildren = {
   EnrollmentWindowsRoute: EnrollmentWindowsRoute,
   IndividualsRoute: IndividualsRouteWithChildren,
   MissingSubmissionsRoute: MissingSubmissionsRoute,
-  OrganizationsRoute: OrganizationsRouteWithChildren,
   PaymentLedgerRoute: PaymentLedgerRoute,
   PoliciesRoute: PoliciesRoute,
   RateCellsRoute: RateCellsRoute,
   RateConfigRoute: RateConfigRoute,
   TokensRoute: TokensRoute,
+  OrganizationsIdRoute: OrganizationsIdRoute,
+  OrganizationsIndexRoute: OrganizationsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
