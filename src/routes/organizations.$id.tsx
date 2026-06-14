@@ -920,9 +920,10 @@ function SystemRefsSection({ org, product }: { org: OrgDetail; product: "DI" | "
         <Ref label="Attio Deal ID" value={org.attio_deal_id} />
         <Ref label="Attio Company ID" value={org.attio_company_id} />
         <Ref label="Rate Sheet ID (legacy)" value={org.rate_sheet_id} muted />
+        <Ref label="Gmail Label ID" value={org.gmail_label_id} muted />
         {product === "LTC" && (
-          <>
-            <Ref label="LTC Enrollment Phase" value={org.ltc_enrollment_phase} />
+          <></>
+        )}
             <Ref label="LTC One Week To Go" value={fmtDate(org.ltc_one_week_to_go)} />
           </>
         )}
