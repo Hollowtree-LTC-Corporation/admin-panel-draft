@@ -124,7 +124,7 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     failed_attempt_date: base.last_payment_status === "Failed" ? `2025-06-0${(n % 9) + 1}` : null,
     failed_payment_reason: base.last_payment_status === "Failed" ? "Insufficient funds" : null,
     enrollment_deadline: n % 4 === 0 ? `2025-08-${10 + (n % 18)}` : null,
-    affiliations: !isLTC && (n === 1 || n === 9)
+    affiliations: !isLTC && org?.cca_group
       ? [{ id: "aff_cca", name: "CCA: Coastal Carriers Association" }]
       : isLTC && (n === 5 || n === 11)
         ? [{ id: "aff_trust_1", name: n === 5 ? "SEIU Trust" : "Teamsters Trust" }]
@@ -322,12 +322,9 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
     <SectionCard title="Coverage & Plan · DI" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
         <CoverageStatusField editing={editing} status={status} setStatus={setStatus} allowed={allowed} current={i.coverage_status} />
-        <RField label="DI Type" value={i.di_type === "STD+LTD" ? "STD+LTD" : "LTD Only"} />
         <RField label="Coverage Plan" value={unfunded ? "—" : i.coverage_plan} editing={editing}>
           <select defaultValue={i.coverage_plan} className={inputCls}>{DI_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
         </RField>
-        <RField label="Active Date" value={fmtDate(i.active_date)} />
-
         <RField label="Monthly Premium">
           {unfunded ? <span className="text-gray-400">—</span> : (
             <span className="inline-flex items-center gap-1">
@@ -336,18 +333,8 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
             </span>
           )}
         </RField>
-        {i.di_type === "STD+LTD" && (
-          <RField label="STD Premium" value={unfunded ? "—" : formatCents(i.std_premium_cents)} />
-        )}
-        <RField label="LTD Premium" value={unfunded ? "—" : formatCents(i.ltd_premium_cents)} />
         <RField label="Weekly Covered Benefit" value={unfunded ? "—" : formatCents(i.weekly_covered_benefit_cents)} />
-
-        <RField label="Monthly Benefit" value={unfunded ? "—" : formatCents(i.monthly_benefit_cents)} />
-        <RField label="Effective Date" value={fmtDate(i.effective_date)} editing={editing}>
-          <input type="date" defaultValue={i.effective_date ?? ""} className={inputCls} />
-        </RField>
-        <RField label="Canceled Date" value={fmtDate(i.canceled_date)} />
-        <RField label="Application Status" value={i.application_status} />
+        {i.canceled_date && <RField label="Canceled Date" value={fmtDate(i.canceled_date)} />}
       </Grid>
       {error && <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
       {mismatch && !editing && (
@@ -399,11 +386,36 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
 }
 
 
+function paymentMethodLabel(bg: ReturnType<typeof BILLING_GROUPS.find>): React.ReactNode {
+  const t = bg?.payment_method_type;
+  if (!t) return <span className="text-black/40">No method on file</span>;
+  if (t === "ach") return bg?.plaid_institution ? `ACH · ${bg.plaid_institution}` : "ACH (Bank Account)";
+  if (t === "card-payment") return bg?.card_last4 ? `Card ending ${bg.card_last4}` : "Credit Card";
+  if (t === "apple-pay") return "Apple Pay";
+  return String(t);
+}
+
 function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof BILLING_GROUPS.find>; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
   return (
     <SectionCard title="Payment & Billing" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
+        <RField label="Payment Method">
+          <span className="inline-flex items-center gap-1">
+            {paymentMethodLabel(bg)}
+            <Lock className="h-3 w-3 text-black/30" aria-label="Managed on billing group" />
+          </span>
+        </RField>
+        <RField label="Billing Group">
+          <Link to="/billing-groups" className="text-sm underline hover:text-[#0a3d3e]">{bg?.name ?? i.billing_group_id}</Link>
+        </RField>
+        <RField label="Balance">
+          <span className={i.last_payment_status === "Failed" ? "text-red-700 font-medium" : "text-emerald-700"}>
+            {formatCents(i.last_payment_status === "Failed" ? i.monthly_premium_cents : -250)}
+          </span>
+        </RField>
+        <div />
+
         <RField label="Last Payment Status">{paymentBadge(i.last_payment_status, i.retry_count)}</RField>
         <RField label="Retry Count" value={String(i.retry_count)} locked={editing} />
         <RField label="Failed Payment Reason" value={i.failed_payment_reason ?? "—"} locked={editing} />
@@ -415,15 +427,6 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
         </RField>
         <RField label="Failed Attempt Date" value={fmtDate(i.failed_attempt_date)} locked={editing} />
         <RField label="Next Retry Date" value={fmtDate(i.next_retry_date)} locked={editing} />
-
-        <RField label="Billing Group">
-          <Link to="/billing-groups" className="text-sm underline hover:text-[#0a3d3e]">{bg?.name ?? i.billing_group_id}</Link>
-        </RField>
-        <RField label="Balance">
-          <span className={i.last_payment_status === "Failed" ? "text-red-700 font-medium" : "text-emerald-700"}>
-            {formatCents(i.last_payment_status === "Failed" ? i.monthly_premium_cents : -250)}
-          </span>
-        </RField>
       </Grid>
       <div className="mt-3">
         <Link to="/payment-ledger" className="text-xs text-[#0a3d3e] hover:underline inline-flex items-center gap-1">
@@ -438,31 +441,47 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
 function ContributionSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
   const active = i.contribution_active;
+  const hasHistory = !active && !!i.contribution_start_date && !!i.contribution_duration_months;
+  const endDate = i.contribution_duration_months ? `${i.contribution_start_date} + ${i.contribution_duration_months}mo` : "Indefinite";
   return (
     <SectionCard title="Employer Contribution" defaultOpen={active} editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
-        <RField label="Contribution Tier" value={i.contribution_tier ?? "—"} editing={editing}>
+        <RField label="Contribution Tier" value={i.contribution_tier ?? "—"} editing={editing && active}>
           <select defaultValue={i.contribution_tier ?? ""} className={inputCls}>{TIERS.map((t) => <option key={t}>{t}</option>)}</select>
-        </RField>
-        <RField label="Duration (months)" value={i.contribution_duration_months ? String(i.contribution_duration_months) : "Indefinite"} editing={editing}>
-          <input defaultValue={i.contribution_duration_months?.toString() ?? ""} placeholder="Indefinite" className={inputCls} />
         </RField>
         <RField label="Active">
           {active ? <Badge map={COVERAGE_BADGE} value="active" /> : <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">Inactive</span>}
         </RField>
-        <div />
-        <RField label="Start Date" value={fmtDate(i.contribution_start_date)} editing={editing}>
-          <input type="date" defaultValue={i.contribution_start_date ?? ""} className={inputCls} />
-        </RField>
-        <RField label="End Date" value={i.contribution_duration_months ? `${i.contribution_start_date} + ${i.contribution_duration_months}mo` : "Indefinite"} />
+        {active && (
+          <RField label="Duration (months)" value={i.contribution_duration_months ? String(i.contribution_duration_months) : "Indefinite"} editing={editing}>
+            <input defaultValue={i.contribution_duration_months?.toString() ?? ""} placeholder="Indefinite" className={inputCls} />
+          </RField>
+        )}
+        {active && <div />}
+        {(active || hasHistory) && (
+          <>
+            <RField label="Start Date" value={fmtDate(i.contribution_start_date)} editing={editing && active}>
+              <input type="date" defaultValue={i.contribution_start_date ?? ""} className={inputCls} />
+            </RField>
+            <RField label="End Date" value={endDate} />
+          </>
+        )}
       </Grid>
-      {i.contribution_tier && (
+      {active && i.contribution_tier && (
         <div className="mt-4 bg-blue-50 border-l-4 border-blue-400 text-sm text-black/75 p-3 rounded-r leading-relaxed">
           The employer covers this enrollee's premium at the <b>{i.contribution_tier}</b> tier
           {i.contribution_duration_months ? <> for <b>{i.contribution_duration_months} months</b></> : <> <b>indefinitely</b></>}
           {i.contribution_start_date ? <> starting <b>{fmtDate(i.contribution_start_date)}</b></> : null}.
           The dollar amount is derived at billing time from the rate table based on age and smoker status.
         </div>
+      )}
+      {!active && hasHistory && (
+        <div className="mt-4 text-sm text-black/60 leading-relaxed">
+          Employer covered this enrollee's premium at the <b>{i.contribution_tier}</b> tier from <b>{fmtDate(i.contribution_start_date)}</b> to <b>{endDate}</b>. The enrollee now pays the full premium.
+        </div>
+      )}
+      {!active && !hasHistory && (
+        <div className="mt-4 text-sm text-black/50">Employer contribution is not currently active for this enrollee.</div>
       )}
       {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
     </SectionCard>
@@ -709,7 +728,12 @@ function SystemRefsSection({ i }: { i: Detail }) {
         <Ref label="Magic Link" value={i.magic_link} />
         <Ref label="Magic Link Portal" value={i.magic_link_portal} />
         <Ref label="Signature URL" value={i.signature_url} />
-        {i.product === "DI" && i.cca_portal_link && <Ref label="CCA Portal Link" value={i.cca_portal_link} />}
+        {i.active_date && (
+          <div className="mb-2">
+            <div className="text-[9px] uppercase tracking-wider text-black/40 mb-0.5 font-sans">Active Date <span className="text-black/30">(system)</span></div>
+            <div className="text-black/50 break-all">{fmtDate(i.active_date)}</div>
+          </div>
+        )}
       </div>
     </SectionCard>
   );
