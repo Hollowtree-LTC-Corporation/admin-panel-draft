@@ -1,4 +1,5 @@
-import { useState } from "react";
+import * as React from "react";
+import { useState, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   PageHeader, Card, Field, Btn, Pill, TableShell, THead, TRow, TCell, ProductBadge,
@@ -7,9 +8,12 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { ORGS, BENEFIT_CLASSES, INDIVIDUALS, POLICIES, PAYMENT_LEDGER, CARRIERS, formatCents } from "@/lib/wireframe/data";
+import {
+  ORGS, BENEFIT_CLASSES, INDIVIDUALS, POLICIES, PAYMENT_LEDGER, CARRIERS,
+  COMMISSION_SPLIT_DEFAULTS, formatCents,
+} from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
-import { ChevronLeft, ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronRight, Pencil, ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/organizations/$id")({ component: OrgDetail });
 
@@ -23,6 +27,10 @@ const WINDOW_TYPES = ["initial","annual","new_joiner","special"];
 const SPONSOR_TYPES = ["employer","affiliate"];
 const WINDOW_STATUSES = ["upcoming","open","closed"];
 const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
+const BROKERS = ["Westfield Brokers","Hollowtree House","Override Group LLC","Jamie Rep"];
+const PRODUCT_TEMPLATE_VARIANTS = ["base","eob_only","restoration_only","eob_and_restoration"];
+const CONTRIBUTION_TYPES = ["voluntary","buy_up","employer_paid"];
+const PAY_MODES = ["Monthly","10-Pay"];
 
 // Dummy enrollment windows scoped per org for this iteration
 const DUMMY_WINDOWS = [
@@ -37,7 +45,7 @@ const DUMMY_WINDOWS = [
   { id: "ew_i", org_id: "org_6", window_type: "special", sponsor_type: "affiliate", affiliate: "Foxtail Alumni Assoc", start: "2025-07-15", end: "2025-08-15", effective: "2025-09-01", status: "open", gi_eligible: false, carrier: "Sequoia Care Partners", notes: "Affiliate-sponsored" },
 ];
 
-const PLAN_DETAILS_DUMMY: Record<string, string> = {
+const DI_PLAN_DETAILS: Record<string, string> = {
   "Benefit Period": "24 months",
   "Elimination Period": "90 days",
   "Monthly Benefit": "Up to 60% of base salary, capped at $10,000/mo",
@@ -45,8 +53,115 @@ const PLAN_DETAILS_DUMMY: Record<string, string> = {
   "Pre-existing Conditions": "12/12 look-back; excluded if treated in prior 12 months",
 };
 
-function isCCA(orgId: string) {
-  return orgId === "org_3"; // Coastal Credit Union as the CCA example
+const LTC_TIER_DETAILS = {
+  bronze:   { benefit_trigger: "2 of 6 ADLs or cognitive impairment", portability: "Available at group rates", inflation_protection: "None" },
+  silver:   { benefit_trigger: "2 of 6 ADLs or cognitive impairment", portability: "Available at group rates", inflation_protection: "3% simple" },
+  gold:     { benefit_trigger: "2 of 6 ADLs or cognitive impairment", portability: "Available at group rates", inflation_protection: "3% compound" },
+  platinum: { benefit_trigger: "2 of 6 ADLs or cognitive impairment", portability: "Available at group rates", inflation_protection: "5% compound" },
+  diamond:  { benefit_trigger: "2 of 6 ADLs or cognitive impairment", portability: "Available at group rates", inflation_protection: "5% compound + benefit restoration" },
+};
+const LTC_TIERS = ["bronze","silver","gold","platinum","diamond"] as const;
+
+const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtDate(d: string | null | undefined): string {
+  if (!d) return "—";
+  const [y, m, day] = d.split("-").map(Number);
+  if (!y || !m || !day) return "—";
+  return `${MONTH_ABBR[m - 1]} ${day}, ${y}`;
+}
+
+function daysUntil(d: string | null | undefined): number | null {
+  if (!d) return null;
+  const target = new Date(d + "T00:00:00").getTime();
+  const now = new Date("2026-06-14T00:00:00").getTime();
+  return Math.round((target - now) / 86400000);
+}
+
+/* ---------- Synthesize per-org detail ---------- */
+type OrgDetail = ReturnType<typeof synthesize>;
+function synthesize(org: typeof ORGS[number]) {
+  const slug = org.name.toLowerCase().replace(/[^a-z]/g, "");
+  const idx = parseInt(org.id.replace("org_", ""), 10) || 1;
+  const cca = org.cca_group;
+  return {
+    ...org,
+    domain: `${slug}.example.com`,
+    industry: ["professional_services","healthcare","manufacturing","transportation","education","hospitality"][idx % 6],
+    org_type: cca ? "CPA Firm" : (idx % 3 === 0 ? "Association" : "Employer Group"),
+    situs_city: ["Austin","Portland","Boston","Miami","Seattle","Chicago","Denver","Atlanta"][idx % 8],
+    eligible_lives: org.individuals_count * 3,
+    // DI
+    gi_offer_cents: 15000000,
+    microsite_url: `https://enroll.hollowtree.app/${org.id}`,
+    di_healthcare_type: "Healthcare Practice",
+    inbound_type: "Broker Referral",
+    ltd_benefit_pct: 60,
+    std_benefit_pct: 66.7,
+    next_sun_life_report_date: "2026-07-15",
+    // Coverage / Billing
+    contribution_type: cca ? "voluntary" : "employer_paid",
+    pay_mode: "Monthly",
+    tpa_fee_cents: cca ? 2000 : 800,
+    service_fee_retained_cents: cca ? 500 : null,
+    tpa_fee_name: cca ? "CCA Membership Fee" : "Processing Fee",
+    // Broker
+    primary_broker: "Westfield Brokers",
+    primary_override_pct: null as number | null,
+    secondary_broker: null as string | null,
+    secondary_override_pct: null as number | null,
+    // Signatory
+    signatory_name: "Test Signatory",
+    signatory_title: "VP HR",
+    signatory_email: `signatory@${slug}.example.com`,
+    // Links
+    google_drive_folder: `https://drive.google.com/drive/folders/${org.id}_dummy`,
+    meeting_link: "https://meet.google.com/abc-defg-hij",
+    assigned_gmail_person: "ops@hollowtree.example.com",
+    gmail_label_id: `Label_${1000 + idx}`,
+    attio_deal_id: `deal_${org.id}_abc123`,
+    attio_company_id: `cmp_${org.id}_xyz789`,
+    // Plan details
+    plan_details: org.product === "LTC" ? LTC_TIER_DETAILS as unknown as Record<string, unknown> : DI_PLAN_DETAILS as unknown as Record<string, unknown>,
+    // Employer billing (some orgs have it)
+    employer_moov_account_id: idx % 3 === 0 ? `moov_emp_${1000 + idx}` : null,
+    employer_payment_method_id: idx % 3 === 0 ? `pm_${2000 + idx}` : null,
+    employer_payment_method_type: idx % 3 === 0 ? "ach" : null,
+    // System refs
+    created_at: "2024-09-15T10:22:00Z",
+    updated_at: "2025-06-01T14:11:00Z",
+    rate_sheet_id: `rs_legacy_${idx}`,
+    // LTC-only
+    company_years_in_existence: 28,
+    naic_code: "61271",
+    org_website: `https://www.${slug}.example.com`,
+    product_template_variant: "eob_and_restoration",
+    healthcare_company: idx % 2 === 0 ? "yes" : "no",
+    benefit_duration: 6,
+    duration: "6 years",
+    min_age: 18,
+    max_age: 75,
+    // LTC carrier/operational
+    case_id: `CASE-${10000 + idx}`,
+    enrollment_id_carrier: `ENR-${50000 + idx}`,
+    form_number: "LTC-2024-A",
+    agent_number: `AGT-${1000 + idx}`,
+    benefit_system: "Heritage Online",
+    rider_codes: ["EOB-100","BR-50","WAIVER"],
+    application_questions: [
+      "Have you used tobacco in the past 12 months?",
+      "Have you been hospitalized in the past 5 years?",
+      "Are you currently receiving disability benefits?",
+    ],
+    // LTC system
+    ltc_enrollment_phase: "open_enrollment",
+    ltc_one_week_to_go: "2025-08-24",
+  };
+}
+
+function brokerDefaultPct(name: string | null): number | null {
+  if (!name) return null;
+  const d = COMMISSION_SPLIT_DEFAULTS.find((c) => c.channel_partner_name === name);
+  return d ? d.default_split_pct : null;
 }
 
 function OrgDetail() {
@@ -57,8 +172,9 @@ function OrgDetail() {
   const editDrawer = useDrawer<typeof ORGS[number]>();
   const windowDrawer = useDrawer<typeof DUMMY_WINDOWS[number]>();
   const bcDrawer = useDrawer<typeof BENEFIT_CLASSES[number]>();
-  const org = ORGS.find((o) => o.id === id);
-  if (!org) return <div className="p-4">Org not found.</div>;
+  const orgBase = ORGS.find((o) => o.id === id);
+  if (!orgBase) return <div className="p-4">Org not found.</div>;
+  const org = synthesize(orgBase);
 
   const readOnly = !can("organizations", "update");
   const windows = DUMMY_WINDOWS.filter((w) => w.org_id === id);
@@ -69,7 +185,7 @@ function OrgDetail() {
     classes = [{ id: `bc_synth_${id}`, org_id: id, name: "All Employees", gi_offer_cents: 15000000, bronze: 0, silver: 7500000, gold: 15000000, platinum: 20000000, diamond: 25000000, is_default: true }];
   }
 
-  // ---- Summary metrics ----
+  // Summary metrics
   const orgIndividuals = INDIVIDUALS.filter((i) => i.org_id === id);
   const activeEnrollees = orgIndividuals.filter((i) => i.coverage_status === "active").length;
   const totalEnrollees = orgIndividuals.length;
@@ -79,9 +195,16 @@ function OrgDetail() {
   const collectedCents = PAYMENT_LEDGER
     .filter((p) => orgIndIds.has(p.individual_id) && p.status === "successful" && p.date.startsWith(currentCycle))
     .reduce((s, p) => s + p.amount_cents, 0);
-  // Outstanding = synthesized net balance (dummy: ~10% of monthly premium sum)
   const outstandingCents = Math.round(orgIndividuals.reduce((s, i) => s + i.monthly_premium_cents, 0) * 0.1);
-  const openWindows = windows.filter((w) => w.status === "open").length;
+  const openWindowsList = windows.filter((w) => w.status === "open");
+  const openWindows = openWindowsList.length;
+  // earliest dated open window with an end date
+  const nextOpenEnd = openWindowsList
+    .map((w) => w.end)
+    .filter((d): d is string => !!d)
+    .sort()[0] ?? null;
+  const daysToClose = daysUntil(nextOpenEnd);
+  const showCcaBadge = product === "DI" && org.cca_group;
 
   return (
     <div>
@@ -89,12 +212,24 @@ function OrgDetail() {
         <ChevronLeft className="h-3 w-3" /> Organizations
       </Link>
       <PageHeader
-        title={org.name}
+        title={
+          <span className="inline-flex items-center gap-2">
+            {org.name}
+            <ProductBadge product={org.product} />
+            {showCcaBadge && (
+              <span
+                className="border border-emerald-500 text-emerald-700 bg-emerald-50 rounded px-2 py-0.5 text-xs font-medium"
+                title="CCA-affiliated organization. Uses CCA portal link and CCA-specific policy emails."
+              >
+                CCA
+              </span>
+            )}
+          </span>
+        }
         subtitle={<>Organizations &rsaquo; {org.name} · <span className="text-black/40">{org.id}</span></>}
         actions={
           <>
-            <ProductBadge product={org.product} />
-            <Btn onClick={() => editDrawer.open(org, "edit")} disabled={readOnly}>Edit</Btn>
+            <Btn onClick={() => editDrawer.open(orgBase, "edit")} disabled={readOnly}>Edit</Btn>
             <Btn disabled={!can("organizations", "delete")}>Deactivate</Btn>
           </>
         }
@@ -104,11 +239,18 @@ function OrgDetail() {
       <div className="grid grid-cols-6 gap-2 mb-4">
         <SummaryChip label="Active Enrollees" value={activeEnrollees} hint={`filter: org=${id} · active`} onClick={() => navigate({ to: "/individuals", search: { org: id, coverage: "active" } })} />
         <SummaryChip label="Total Enrollees" value={totalEnrollees} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/individuals", search: { org: id } })} />
-
         <SummaryChip label="Policies" value={policies} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/policies" })} />
         <SummaryChip label="Collected This Cycle" value={formatCents(collectedCents)} hint={`${currentCycle} · org=${id}`} onClick={() => navigate({ to: "/payment-ledger" })} />
-        <SummaryChip label="Outstanding" value={formatCents(outstandingCents)} tone={outstandingCents > 0 ? "warn" : "ok"} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/enrollee-balance" })} />
-        <SummaryChip label="Open Windows" value={openWindows} />
+        <SummaryChip label="Outstanding" value={formatCents(outstandingCents)} tone={outstandingCents > 0 ? "bad" : undefined} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/enrollee-balance" })} />
+        <SummaryChip
+          label="Open Windows"
+          value={openWindows}
+          sub={openWindows > 0 && nextOpenEnd ? (
+            <span className={daysToClose !== null && daysToClose <= 14 ? "text-amber-700" : "text-black/50"}>
+              Window closes {fmtDate(nextOpenEnd)}
+            </span>
+          ) : undefined}
+        />
       </div>
 
       <Tabs defaultValue="config" className="w-full">
@@ -124,7 +266,7 @@ function OrgDetail() {
           <ConfigTab org={org} product={product} readOnly={readOnly} isAdmin={role === "admin"} />
         </TabsContent>
         <TabsContent value="fees">
-          <FeesTab org={org} readOnly={readOnly} />
+          <FeesTab org={orgBase} readOnly={readOnly} />
         </TabsContent>
         <TabsContent value="windows">
           <WindowsTab
@@ -152,7 +294,7 @@ function OrgDetail() {
         </TabsContent>
       </Tabs>
 
-      {/* Edit drawer (reuses create form shape) */}
+      {/* Edit drawer (top-of-page shortcut) */}
       <Drawer open={editDrawer.state.open} onClose={editDrawer.close} title={`Edit · ${org.name}`}>
         <Field label="Name"><Input defaultValue={org.name} /></Field>
         <Field label="Product"><DSelect defaultValue={org.product} options={["DI","LTC"]} /></Field>
@@ -209,8 +351,8 @@ function OrgDetail() {
 
 /* ---------- Summary chip ---------- */
 
-function SummaryChip({ label, value, onClick, tone, hint }: { label: string; value: React.ReactNode; onClick?: () => void; tone?: "ok" | "warn"; hint?: string }) {
-  const valueColor = tone === "warn" ? "text-amber-700" : tone === "ok" ? "text-emerald-700" : "text-black/85";
+function SummaryChip({ label, value, onClick, tone, hint, sub }: { label: string; value: React.ReactNode; onClick?: () => void; tone?: "ok" | "warn" | "bad"; hint?: string; sub?: React.ReactNode }) {
+  const valueColor = tone === "bad" ? "text-red-700" : tone === "warn" ? "text-amber-700" : tone === "ok" ? "text-emerald-700" : "text-black/85";
   return (
     <button
       onClick={onClick}
@@ -220,6 +362,7 @@ function SummaryChip({ label, value, onClick, tone, hint }: { label: string; val
     >
       <div className="text-[9px] uppercase tracking-wider text-black/50">{label}</div>
       <div className={`text-sm font-semibold mt-0.5 ${valueColor}`}>{value}</div>
+      {sub && <div className="text-[10px] mt-0.5">{sub}</div>}
     </button>
   );
 }
@@ -234,172 +377,483 @@ function DSelect({ defaultValue, options }: { defaultValue?: string; options: st
   );
 }
 
-/* ---------- Tabs ---------- */
+/* =============================================================
+   CONFIG TAB — section-card layout
+============================================================= */
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[180px_1fr] items-center gap-3 py-1.5 border-b border-black/5">
-      <div className="text-[11px] uppercase tracking-wider text-black/50">{label}</div>
-      <div className="text-sm">{children}</div>
-    </div>
-  );
-}
-
-function SubHead({ children }: { children: React.ReactNode }) {
-  return <div className="text-[11px] font-semibold uppercase tracking-wider text-black/60 mt-4 mb-1">{children}</div>;
-}
-
-function RO({ value, readOnly, placeholder }: { value?: string | number; readOnly: boolean; placeholder?: string }) {
-  if (readOnly) return <span className="text-black/80">{value || <span className="text-black/30">—</span>}</span>;
-  return <Input defaultValue={value === undefined || value === null ? "" : String(value)} placeholder={placeholder} />;
-}
-
-function Select({ value, options, readOnly, disabled }: { value: string; options: string[]; readOnly: boolean; disabled?: boolean }) {
-  if (readOnly) return <span className="text-black/80">{value}</span>;
-  return (
-    <select defaultValue={value} disabled={disabled} className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white disabled:bg-black/5 disabled:text-black/60">
-      {options.map((o) => <option key={o} value={o}>{o}</option>)}
-    </select>
-  );
-}
-
-function Toggle({ checked, readOnly }: { checked: boolean; readOnly: boolean }) {
-  return <Switch defaultChecked={checked} disabled={readOnly} />;
-}
-
-function ConfigTab({ org, product, readOnly, isAdmin }: { org: typeof ORGS[number]; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
-  const cca = isCCA(org.id);
-  const [sysOpen, setSysOpen] = useState(false);
+function ConfigTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
   const statusValue = org.enrollment_status === "active" ? "active" : org.enrollment_status === "closed" ? "closed" : "pending_review";
+  const identitySummary = `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible`;
+
   return (
-    <div className="mt-3">
-      <div className="grid grid-cols-2 gap-x-8">
-        <div>
-          <SubHead>Identity</SubHead>
-          <Row label="Name"><RO value={org.name} readOnly={readOnly} /></Row>
-          <Row label="Domain"><RO value={`${org.name.toLowerCase().replace(/[^a-z]/g, "")}.example.com`} readOnly={readOnly} /></Row>
-          <Row label="Industry"><Select value={["professional_services", "healthcare", "manufacturing", "transportation"][["org_1","org_3","org_4","org_8"].indexOf(org.id) % 4] || "other"} options={INDUSTRIES} readOnly={readOnly} /></Row>
-          <Row label="Org Type"><Select value={cca ? "CPA Firm" : "Employer Group"} options={ORG_TYPES} readOnly={readOnly} /></Row>
-          <Row label="Status"><Select value={statusValue} options={ORG_STATUSES} readOnly={readOnly} disabled={!isAdmin} /></Row>
-          <Row label="Situs State"><Select value={org.situs_state} options={US_STATES} readOnly={readOnly} /></Row>
-          <Row label="Situs City"><RO value="Austin" readOnly={readOnly} /></Row>
-          <Row label="Eligible Lives"><RO value={org.individuals_count * 3} readOnly={readOnly} /></Row>
-          <Row label="Policy Owner Type"><Select value={org.policy_owner_type === "employer" ? "employer_group" : "cca"} options={["employer_group","cca"]} readOnly={readOnly} /></Row>
-          <Row label="CCA Group"><Toggle checked={cca} readOnly={readOnly} /></Row>
-        </div>
+    <div className="mt-3 space-y-4">
+      <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} />
+      {product === "DI"
+        ? <DISettingsSection org={org} readOnly={readOnly} />
+        : <LTCProductConfigSection org={org} readOnly={readOnly} />}
+      <CoverageBillingSection org={org} readOnly={readOnly} />
+      <BrokerSection org={org} readOnly={readOnly} />
+      <SignatorySection org={org} readOnly={readOnly} />
+      <LinksRefsSection org={org} product={product} readOnly={readOnly} />
+      <PlanDetailsSection org={org} product={product} readOnly={readOnly} />
+      {product === "LTC" && <CarrierOperationalSection org={org} readOnly={readOnly} />}
+      {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
+      <SystemRefsSection org={org} product={product} />
+    </div>
+  );
+}
 
-        <div>
-          {product === "DI" ? (
-            <>
-              <SubHead>DI Settings</SubHead>
-              <Row label="DI Healthcare Type"><Select value="Healthcare Practice" options={DI_HC_TYPES} readOnly={readOnly} /></Row>
-              <Row label="Inbound Type"><RO value="Broker Referral" readOnly={readOnly} /></Row>
-              <Row label="Type of Rate"><RO value="Issue Age" readOnly={readOnly} /></Row>
-              <Row label="LTD Benefit %"><RO value="60.0" readOnly={readOnly} /></Row>
-              <Row label="STD Benefit %"><RO value="66.7" readOnly={readOnly} /></Row>
-            </>
-          ) : (
-            <>
-              <SubHead>LTC Settings</SubHead>
-              <Row label="Company Years in Existence"><RO value={28} readOnly={readOnly} /></Row>
-              <Row label="Product Template Variant"><Select value="eob_and_restoration" options={["base","eob_only","restoration_only","eob_and_restoration"]} readOnly={readOnly} /></Row>
-              <Row label="Extension of Benefits Rider"><Toggle checked={true} readOnly={readOnly} /></Row>
-              <Row label="Benefit Restoration Rider"><Toggle checked={true} readOnly={readOnly} /></Row>
-              <Row label="Benefit Duration"><RO value={6} readOnly={readOnly} /></Row>
-              <Row label="Min Age"><RO value={18} readOnly={readOnly} /></Row>
-              <Row label="Max Age"><RO value={75} readOnly={readOnly} /></Row>
-              <Row label="NAIC Code"><RO value="61425" readOnly={readOnly} /></Row>
-            </>
-          )}
+/* ---------- Section building blocks (mirror individual page) ---------- */
 
-          <SubHead>Coverage / Billing</SubHead>
-          <Row label="Contribution Type"><Select value={cca ? "voluntary" : "employer_paid"} options={["voluntary","buy_up","employer_paid"]} readOnly={readOnly} /></Row>
-          <Row label="Pay Mode"><Select value="Monthly" options={["Monthly","10-Pay"]} readOnly={readOnly} /></Row>
-          <Row label="Microsite URL"><a className="text-sky-700 hover:underline" href="#">https://enroll.hollowtree.app/{org.id}</a></Row>
+const inputCls = "w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400";
 
-          <SubHead>Broker</SubHead>
-          <Row label="Primary Broker"><Select value="Westfield Brokers" options={["Westfield Brokers","Hollowtree House","Override Group LLC"]} readOnly={readOnly} /></Row>
-          <Row label="Primary Override %"><RO value="Default" readOnly={readOnly} /></Row>
-          <Row label="Secondary Broker"><RO value="" readOnly={readOnly} placeholder="None" /></Row>
-          <Row label="Secondary Override %"><RO value="" readOnly={readOnly} placeholder="Default" /></Row>
-        </div>
-      </div>
+function useSectionEdit() {
+  const [editing, setEditing] = useState(false);
+  return {
+    editing,
+    onEdit: () => setEditing(true),
+    onCancel: () => setEditing(false),
+    onSave: () => setEditing(false),
+  };
+}
 
-      <div className="grid grid-cols-2 gap-x-8 mt-2">
-        <div>
-          <SubHead>Signatory</SubHead>
-          <Row label="Name"><RO value="Test Signatory" readOnly={readOnly} /></Row>
-          <Row label="Title"><RO value="VP HR" readOnly={readOnly} /></Row>
-          <Row label="Email"><RO value={`signatory@${org.name.toLowerCase().replace(/[^a-z]/g,"")}.example.com`} readOnly={readOnly} /></Row>
-        </div>
-        <div>
-          <SubHead>Links</SubHead>
-          <Row label="Google Drive Folder"><a className="text-sky-700 hover:underline" href="#">drive.google.com/.../{org.id}</a></Row>
-          <Row label="Meeting Link"><a className="text-sky-700 hover:underline" href="#">meet.google.com/abc-defg-hij</a></Row>
-          <Row label="Assigned Gmail Person"><RO value="ops@hollowtree.example.com" readOnly={readOnly} /></Row>
-        </div>
-      </div>
-
-      <SubHead>Plan Details (JSONB)</SubHead>
-      <Card className="p-3">
-        <div className="space-y-2">
-          {Object.entries(PLAN_DETAILS_DUMMY).map(([k, v]) => (
-            <div key={k} className="grid grid-cols-[200px_1fr] gap-3 items-start">
-              <div className="text-xs font-semibold text-black/70 pt-2">{k}</div>
-              <Textarea defaultValue={v} disabled={readOnly} placeholder="Enter plan detail..." className="text-sm min-h-[44px]" />
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* System References (collapsible) */}
-      <div className="mt-6 border-t border-black/10 pt-3">
-        <button
-          onClick={() => setSysOpen((o) => !o)}
-          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider text-black/50 hover:text-black/80"
-        >
-          {sysOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-          System References
+function SectionCard({
+  title, children, defaultOpen = false, summary, editing = false, canEdit = false, onEdit, note,
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  summary?: string;
+  editing?: boolean;
+  canEdit?: boolean;
+  onEdit?: () => void;
+  note?: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen || editing);
+  const isOpen = open || editing;
+  return (
+    <div className={`bg-white border rounded-lg p-5 ${editing ? "border-blue-300 ring-1 ring-blue-100" : "border-gray-200"}`}>
+      <div className="flex items-center justify-between gap-2">
+        <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 text-left flex-1 min-w-0">
+          {isOpen ? <ChevronDown className="h-4 w-4 text-black/40 shrink-0" /> : <ChevronRight className="h-4 w-4 text-black/40 shrink-0" />}
+          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+          {!isOpen && summary && <span className="text-xs text-black/50 truncate">· {summary}</span>}
         </button>
-        {sysOpen ? (
-          <Card className="p-3 mt-2 bg-black/[0.02]">
-            <div className="grid grid-cols-[200px_1fr] gap-x-3 gap-y-1.5 text-xs text-black/60">
-              <div className="font-medium">Attio Deal ID</div>
-              <div><a className="text-sky-700 hover:underline font-mono" href={`https://app.attio.com/deals/deal_${org.id}_abc123`} target="_blank" rel="noopener noreferrer">deal_{org.id}_abc123</a></div>
-              <div className="font-medium">Attio Company ID</div>
-              <div><a className="text-sky-700 hover:underline font-mono" href={`https://app.attio.com/companies/cmp_${org.id}_xyz789`} target="_blank" rel="noopener noreferrer">cmp_{org.id}_xyz789</a></div>
-              <div className="font-medium">Google Drive Folder</div>
-              <div><a className="text-sky-700 hover:underline" href="#">drive.google.com/.../{org.id}</a></div>
-              <div className="font-medium">Org ID (Supabase)</div>
-              <div className="font-mono">{`${org.id}-${"0000-0000-0000-000000000000".slice(0, 28)}`}</div>
-            </div>
-          </Card>
-        ) : null}
+        {canEdit && !editing && isOpen && onEdit && (
+          <button onClick={onEdit} className="text-black/40 hover:text-[#0a3d3e] p-1" title="Edit section">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {isOpen && (
+        <div className="mt-4">
+          {note && <div className="text-xs text-black/50 mb-3 italic">{note}</div>}
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SectionActions({ onCancel, onSave }: { onCancel: () => void; onSave: () => void }) {
+  return (
+    <div className="mt-4 pt-4 border-t border-black/10 flex justify-end gap-2">
+      <Btn onClick={onCancel}>Cancel</Btn>
+      <Btn variant="primary" onClick={onSave}>Save</Btn>
+    </div>
+  );
+}
+
+function Grid2({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-2 gap-x-8 gap-y-4">{children}</div>;
+}
+
+function RField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label}</div>
+      <div className="text-sm text-gray-900">{children}</div>
+    </div>
+  );
+}
+
+function Empty() { return <span className="text-gray-400">—</span>; }
+function val(v: React.ReactNode | null | undefined) {
+  if (v === null || v === undefined || v === "") return <Empty />;
+  return v;
+}
+function YesNo({ b }: { b: boolean }) { return <>{b ? "Yes" : "No"}</>; }
+function ExtLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return <a href={href} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline inline-flex items-center gap-1">{children}<ExternalLink className="h-3 w-3" /></a>;
+}
+
+/* ---------- Sections ---------- */
+
+function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary }: { org: OrgDetail; product: "DI" | "LTC"; statusValue: string; isAdmin: boolean; readOnly: boolean; summary: string }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard title="Identity" defaultOpen summary={summary} editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+      <Grid2>
+        <RField label="Name">{e.editing ? <input className={inputCls} defaultValue={org.name} /> : org.name}</RField>
+        <RField label="CCA Group">
+          {product === "DI"
+            ? (e.editing ? <Switch defaultChecked={org.cca_group} /> : <YesNo b={org.cca_group} />)
+            : <span className="text-black/40 text-xs">N/A for LTC</span>}
+        </RField>
+        <RField label="Domain">{e.editing ? <input className={inputCls} defaultValue={org.domain} /> : org.domain}</RField>
+        <RField label={product === "DI" ? "GI Offer" : "NAIC Code"}>
+          {product === "DI"
+            ? (e.editing ? <input className={inputCls} defaultValue={String(org.gi_offer_cents / 100)} /> : formatCents(org.gi_offer_cents))
+            : (e.editing ? <input className={inputCls} defaultValue={org.naic_code} /> : org.naic_code)}
+        </RField>
+        <RField label="Industry">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.industry}>{INDUSTRIES.map((o) => <option key={o}>{o}</option>)}</select>
+            : org.industry}
+        </RField>
+        <RField label="Microsite URL"><ExtLink href={org.microsite_url}>{org.microsite_url}</ExtLink></RField>
+        <RField label="Org Type">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.org_type}>{ORG_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
+            : org.org_type}
+        </RField>
+        {product === "LTC" ? (
+          <RField label="Company Years in Existence">{e.editing ? <input className={inputCls} type="number" defaultValue={org.company_years_in_existence} /> : org.company_years_in_existence}</RField>
+        ) : <div />}
+        <RField label="Status">
+          {e.editing
+            ? <select className={inputCls} defaultValue={statusValue} disabled={!isAdmin}>{ORG_STATUSES.map((o) => <option key={o}>{o}</option>)}</select>
+            : statusValue}
+        </RField>
+        {product === "LTC" ? (
+          <RField label="Org Website"><ExtLink href={org.org_website}>{org.org_website}</ExtLink></RField>
+        ) : <div />}
+        <RField label="Situs State">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.situs_state}>{US_STATES.map((o) => <option key={o}>{o}</option>)}</select>
+            : org.situs_state}
+        </RField>
+        <RField label="Situs City">{e.editing ? <input className={inputCls} defaultValue={org.situs_city} /> : org.situs_city}</RField>
+        <RField label="Eligible Lives">{e.editing ? <input className={inputCls} type="number" defaultValue={org.eligible_lives} /> : org.eligible_lives}</RField>
+        <RField label="Policy Owner Type">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.policy_owner_type}>{["employer","individual"].map((o) => <option key={o}>{o}</option>)}</select>
+            : org.policy_owner_type}
+        </RField>
+      </Grid2>
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function DISettingsSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard title="DI Settings" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+      <Grid2>
+        <RField label="DI Healthcare Type">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.di_healthcare_type}>{DI_HC_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
+            : org.di_healthcare_type}
+        </RField>
+        <RField label="LTD Benefit %">{e.editing ? <input className={inputCls} defaultValue={String(org.ltd_benefit_pct)} /> : `${org.ltd_benefit_pct}%`}</RField>
+        <RField label="Inbound Type">{e.editing ? <input className={inputCls} defaultValue={org.inbound_type} /> : org.inbound_type}</RField>
+        <RField label="STD Benefit %">{e.editing ? <input className={inputCls} defaultValue={String(org.std_benefit_pct)} /> : `${org.std_benefit_pct}%`}</RField>
+        <RField label="Type of Rate">{e.editing ? <input className={inputCls} defaultValue={org.type_of_rate ?? ""} /> : val(org.type_of_rate)}</RField>
+      </Grid2>
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function LTCProductConfigSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard title="LTC Product Config" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+      <Grid2>
+        <RField label="Product Template Variant">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.product_template_variant}>{PRODUCT_TEMPLATE_VARIANTS.map((o) => <option key={o}>{o}</option>)}</select>
+            : org.product_template_variant}
+        </RField>
+        <RField label="Extension of Benefits Rider">{e.editing ? <Switch defaultChecked={org.extension_of_benefits_rider} /> : <YesNo b={org.extension_of_benefits_rider} />}</RField>
+        <RField label="Healthcare Company">{e.editing ? <input className={inputCls} defaultValue={org.healthcare_company} /> : org.healthcare_company}</RField>
+        <RField label="Benefit Restoration Rider">{e.editing ? <Switch defaultChecked={org.benefit_restoration_rider} /> : <YesNo b={org.benefit_restoration_rider} />}</RField>
+        <RField label="Benefit Duration">{e.editing ? <input className={inputCls} type="number" defaultValue={org.benefit_duration} /> : org.benefit_duration}</RField>
+        <RField label="Duration">{e.editing ? <input className={inputCls} defaultValue={org.duration} /> : org.duration}</RField>
+        <RField label="Min Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.min_age} /> : org.min_age}</RField>
+        <RField label="Max Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.max_age} /> : org.max_age}</RField>
+      </Grid2>
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function CoverageBillingSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard title="Coverage / Billing" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+      <Grid2>
+        <RField label="Contribution Type">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
+            : org.contribution_type}
+        </RField>
+        <RField label="TPA Fee">{e.editing ? <input className={inputCls} defaultValue={String(org.tpa_fee_cents / 100)} /> : `${formatCents(org.tpa_fee_cents)} / mo`}</RField>
+        <RField label="Pay Mode">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.pay_mode}>{PAY_MODES.map((o) => <option key={o}>{o}</option>)}</select>
+            : org.pay_mode}
+        </RField>
+        <RField label="Service Fee Retained">
+          {org.service_fee_retained_cents === null
+            ? <span className="text-black/60 italic">Full retention</span>
+            : (e.editing ? <input className={inputCls} defaultValue={String(org.service_fee_retained_cents / 100)} /> : formatCents(org.service_fee_retained_cents))}
+        </RField>
+        <div />
+        <RField label="TPA Fee Name">{e.editing ? <input className={inputCls} defaultValue={org.tpa_fee_name} /> : org.tpa_fee_name}</RField>
+      </Grid2>
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function BrokerSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const e = useSectionEdit();
+  function renderOverride(value: number | null, brokerName: string | null) {
+    if (value !== null) return `${value}%`;
+    const def = brokerDefaultPct(brokerName);
+    if (def !== null) return <span>{def}% <span className="text-[11px] text-black/40">(default)</span></span>;
+    return <Empty />;
+  }
+  return (
+    <SectionCard title="Broker" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+      <Grid2>
+        <RField label="Primary Broker">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.primary_broker}>{BROKERS.map((o) => <option key={o}>{o}</option>)}</select>
+            : org.primary_broker}
+        </RField>
+        <RField label="Secondary Broker">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.secondary_broker ?? ""}><option value="">— None —</option>{BROKERS.map((o) => <option key={o}>{o}</option>)}</select>
+            : val(org.secondary_broker)}
+        </RField>
+        <RField label="Primary Override %">
+          {e.editing ? <input className={inputCls} defaultValue={org.primary_override_pct ?? ""} placeholder="default" /> : renderOverride(org.primary_override_pct, org.primary_broker)}
+        </RField>
+        <RField label="Secondary Override %">
+          {e.editing ? <input className={inputCls} defaultValue={org.secondary_override_pct ?? ""} placeholder="default" /> : renderOverride(org.secondary_override_pct, org.secondary_broker)}
+        </RField>
+      </Grid2>
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function SignatorySection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard title="Signatory" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+      <Grid2>
+        <RField label="Name">{e.editing ? <input className={inputCls} defaultValue={org.signatory_name} /> : org.signatory_name}</RField>
+        <RField label="Email">{e.editing ? <input className={inputCls} defaultValue={org.signatory_email} /> : org.signatory_email}</RField>
+        <RField label="Title">{e.editing ? <input className={inputCls} defaultValue={org.signatory_title} /> : org.signatory_title}</RField>
+      </Grid2>
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function LinksRefsSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard title="Links & References" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+      <Grid2>
+        <RField label="Google Drive Folder">
+          {e.editing ? <input className={inputCls} defaultValue={org.google_drive_folder} /> : <ExtLink href={org.google_drive_folder}>Open folder</ExtLink>}
+        </RField>
+        <RField label="Assigned Gmail Person">{e.editing ? <input className={inputCls} defaultValue={org.assigned_gmail_person} /> : org.assigned_gmail_person}</RField>
+        <RField label="Meeting Link">
+          {e.editing ? <input className={inputCls} defaultValue={org.meeting_link} /> : <ExtLink href={org.meeting_link}>{org.meeting_link}</ExtLink>}
+        </RField>
+        <RField label="Gmail Label ID">{e.editing ? <input className={inputCls} defaultValue={org.gmail_label_id} /> : <span className="font-mono text-xs">{org.gmail_label_id}</span>}</RField>
+        <RField label="Attio Deal">
+          <ExtLink href={`https://app.attio.com/deals/${org.attio_deal_id}`}><span className="font-mono text-xs">{org.attio_deal_id}</span></ExtLink>
+        </RField>
+        <RField label="Attio Company">
+          <ExtLink href={`https://app.attio.com/companies/${org.attio_company_id}`}><span className="font-mono text-xs">{org.attio_company_id}</span></ExtLink>
+        </RField>
+        {product === "DI" && (
+          <RField label="Next Sun Life Report Date">{e.editing ? <input className={inputCls} defaultValue={org.next_sun_life_report_date} /> : fmtDate(org.next_sun_life_report_date)}</RField>
+        )}
+      </Grid2>
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function PlanDetailsSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
+  const e = useSectionEdit();
+  const note = "Plan terms displayed on the enrollment microsite. Changes here update enrollee-facing content.";
+  const pd = org.plan_details as Record<string, unknown>;
+  // Detect tier-nested LTC structure
+  const isTierNested = product === "LTC" && LTC_TIERS.some((t) => t in pd) && typeof pd[LTC_TIERS[0]] === "object";
+
+  return (
+    <SectionCard title="Plan Details" note={note} editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+      {isTierNested ? (
+        <LtcTierPanels details={pd as Record<string, Record<string, string>>} editing={e.editing} />
+      ) : (
+        <FlatPlanDetails details={pd as Record<string, string>} editing={e.editing} />
+      )}
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function FlatPlanDetails({ details, editing }: { details: Record<string, string>; editing: boolean }) {
+  return (
+    <div className="space-y-2">
+      {Object.entries(details).map(([k, v]) => (
+        <div key={k} className="grid grid-cols-[220px_1fr] gap-3 items-start">
+          <div className="text-xs font-semibold text-black/70 pt-2">{k}</div>
+          {editing
+            ? <Textarea defaultValue={v} className="text-sm min-h-[44px]" />
+            : <div className="text-sm text-black/80 leading-relaxed pt-1">{v}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LtcTierPanels({ details, editing }: { details: Record<string, Record<string, string>>; editing: boolean }) {
+  const [active, setActive] = useState<typeof LTC_TIERS[number]>("bronze");
+  const tier = details[active] ?? {};
+  return (
+    <div>
+      <div className="flex gap-1 border-b border-black/10 mb-3">
+        {LTC_TIERS.map((t) => (
+          <button
+            key={t}
+            onClick={() => setActive(t)}
+            className={`px-3 py-1.5 text-xs capitalize border-b-2 -mb-px ${active === t ? "border-[#0a3d3e] text-[#0a3d3e] font-medium" : "border-transparent text-black/50 hover:text-black/80"}`}
+          >{t}</button>
+        ))}
+      </div>
+      <div className="space-y-2">
+        {Object.entries(tier).map(([k, v]) => (
+          <div key={k} className="grid grid-cols-[220px_1fr] gap-3 items-start">
+            <div className="text-xs font-semibold text-black/70 pt-2 capitalize">{k.replace(/_/g, " ")}</div>
+            {editing
+              ? <Textarea defaultValue={v} className="text-sm min-h-[44px]" />
+              : <div className="text-sm text-black/80 leading-relaxed pt-1">{v}</div>}
+          </div>
+        ))}
       </div>
     </div>
   );
 }
+
+function CarrierOperationalSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard
+      title="Carrier / Operational"
+      note="Carrier-assigned identifiers and configuration. Typically set during initial setup."
+      editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}
+    >
+      <Grid2>
+        <RField label="Case ID">{e.editing ? <input className={inputCls} defaultValue={org.case_id} /> : <span className="font-mono text-xs">{org.case_id}</span>}</RField>
+        <RField label="Benefit System">{e.editing ? <input className={inputCls} defaultValue={org.benefit_system} /> : org.benefit_system}</RField>
+        <RField label="Enrollment ID (Carrier)">{e.editing ? <input className={inputCls} defaultValue={org.enrollment_id_carrier} /> : <span className="font-mono text-xs">{org.enrollment_id_carrier}</span>}</RField>
+        <RField label="Rider Codes">
+          <div className="flex flex-wrap gap-1">
+            {org.rider_codes.map((r) => <span key={r} className="px-1.5 py-0.5 rounded text-[11px] bg-[#d4b87a]/40 text-[#0a3d3e] font-mono">{r}</span>)}
+          </div>
+        </RField>
+        <RField label="Form Number">{e.editing ? <input className={inputCls} defaultValue={org.form_number} /> : <span className="font-mono text-xs">{org.form_number}</span>}</RField>
+        <RField label="Application Questions">
+          <ol className="list-decimal pl-4 text-xs text-black/70 space-y-0.5">
+            {org.application_questions.map((q, i) => <li key={i}>{q}</li>)}
+          </ol>
+        </RField>
+        <RField label="Agent Number">{e.editing ? <input className={inputCls} defaultValue={org.agent_number} /> : <span className="font-mono text-xs">{org.agent_number}</span>}</RField>
+      </Grid2>
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function EmployerBillingSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard title="Employer Billing" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+      <Grid2>
+        <RField label="Employer Moov Account ID"><span className="font-mono text-xs">{org.employer_moov_account_id}</span></RField>
+        <RField label="Payment Method Type">{val(org.employer_payment_method_type)}</RField>
+        <RField label="Payment Method ID"><span className="font-mono text-xs">{org.employer_payment_method_id}</span></RField>
+      </Grid2>
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function SystemRefsSection({ org, product }: { org: OrgDetail; product: "DI" | "LTC" }) {
+  return (
+    <SectionCard title="System References">
+      <div className="grid grid-cols-2 gap-x-8 gap-y-2 font-mono text-[11px]">
+        <Ref label="Created At" value={org.created_at} />
+        <Ref label="Updated At" value={org.updated_at} />
+        <Ref label="Attio Deal ID" value={org.attio_deal_id} />
+        <Ref label="Attio Company ID" value={org.attio_company_id} />
+        <Ref label="Rate Sheet ID (legacy)" value={org.rate_sheet_id} muted />
+        {product === "LTC" && (
+          <>
+            <Ref label="LTC Enrollment Phase" value={org.ltc_enrollment_phase} />
+            <Ref label="LTC One Week To Go" value={fmtDate(org.ltc_one_week_to_go)} />
+          </>
+        )}
+      </div>
+    </SectionCard>
+  );
+}
+
+function Ref({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+  return (
+    <div className="mb-1">
+      <div className="text-[9px] uppercase tracking-wider text-black/40 mb-0.5 font-sans">{label}</div>
+      <div className={`${muted ? "text-black/40" : "text-black/70"} break-all`}>{value || "—"}</div>
+    </div>
+  );
+}
+
+/* =============================================================
+   FEES / WINDOWS / BENEFIT CLASSES / NEW JOINER  (unchanged)
+============================================================= */
+
+function isCCA(orgId: string) { return orgId === "org_3" || orgId === "org_1" || orgId === "org_7"; }
 
 function FeesTab({ org, readOnly }: { org: typeof ORGS[number]; readOnly: boolean }) {
-  const cca = isCCA(org.id);
+  const cca = org.cca_group;
   const tpa = cca ? 2000 : 800;
   const retained = cca ? 500 : null;
   return (
     <div className="mt-3 grid grid-cols-2 gap-x-8">
       <Card className="p-4 col-span-1">
         <SubHead>Fee Schedule</SubHead>
-        <Row label="TPA Fee"><RO value={formatCents(tpa) + " / mo"} readOnly={readOnly} /></Row>
-        <Row label="TPA Fee Name"><RO value={cca ? "CCA Membership Fee" : "Processing Fee"} readOnly={readOnly} /></Row>
-        <Row label="Service Fee Retained">{retained === null ? <span className="text-black/60">Full Retention</span> : <RO value={formatCents(retained)} readOnly={readOnly} />}</Row>
-        <Row label="Card Percentage"><RO value="3.7%" readOnly={readOnly} /></Row>
-        <Row label="ACH First Fee"><RO value="$1.00" readOnly={readOnly} /></Row>
-        <Row label="ACH Subsequent Fee"><RO value="$0.50" readOnly={readOnly} /></Row>
-        <Row label="Failed ACH Penalty"><RO value="$15.00" readOnly={readOnly} /></Row>
-        <Row label="Failed Card Penalty Mode"><Select value="flat" options={["flat","percentage"]} readOnly={readOnly} /></Row>
-        <Row label="Failed Card Penalty Value"><RO value="$10.00" readOnly={readOnly} /></Row>
-        <Row label="Free Retry Count"><RO value={2} readOnly={readOnly} /></Row>
-        <Row label="Effective From"><RO value="2025-01-01" readOnly={readOnly} /></Row>
-        <Row label="Effective To"><RO value="" readOnly={readOnly} placeholder="(open-ended)" /></Row>
+        <RowLegacy label="TPA Fee"><RO value={formatCents(tpa) + " / mo"} readOnly={readOnly} /></RowLegacy>
+        <RowLegacy label="TPA Fee Name"><RO value={cca ? "CCA Membership Fee" : "Processing Fee"} readOnly={readOnly} /></RowLegacy>
+        <RowLegacy label="Service Fee Retained">{retained === null ? <span className="text-black/60">Full Retention</span> : <RO value={formatCents(retained)} readOnly={readOnly} />}</RowLegacy>
+        <RowLegacy label="Card Percentage"><RO value="3.7%" readOnly={readOnly} /></RowLegacy>
+        <RowLegacy label="ACH First Fee"><RO value="$1.00" readOnly={readOnly} /></RowLegacy>
+        <RowLegacy label="ACH Subsequent Fee"><RO value="$0.50" readOnly={readOnly} /></RowLegacy>
+        <RowLegacy label="Failed ACH Penalty"><RO value="$15.00" readOnly={readOnly} /></RowLegacy>
+        <RowLegacy label="Failed Card Penalty Mode"><SelectLegacy value="flat" options={["flat","percentage"]} readOnly={readOnly} /></RowLegacy>
+        <RowLegacy label="Failed Card Penalty Value"><RO value="$10.00" readOnly={readOnly} /></RowLegacy>
+        <RowLegacy label="Free Retry Count"><RO value={2} readOnly={readOnly} /></RowLegacy>
+        <RowLegacy label="Effective From"><RO value="2025-01-01" readOnly={readOnly} /></RowLegacy>
+        <RowLegacy label="Effective To"><RO value="" readOnly={readOnly} placeholder="(open-ended)" /></RowLegacy>
       </Card>
 
       <div className="col-span-1">
@@ -429,6 +883,33 @@ function FeesTab({ org, readOnly }: { org: typeof ORGS[number]; readOnly: boolea
         </Card>
       </div>
     </div>
+  );
+}
+
+function RowLegacy({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[180px_1fr] items-center gap-3 py-1.5 border-b border-black/5">
+      <div className="text-[11px] uppercase tracking-wider text-black/50">{label}</div>
+      <div className="text-sm">{children}</div>
+    </div>
+  );
+}
+
+function SubHead({ children }: { children: React.ReactNode }) {
+  return <div className="text-[11px] font-semibold uppercase tracking-wider text-black/60 mt-2 mb-2">{children}</div>;
+}
+
+function RO({ value, readOnly, placeholder }: { value?: string | number; readOnly: boolean; placeholder?: string }) {
+  if (readOnly) return <span className="text-black/80">{value || <span className="text-black/30">—</span>}</span>;
+  return <Input defaultValue={value === undefined || value === null ? "" : String(value)} placeholder={placeholder} />;
+}
+
+function SelectLegacy({ value, options, readOnly }: { value: string; options: string[]; readOnly: boolean }) {
+  if (readOnly) return <span className="text-black/80">{value}</span>;
+  return (
+    <select defaultValue={value} className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
+      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
   );
 }
 
