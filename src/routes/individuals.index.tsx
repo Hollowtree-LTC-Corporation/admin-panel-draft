@@ -37,7 +37,7 @@ import { INDIVIDUALS, ORGS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 
-type IndSearch = { org?: string; coverage?: string; stage?: string; type?: string };
+type IndSearch = { org?: string; coverage?: string; stage?: string; type?: string; di_type?: string };
 
 export const Route = createFileRoute("/individuals/")({
   component: IndividualsView,
@@ -46,10 +46,11 @@ export const Route = createFileRoute("/individuals/")({
     coverage: typeof s.coverage === "string" ? s.coverage : undefined,
     stage: typeof s.stage === "string" ? s.stage : undefined,
     type: typeof s.type === "string" ? s.type : undefined,
+    di_type: typeof s.di_type === "string" ? s.di_type : undefined,
   }),
 });
 
-type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type";
+type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type" | "di_type";
 
 const COVERAGE_OPTIONS = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"];
 
@@ -67,15 +68,16 @@ function IndividualsView() {
   const [coverageFilter, setCoverageFilter] = useState<string>(searchParams.coverage ?? "all");
   const [stageFilter, setStageFilter] = useState<string>(searchParams.stage ?? "all");
   const [typeFilter, setTypeFilter] = useState<string>(searchParams.type ?? "all");
+  const [diTypeFilter, setDiTypeFilter] = useState<string>(searchParams.di_type ?? "all");
   const sort = useSort<SortKey>("full_name", "asc");
 
-  // Sync from URL when params change (e.g. cross-page nav)
   useEffect(() => {
     if (searchParams.org !== undefined) setOrgFilter(searchParams.org);
     if (searchParams.coverage !== undefined) setCoverageFilter(searchParams.coverage);
     if (searchParams.stage !== undefined) setStageFilter(searchParams.stage);
     if (searchParams.type !== undefined) setTypeFilter(searchParams.type);
-  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type]);
+    if (searchParams.di_type !== undefined) setDiTypeFilter(searchParams.di_type);
+  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type]);
 
   const productRows = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
@@ -93,6 +95,7 @@ function IndividualsView() {
         if (typeFilter === "Spouse" && !isSpouse) return false;
         if (typeFilter === "Employee" && isSpouse) return false;
       }
+      if (!isLTC && diTypeFilter !== "all" && i.di_type !== diTypeFilter) return false;
       return true;
     });
     return sort.applySort(rows, (r, k) => {
@@ -100,12 +103,12 @@ function IndividualsView() {
       if (k === "relationship_type") return r.relationship_type === "spouse" ? "Spouse" : "Employee";
       return (r as unknown as Record<string, string | number>)[k];
     });
-  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, sort, isLTC]);
+  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, sort, isLTC]);
 
-  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || !sort.isDefault;
+  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || !sort.isDefault;
 
   const clearAll = () => {
-    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all");
+    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all");
     sort.reset();
     navigate({ to: "/individuals", search: {} });
   };
@@ -130,6 +133,9 @@ function IndividualsView() {
         {isLTC && (
           <FilterSelect value={typeFilter} onChange={setTypeFilter} allLabel="All types" options={[{ value: "Employee" }, { value: "Spouse" }]} />
         )}
+        {!isLTC && (
+          <FilterSelect value={diTypeFilter} onChange={setDiTypeFilter} allLabel="All types" options={[{ value: "STD+LTD" }, { value: "LTD", label: "LTD Only" }]} />
+        )}
         <ClearFiltersLink show={filtersActive} onClick={clearAll} />
       </FilterRow>
 
@@ -139,6 +145,7 @@ function IndividualsView() {
             { key: "full_name", label: "Name" },
             ...(isLTC ? [{ key: "relationship_type" as SortKey, label: "Type" }] : []),
             { key: "org_name", label: "Org" },
+            ...(!isLTC ? [{ key: "di_type" as SortKey, label: "DI Type" }] : []),
             { key: "coverage_status", label: "Coverage Status" },
             { key: "stage", label: "Stage" },
             { key: "plan", label: "Coverage Plan" },
@@ -167,6 +174,13 @@ function IndividualsView() {
                   </TCell>
                 )}
                 <TCell>{i.org_name}</TCell>
+                {!isLTC && (
+                  <TCell>
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${i.di_type === "STD+LTD" ? "bg-slate-100 text-slate-700" : "bg-slate-50 text-slate-500"}`}>
+                      {i.di_type === "STD+LTD" ? "STD+LTD" : "LTD Only"}
+                    </span>
+                  </TCell>
+                )}
                 <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
                 <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
                 <TCell>{unpurchased ? "—" : (isLTC ? i.purchased_plan : i.coverage_plan)}</TCell>
@@ -176,7 +190,7 @@ function IndividualsView() {
             );
           })}
           {filtered.length === 0 && (
-            <tr><td colSpan={isLTC ? 8 : 7} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
+            <tr><td colSpan={8} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
