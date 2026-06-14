@@ -25,10 +25,14 @@ const STAGES = ["not_started", "in_progress", "purchased", "active", "suspended"
 const PLANS_DI = ["Bronze DI", "Silver DI", "Gold DI"];
 const PLANS_LTC = ["Bronze LTC", "Silver LTC", "Gold LTC", "Platinum LTC", "Diamond LTC"];
 
+// Pre-defined spouse pairs (LTC only): spouse_n -> primary_n, both at same org.
+const SPOUSE_PAIRS: Record<number, number> = { 11: 3, 13: 5, 14: 6 };
+
 export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
   const n = i + 1;
   const org = ORGS[i % ORGS.length];
   const isLTC = org.product === "LTC";
+  const isSpouse = isLTC && n in SPOUSE_PAIRS;
   return {
     id: `ind_${n}`,
     full_name: `Test Person ${n}`,
@@ -54,8 +58,8 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     upgrade_applied_for: n % 5 === 0,
     interested_upgrading: n % 3 === 0,
     interested_spousal: n % 4 === 0,
-    relationship_type: n % 7 === 0 ? "spouse" : "employee",
-    linked_individual_id: n % 7 === 0 ? `ind_${Math.max(1, n - 1)}` : null,
+    relationship_type: isSpouse ? "spouse" : (isLTC ? "primary" : "employee"),
+    linked_individual_id: isSpouse ? `ind_${SPOUSE_PAIRS[n]}` : null,
     employee_face_amount_cents: 10000000 + (n % 5) * 2500000,
     // Employer contribution
     contribution_tier: ["100%", "75%", "50%", "0%"][n % 4],
