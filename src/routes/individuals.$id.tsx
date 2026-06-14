@@ -560,12 +560,44 @@ function UnderwritingSection({ i, readOnly }: { i: Detail; readOnly: boolean }) 
   );
 }
 
-function SpouseSection({ i, isLTC, linked, linkedDetail, readOnly }: { i: Detail; isLTC: boolean; linked: ReturnType<typeof INDIVIDUALS.find>; linkedDetail: Detail | null; readOnly: boolean }) {
+function ProfessionalClassificationSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <SectionCard title="Professional Classification" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+      <Grid cols={4}>
+        <RField label="Physician Type" value={i.physician_type ?? "—"} editing={editing}>
+          <select defaultValue={i.physician_type ?? ""} className={inputCls}>{["","MD","DO","Resident"].map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select>
+        </RField>
+        <RField label="Nurse Type" value={i.nurse_type ?? "—"} editing={editing}>
+          <select defaultValue={i.nurse_type ?? ""} className={inputCls}>{["","RN","NP","CRNA"].map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select>
+        </RField>
+        <div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">W2 / 1099</div>
+          <div>
+            {i.w2_or_1099 ? (
+              <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-[#0a3d3e] text-white">{i.w2_or_1099}</span>
+            ) : <span className="text-gray-400 text-sm">—</span>}
+          </div>
+        </div>
+        <RField label="Assigned Rep" value={i.assigned_rep ?? "—"} editing={editing}>
+          <input defaultValue={i.assigned_rep ?? ""} className={inputCls} />
+        </RField>
+        <RField label="Were They a Client">
+          {i.were_they_client
+            ? <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">Yes</span>
+            : <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">No</span>}
+        </RField>
+      </Grid>
+      {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
+    </SectionCard>
+  );
+}
+
+function SpouseSection({ i, linked, linkedDetail, readOnly }: { i: Detail; linked: ReturnType<typeof INDIVIDUALS.find>; linkedDetail: Detail | null; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
   let summary = "No spouse";
   if (linked && linkedDetail) summary = `Spouse: ${linked.full_name} (${linkedDetail.coverage_status}, ${linkedDetail.purchased_plan || linkedDetail.coverage_plan})`;
-  else if (isLTC && i.interested_spousal_text === "yes") summary = "Interested in spousal coverage";
-  const showUpgrade = isLTC && (i.upgrade_applied_for || i.interested_upgrading || i.pre_upgrade_premium_cents);
+  else if (i.interested_spousal_text === "yes") summary = "Interested in spousal coverage";
   return (
     <SectionCard title="Spouse & Linked Individual" summary={summary} editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={3}>
@@ -578,37 +610,71 @@ function SpouseSection({ i, isLTC, linked, linkedDetail, readOnly }: { i: Detail
           ) : <span className="text-sm text-black/50">—</span>}
         </RField>
         <div />
-        {isLTC && i.relationship_type === "primary" && (
+        {i.relationship_type === "primary" && (
           <>
             <RField label="Interested in Spousal Coverage" value={i.interested_spousal_text} editing={editing}>
               <select defaultValue={i.interested_spousal_text} className={inputCls}>{["yes","no",""].map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select>
             </RField>
-            <RField label="Spouse Authorization" value={i.spouse_authorization} />
-            <RField label="Clicked Spouse Link" value={i.clicked_spouse_link} />
-            <RField label="Sent Spouse Invite" value={i.sent_spouse_invite} />
+            <RField label="Sent Spouse Invite" value={i.sent_spouse_invite || "—"} />
+            <RField label="Spouse Face Amount" value={i.spouse_face_amount_cents != null ? formatCents(i.spouse_face_amount_cents) : "—"} />
+            <RField label="Spouse Authorization" value={i.spouse_authorization || "—"} />
+            <RField label="Clicked Spouse Link" value={i.clicked_spouse_link || "—"} />
             <RField label="Why No Spouse" value={i.why_no_spouse ?? "—"} editing={editing}>
               <input defaultValue={i.why_no_spouse ?? ""} className={inputCls} />
             </RField>
           </>
         )}
       </Grid>
-      {showUpgrade && (
-        <div className="mt-4 pt-4 border-t border-black/10">
-          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">LTC Upgrade</div>
-          <Grid cols={3}>
-            <RField label="Interested in Upgrading" value={i.interested_upgrading ? "yes" : "no"} />
-            <RField label="Upgrade Applied For" value={i.upgrade_applied_for ? "yes" : "no"} />
-            <RField label="Upgrade Carrier Decision" value={i.upgrade_carrier_decision ?? "—"} />
-            <RField label="Pre-Upgrade Premium" value={i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"} />
-            <RField label="Upgrade Submitted At" value={fmtDate(i.upgrade_submitted_at)} />
-            <RField label="Upgrade Carrier Decision At" value={fmtDate(i.upgrade_carrier_decision_at)} />
-          </Grid>
-        </div>
-      )}
       {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
     </SectionCard>
   );
 }
+
+function UpgradeSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
+  const hasActivity = i.interested_upgrading || i.applied_for_upgrade || i.upgrade_applied_for;
+  if (!hasActivity) return null;
+  const [editing, setEditing] = useState(false);
+  return (
+    <SectionCard title="Upgrade" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+      <Grid cols={3}>
+        <RField label="Interested in Upgrading" value={i.interested_upgrading ? "yes" : "no"} />
+        <RField label="Applied for Upgrade" value={i.upgrade_applied_for ? "yes" : "no"} />
+        <RField label="Employee Upgrade Option" value={i.employee_upgrade_option ?? "—"} />
+        <RField label="Pre-Upgrade Premium" value={i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"} />
+        <RField label="Upgrade Submitted At" value={fmtDate(i.upgrade_submitted_at)} />
+        <RField label="Upgrade Carrier Decision" value={i.upgrade_carrier_decision ?? "—"} />
+        <RField label="Upgrade Carrier Decision At" value={fmtDate(i.upgrade_carrier_decision_at)} />
+      </Grid>
+      {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
+    </SectionCard>
+  );
+}
+
+function CCAPortalSection({ link }: { link: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+    }
+  };
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">CCA Portal</div>
+          <a href={link} target="_blank" rel="noreferrer" className="text-sm text-[#0a3d3e] hover:underline inline-flex items-center gap-1 break-all">
+            {link} <ExternalLink className="h-3 w-3 shrink-0" />
+          </a>
+        </div>
+        <button onClick={copy} className="text-black/50 hover:text-[#0a3d3e] p-1 shrink-0" title="Copy link">
+          <Copy className="h-4 w-4" />
+        </button>
+      </div>
+      {copied && <div className="text-[11px] text-emerald-700 mt-1">Copied</div>}
+    </div>
+  );
+}
+
 
 function EnrollmentSection({ i }: { i: Detail }) {
   return (
