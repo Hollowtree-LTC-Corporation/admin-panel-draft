@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Btn, ProductBadge } from "@/components/wireframe/Bits";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, ChevronDown, ChevronRight, Lock, Pencil, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronRight, Lock, Pencil, AlertTriangle, Copy, ExternalLink } from "lucide-react";
 import { INDIVIDUALS, ORGS, BILLING_GROUPS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 
