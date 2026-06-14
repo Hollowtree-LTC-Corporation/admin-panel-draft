@@ -225,11 +225,12 @@ function IndividualsView() {
                 )}
                 <TCell className={i.coverage_status === "in_progress" ? "text-black/40" : ""}>{formatDate(i.effective_date)}</TCell>
                 <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>
+                <TCell>{unpurchased ? <span className="text-black/40">—</span> : paymentBadge(i.last_payment_status, i.retry_count)}</TCell>
               </TRow>
             );
           })}
           {filtered.length === 0 && (
-            <tr><td colSpan={10} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
+            <tr><td colSpan={11} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
