@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({ title, subtitle, actions }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="flex items-end justify-between mb-4">
       <div>
