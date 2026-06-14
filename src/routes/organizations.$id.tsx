@@ -208,12 +208,13 @@ function OrgDetail() {
 
 /* ---------- Summary chip ---------- */
 
-function SummaryChip({ label, value, onClick, tone }: { label: string; value: React.ReactNode; onClick?: () => void; tone?: "ok" | "warn" }) {
+function SummaryChip({ label, value, onClick, tone, hint }: { label: string; value: React.ReactNode; onClick?: () => void; tone?: "ok" | "warn"; hint?: string }) {
   const valueColor = tone === "warn" ? "text-amber-700" : tone === "ok" ? "text-emerald-700" : "text-black/85";
   return (
     <button
       onClick={onClick}
       disabled={!onClick}
+      title={hint}
       className={`text-left bg-white border border-black/10 rounded-md p-2 ${onClick ? "hover:bg-[#f7f3eb] cursor-pointer" : "cursor-default"}`}
     >
       <div className="text-[9px] uppercase tracking-wider text-black/50">{label}</div>
