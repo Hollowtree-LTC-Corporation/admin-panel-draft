@@ -1,48 +1,82 @@
 import * as React from "react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import {
-  PageHeader, Card, Field, Btn, Pill, Drawer, useDrawer, Input, ProductBadge,
-} from "@/components/wireframe/Bits";
+import { Btn, ProductBadge } from "@/components/wireframe/Bits";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, ChevronDown, ChevronRight, Lock } from "lucide-react";
-import { INDIVIDUALS, ORGS, BILLING_GROUPS, PAYMENT_LEDGER, formatCents } from "@/lib/wireframe/data";
+import { ChevronLeft, ChevronDown, ChevronRight, Lock, Pencil, AlertTriangle } from "lucide-react";
+import { INDIVIDUALS, ORGS, BILLING_GROUPS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 
 export const Route = createFileRoute("/individuals/$id")({ component: IndividualDetail });
 
-/* ---------- Enums (mirror prod CHECK constraints) ---------- */
+/* ---------- Enums ---------- */
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const GENDERS = ["male","female","non_binary","prefer_not_to_say"];
 const EMPLOYMENT_REL = ["public_sector","private_salaried","private_hourly","self_employed_1099","retired_or_transitioning"];
-const W2_1099 = ["W-2","1099"];
-const TITLES = ["Mr","Mrs","Ms","Dr","other"];
-const COVERAGE_STATUSES = ["not_started","in_progress","purchased","active","suspended","canceled","lapsed"];
-const REL_TYPES = ["primary","spouse"];
+const COVERAGE_STATUSES = ["not_started","in_progress","purchased","active","suspended","canceled","lapsed"] as const;
 const TIERS = ["bronze","silver","gold","platinum","diamond"];
 const UPGRADE_DECISIONS = ["pending","approved","denied"];
 
-/* ---------- Detail synthesis (additive over base INDIVIDUALS) ---------- */
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  not_started: ["in_progress","canceled"],
+  in_progress: ["purchased","canceled"],
+  purchased: ["active","canceled"],
+  active: ["suspended","canceled","lapsed"],
+  suspended: ["active","canceled","lapsed"],
+  canceled: [],
+  lapsed: [],
+};
+
+const COVERAGE_BADGE: Record<string, { label: string; cls: string }> = {
+  not_started: { label: "Not Started", cls: "bg-gray-100 text-gray-700" },
+  in_progress: { label: "In Progress", cls: "bg-blue-100 text-blue-700" },
+  purchased: { label: "Purchased", cls: "bg-teal-100 text-teal-700" },
+  active: { label: "Active", cls: "bg-green-100 text-green-700" },
+  suspended: { label: "Suspended", cls: "bg-amber-100 text-amber-700" },
+  canceled: { label: "Canceled", cls: "bg-red-100 text-red-700" },
+  lapsed: { label: "Lapsed", cls: "border border-red-300 text-red-600 bg-transparent" },
+};
+const STAGE_BADGE: Record<string, { label: string; cls: string }> = {
+  invited: { label: "Invited", cls: "bg-purple-50 text-purple-600" },
+  education: { label: "Education", cls: "bg-purple-100 text-purple-700" },
+  selecting_plan: { label: "Selecting Plan", cls: "bg-purple-200 text-purple-800" },
+  medical_questions: { label: "Medical Qs", cls: "bg-violet-200 text-violet-800" },
+  checkout: { label: "Checkout", cls: "bg-violet-100 text-violet-700" },
+  completed: { label: "Completed", cls: "bg-indigo-100 text-indigo-700" },
+};
+
+function Badge({ map, value }: { map: typeof COVERAGE_BADGE; value: string }) {
+  const m = map[value] ?? { label: value, cls: "bg-black/5 text-black/70" };
+  return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${m.cls}`}>{m.label}</span>;
+}
+
+function paymentBadge(status: string | null | undefined, retry: number) {
+  if (!status) return <span className="text-black/40">—</span>;
+  const s = status.toLowerCase();
+  if (s === "successful") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">Paid</span>;
+  if (s === "pending") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Pending</span>;
+  if (s === "failed") {
+    const escalated = retry >= 3;
+    const cls = escalated ? "bg-red-200 text-red-800 font-medium" : "bg-red-100 text-red-700";
+    const label = retry > 0 ? `Failed (${retry})` : "Failed";
+    return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${cls}`}>{label}</span>;
+  }
+  return <span className="text-black/40">—</span>;
+}
+
+/* ---------- Detail synthesis ---------- */
 type Detail = ReturnType<typeof synthesize>;
 function synthesize(base: typeof INDIVIDUALS[number]) {
   const n = parseInt(base.id.replace("ind_",""), 10) || 1;
   const isLTC = base.product === "LTC";
-  // Coverage status mapped onto the enum the spec wants (override stale "pending")
-  const coverage = COVERAGE_STATUSES[n % COVERAGE_STATUSES.length];
-  // Affiliate-sponsored (no org) for ind_3 & ind_17
   const noOrg = n === 3 || n === 17;
-  // No employer contribution for ind_4 and ind_12
-  const noContrib = n === 4 || n === 12;
-  // Failed last payment for ind_2, ind_18
-  const failedPay = n === 2 || n === 18;
-  // LTC spouse linkage: only ind_7 (spouse of ind_6), ind_14 (spouse of ind_13) when LTC base
   const isLtcSpouse = isLTC && (n === 7 || n === 14);
   const relationship = isLTC ? (isLtcSpouse ? "spouse" : "primary") : "primary";
   const linkedId = isLtcSpouse ? `ind_${n - 1}` : (isLTC && (n === 6 || n === 13) ? `ind_${n + 1}` : null);
+  const org = ORGS.find((o) => o.id === base.org_id);
 
   return {
     ...base,
-    // Identity
     first_name: `Test`,
     last_name: `Person ${n}`,
     personal_email: n % 3 === 0 ? `personal${n}@example.net` : null,
@@ -60,35 +94,22 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     union_member: n % 6 === 0,
     union_local_name: n % 6 === 0 ? `Local ${100 + n}` : null,
     ssn_on_file: n % 3 !== 0,
-    // DI identity-only
-    title_enum: TITLES[n % TITLES.length],
-    w2_1099: W2_1099[n % 2],
-    physician_type: n % 4 === 0 ? "Cardiology" : "",
-    nurse_type: n % 5 === 0 ? "RN" : "",
-    // LTC identity-only
+    ssn_last4: String(1000 + n).slice(-4),
     income: isLTC ? `$${60 + n}k` : "",
     height: isLTC ? `${64 + (n % 8)}in` : "",
     weight: isLTC ? `${150 + (n % 40)}lb` : "",
     tobacco_use: isLTC && n % 6 === 0,
-    // Coverage
-    coverage_status: coverage,
-    effective_date: `2025-0${(n % 9) + 1}-01`,
-    active_date: coverage === "active" ? `2025-0${(n % 9) + 1}-01` : null,
-    canceled_date: coverage === "canceled" ? `2025-0${(n % 9) + 1}-15` : null,
+    active_date: base.coverage_status === "active" ? base.effective_date : null,
+    canceled_date: base.coverage_status === "canceled" ? `2025-0${(n % 9) + 1}-15` : null,
     application_status: ["submitted","carrier_review","approved","issued"][n % 4],
     enrollment_cycle: "2025-Q3",
     persona: ["standard","high_value","new_hire"][n % 3],
-    // DI coverage
-    payment_plan: "monthly",
-    ltd_premium_cents: 1800 + (n % 7) * 250,
-    std_premium_cents: 700 + (n % 7) * 80,
-    // LTC coverage
     employee_plan_selected: isLTC ? base.purchased_plan : "",
-    employee_monthly_premium_cents: base.monthly_premium_cents,
     benefit_class_name: isLTC ? (n % 2 === 0 ? "All Employees" : "Management") : "",
     upgrade_carrier_decision: isLTC && base.upgrade_applied_for ? UPGRADE_DECISIONS[n % 3] : null,
     pre_upgrade_premium_cents: isLTC && base.upgrade_applied_for ? Math.round(base.monthly_premium_cents * 0.8) : null,
-    // Spouse linkage
+    upgrade_submitted_at: isLTC && base.upgrade_applied_for ? `2025-05-1${n % 9}` : null,
+    upgrade_carrier_decision_at: isLTC && base.upgrade_applied_for ? `2025-06-0${(n % 9) + 1}` : null,
     relationship_type: relationship,
     linked_individual_id: linkedId,
     interested_spousal_text: isLTC && relationship === "primary" ? (base.interested_spousal ? "yes" : "no") : "",
@@ -96,44 +117,40 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     clicked_spouse_link: isLTC && relationship === "primary" ? (n % 3 === 0 ? "yes" : "no") : "",
     sent_spouse_invite: isLTC && relationship === "primary" ? (n % 3 === 0 ? "2025-05-12" : "no") : "",
     why_no_spouse: isLTC && relationship === "primary" && !base.interested_spousal ? "unmarried" : null,
-    // Employer contribution
-    contribution_tier: noContrib ? null : TIERS[n % TIERS.length],
-    contribution_duration_months: noContrib ? null : ([12, 24, null] as const)[n % 3],
-    contribution_start_date: noContrib ? null : `2025-0${(n % 9) + 1}-01`,
-    contribution_active: !noContrib && n % 5 !== 0,
-    // Payment & billing
-    should_be_charged: !isLTC,
-    last_payment_status: failedPay ? "failed" : (n % 4 === 0 ? "pending" : "successful"),
-    last_charge_date: `2025-06-0${(n % 9) + 1}`,
+    contribution_start_date: `2025-0${(n % 9) + 1}-01`,
+    last_charge_date: base.last_payment_status ? `2025-06-0${(n % 9) + 1}` : null,
     next_charge_date: `2025-07-0${(n % 9) + 1}`,
-    retry_count: failedPay ? (n % 3) + 1 : 0,
-    next_retry_date: failedPay ? `2025-06-1${n % 9}` : null,
-    failed_attempt_date: failedPay ? `2025-06-0${(n % 9) + 1}` : null,
-    failed_payment_reason: failedPay ? "Insufficient funds" : null,
-    // Enrollment window
+    next_retry_date: base.last_payment_status === "Failed" ? `2025-06-1${n % 9}` : null,
+    failed_attempt_date: base.last_payment_status === "Failed" ? `2025-06-0${(n % 9) + 1}` : null,
+    failed_payment_reason: base.last_payment_status === "Failed" ? "Insufficient funds" : null,
     enrollment_deadline: n % 4 === 0 ? `2025-08-${10 + (n % 18)}` : null,
-    // Affiliations
     affiliations: !isLTC && (n === 1 || n === 9)
       ? [{ id: "aff_cca", name: "CCA: Coastal Carriers Association" }]
       : isLTC && (n === 5 || n === 11)
         ? [{ id: "aff_trust_1", name: n === 5 ? "SEIU Trust" : "Teamsters Trust" }]
         : [],
-    // System references
     klaviyo_main_id: `kl_${10000 + n}`,
     magic_link: `https://enroll.hollowtree.dev/m/${base.id}-resume-tok`,
     magic_link_portal: `https://portal.hollowtree.dev/m/${base.id}-portal-tok`,
-    cca_portal_link: !isLTC ? `https://cca.example/portal/${base.id}` : "",
     signature_url: `https://sign.hollowtree.dev/s/${base.id}.pdf`,
+    _org: org,
+    _riders: org ? [org.extension_of_benefits_rider && "EOB", org.benefit_restoration_rider && "BR"].filter(Boolean).join(" + ") || "—" : "—",
   };
+}
+
+const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtDate(d: string | null | undefined): string {
+  if (!d) return "—";
+  const [y, m, day] = d.split("-").map(Number);
+  if (!y || !m || !day) return "—";
+  return `${MONTH_ABBR[m - 1]} ${day}, ${y}`;
 }
 
 function IndividualDetail() {
   const { id } = Route.useParams();
-  const { product } = useStore();
+  const { product: _product } = useStore();
   const can = usePermission();
   const navigate = useNavigate();
-  const editDrawer = useDrawer<Detail>();
-  const [refsOpen, setRefsOpen] = useState(false);
 
   const base = INDIVIDUALS.find((i) => i.id === id);
   if (!base) return <div className="p-4">Individual not found.</div>;
@@ -144,373 +161,499 @@ function IndividualDetail() {
   const readOnly = !can("individuals", "update");
   const bg = BILLING_GROUPS.find((b) => b.id === i.billing_group_id);
 
-  // Net balance: synth as outstanding when failed, small credit otherwise
-  const balanceCents = i.last_payment_status === "failed" ? i.monthly_premium_cents : -250;
+  const balanceCents = i.last_payment_status === "Failed" ? i.monthly_premium_cents : -250;
+  const balanceNeg = balanceCents > 0;
+
+  const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [confirm, setConfirm] = useState<null | { title: string; message: string; onConfirm: () => void }>(null);
 
   return (
-    <div>
+    <div className="pb-10">
       <Link to="/individuals" className="inline-flex items-center text-xs text-black/60 hover:text-black mb-2">
         <ChevronLeft className="h-3 w-3" /> Individuals
       </Link>
-      <PageHeader
-        title={i.full_name}
-        subtitle={<>Individuals &rsaquo; {i.full_name} · <span className="text-black/40">{i.id}</span></>}
-        actions={
-          <>
-            <Pill tone={i.coverage_status === "active" ? "ok" : i.coverage_status === "canceled" || i.coverage_status === "lapsed" ? "bad" : "info"}>{i.coverage_status}</Pill>
-            <ProductBadge product={i.product} />
-            <Btn onClick={() => editDrawer.open(i, "edit")} disabled={readOnly}>Edit</Btn>
-            <Btn disabled={!can("individuals", "delete")}>Deactivate</Btn>
-          </>
-        }
-      />
 
-      {/* Summary chips */}
-      <div className="grid grid-cols-6 gap-2 mb-5">
-        <SummaryChip
-          label="Org"
-          value={i.org_name ?? <span className="italic text-black/50">Affiliate-sponsored</span>}
-          onClick={i.org_id ? () => navigate({ to: "/organizations/$id", params: { id: i.org_id! } }) : undefined}
-        />
-        <SummaryChip label="Billing Group" value={bg?.name ?? i.billing_group_id} onClick={() => navigate({ to: "/billing-groups" })} />
-        <SummaryChip label="Enrollment Window" value={i.org_id ? `annual · 2025-09` : "—"} onClick={i.org_id ? () => navigate({ to: "/organizations/$id", params: { id: i.org_id! } }) : undefined} />
-        <SummaryChip label="Monthly Premium" value={formatCents(i.monthly_premium_cents)} />
-        <SummaryChip
-          label="Last Payment"
-          value={<span className="inline-flex items-center gap-1">{i.last_charge_date} <Pill tone={i.last_payment_status === "successful" ? "ok" : i.last_payment_status === "failed" ? "bad" : "info"}>{i.last_payment_status}</Pill></span>}
-          onClick={() => navigate({ to: "/payment-ledger" })}
-        />
-        <SummaryChip
-          label="Balance"
-          value={formatCents(balanceCents)}
-          tone={balanceCents > 0 ? "warn" : "ok"}
-          onClick={() => navigate({ to: "/enrollee-balance" })}
-        />
-      </div>
-
-      {/* Section 1: Identity */}
-      <Section title="Identity">
-        <div className="grid grid-cols-2 gap-x-8">
+      {/* Sticky summary header */}
+      <div className="sticky top-0 z-20 bg-[#f7f3eb] -mx-4 px-4 pt-2 pb-3 mb-4 border-b border-black/10">
+        <div className="flex items-end justify-between mb-3">
           <div>
-            <Field label="First Name"><Input defaultValue={i.first_name} /></Field>
-            <Field label="Last Name"><Input defaultValue={i.last_name} /></Field>
-            <Field label="Email"><Input defaultValue={i.email} /></Field>
-            <Field label="Phone"><Input defaultValue={i.phone} /></Field>
-            <Field label="Personal Email"><Input defaultValue={i.personal_email ?? ""} /></Field>
-            <Field label="Secondary Phone"><Input defaultValue={i.secondary_phone ?? ""} /></Field>
-            <Field label="Gender"><Select defaultValue={i.gender} options={GENDERS} /></Field>
-            <Field label="Date of Birth"><input type="date" defaultValue={i.date_of_birth} className="w-full px-2 py-1 text-sm border border-black/15 rounded" /></Field>
-            <Field label="SSN">
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] bg-black/5 text-black/70">
-                <Lock className="h-3 w-3" /> {i.ssn_on_file ? "SSN on file" : "No SSN"}
-              </span>
-            </Field>
+            <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
+              {i.full_name}
+              <ProductBadge product={i.product} />
+            </h1>
+            <div className="text-xs text-black/50 mt-0.5">Individuals &rsaquo; {i.full_name} · <span className="text-black/40">{i.id}</span></div>
           </div>
-          <div>
-            <Field label="Address Line 1"><Input defaultValue={i.address_line_1} /></Field>
-            <Field label="City"><Input defaultValue={i.city} /></Field>
-            <Field label="State"><Select defaultValue={i.state} options={US_STATES} /></Field>
-            <Field label="Zip Code"><Input defaultValue={i.zip_code} /></Field>
-            <Field label="Hire Date"><input type="date" defaultValue={i.hire_date} className="w-full px-2 py-1 text-sm border border-black/15 rounded" /></Field>
-            <Field label="Organization">
-              {i.org_id ? (
-                <Link to="/organizations/$id" params={{ id: i.org_id }} className="text-sm underline hover:text-[#0a3d3e]">{i.org_name}</Link>
-              ) : (
-                <span className="text-sm italic text-black/50">No employer (affiliate-sponsored)</span>
-              )}
-            </Field>
-            <Field label="Employment Relationship"><Select defaultValue={i.employment_relationship} options={EMPLOYMENT_REL} /></Field>
-            <Field label="Union Member">
-              <Switch checked={i.union_member} />
-            </Field>
-            {i.union_member ? <Field label="Union Local Name"><Input defaultValue={i.union_local_name ?? ""} /></Field> : null}
+          <div className="flex gap-2">
+            <Btn disabled={readOnly} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Edit</Btn>
+            <Btn variant="danger" disabled={!can("individuals", "delete")} onClick={() => setDeactivateOpen(true)}>Deactivate</Btn>
           </div>
         </div>
+        <div className="grid grid-cols-7 gap-2">
+          <SummaryChip label="Organization"
+            value={i.org_name ?? <span className="italic text-black/50">Affiliate</span>}
+            onClick={i.org_id ? () => navigate({ to: "/organizations/$id", params: { id: i.org_id! } }) : undefined} />
+          <SummaryChip label="Coverage Status" value={<Badge map={COVERAGE_BADGE} value={i.coverage_status} />} />
+          <SummaryChip label="Last Payment"
+            value={<span className="inline-flex items-center gap-1">{paymentBadge(i.last_payment_status, i.retry_count)}<span className="text-[11px] text-black/50">{fmtDate(i.last_charge_date)}</span></span>}
+            onClick={() => navigate({ to: "/payment-ledger" })} />
+          <SummaryChip label="Monthly Premium" value={formatCents(i.monthly_premium_cents)} />
+          <SummaryChip label="Balance" value={formatCents(balanceCents)} tone={balanceNeg ? "bad" : "ok"}
+            onClick={() => navigate({ to: "/enrollee-balance" })} />
+          <SummaryChip label="Enrollment Window" value={i.org_id ? "annual · 2025-09" : "—"}
+            onClick={i.org_id ? () => navigate({ to: "/organizations/$id", params: { id: i.org_id! } }) : undefined} />
+          <SummaryChip label="Billing Group" value={bg?.name ?? i.billing_group_id}
+            onClick={() => navigate({ to: "/billing-groups" })} />
+        </div>
+      </div>
 
-        {/* Product-specific identity */}
-        {!isLTC ? (
-          <div className="mt-4 pt-4 border-t border-black/10">
-            <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">DI Identity</div>
-            <div className="grid grid-cols-3 gap-x-8">
-              <Field label="Title"><Select defaultValue={i.title_enum} options={TITLES} /></Field>
-              <Field label="Greeting"><Input defaultValue={i.greeting} /></Field>
-              <Field label="W-2 or 1099"><Select defaultValue={i.w2_1099} options={W2_1099} /></Field>
-              <Field label="Physician Type"><Input defaultValue={i.physician_type} placeholder="free text" /></Field>
-              <Field label="Nurse Type"><Input defaultValue={i.nurse_type} placeholder="free text" /></Field>
-              <Field label="Assigned Rep"><Input defaultValue={i.assigned_rep} /></Field>
-            </div>
-          </div>
+      <div className="space-y-4">
+        {/* Section 1: Coverage & Plan */}
+        <CoverageSection i={i} isLTC={isLTC} readOnly={readOnly} setConfirm={setConfirm} />
+
+        {/* Section 2: Payment & Billing */}
+        <PaymentSection i={i} bg={bg} readOnly={readOnly} />
+
+        {/* Section 3: Employer Contribution */}
+        <ContributionSection i={i} readOnly={readOnly} />
+
+        {/* Section 4: Identity */}
+        <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+
+        {/* Section 5: Underwriting (LTC only) */}
+        {isLTC && <UnderwritingSection i={i} readOnly={readOnly} />}
+
+        {/* Section 6: Spouse & Linked Individual */}
+        <SpouseSection i={i} isLTC={isLTC} linked={linked} linkedDetail={linkedDetail} readOnly={readOnly} />
+
+        {/* Section 7: Enrollment Window & Affiliations */}
+        <EnrollmentSection i={i} />
+
+        {/* Section 8: System References */}
+        <SystemRefsSection i={i} />
+      </div>
+
+      {/* Deactivate confirmation */}
+      {deactivateOpen && (
+        <ConfirmModal
+          title="Deactivate this individual?"
+          message={`This will mark ${i.full_name} as canceled and stop future charges. Continue?`}
+          confirmLabel="Deactivate"
+          danger
+          onCancel={() => setDeactivateOpen(false)}
+          onConfirm={() => setDeactivateOpen(false)}
+        />
+      )}
+      {confirm && (
+        <ConfirmModal
+          title={confirm.title}
+          message={confirm.message}
+          confirmLabel="Confirm"
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => { confirm.onConfirm(); setConfirm(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* =============================================================
+   SECTIONS
+============================================================= */
+
+function CoverageSection({ i, isLTC, readOnly, setConfirm }: { i: Detail; isLTC: boolean; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [status, setStatus] = useState(i.coverage_status);
+  const [error, setError] = useState<string | null>(null);
+  const allowed = useMemo(() => [i.coverage_status, ...(VALID_TRANSITIONS[i.coverage_status] ?? [])], [i.coverage_status]);
+  const onSave = () => {
+    setError(null);
+    if (status !== i.coverage_status) {
+      if (!(VALID_TRANSITIONS[i.coverage_status] ?? []).includes(status)) {
+        setError(`Invalid transition: ${i.coverage_status} → ${status}`);
+        return;
+      }
+      setConfirm({
+        title: "Change coverage status?",
+        message: `Change coverage status from ${i.coverage_status} to ${status}? This affects token invalidation, Klaviyo sync, and billing.`,
+        onConfirm: () => setEditing(false),
+      });
+      return;
+    }
+    setEditing(false);
+  };
+  return (
+    <SectionCard title="Coverage & Plan" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+      <Grid cols={4}>
+        <RField label="Coverage Status">
+          {editing ? (
+            <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className={inputCls}>
+              {COVERAGE_STATUSES.map((s) => (
+                <option key={s} value={s} disabled={!allowed.includes(s)}>
+                  {s}{allowed.includes(s) ? "" : " (invalid)"}
+                </option>
+              ))}
+            </select>
+          ) : <Badge map={COVERAGE_BADGE} value={i.coverage_status} />}
+        </RField>
+        <RField label="Current Stage"><Badge map={STAGE_BADGE} value={i.stage} /></RField>
+        <RField label="Effective Date" value={fmtDate(i.effective_date)} editing={editing}>
+          <input type="date" defaultValue={i.effective_date ?? ""} className={inputCls} />
+        </RField>
+        <RField label="Application Status" value={i.application_status} editing={editing}>
+          <input defaultValue={i.application_status} className={inputCls} />
+        </RField>
+
+        <RField label="Coverage Plan" value={isLTC ? i.purchased_plan : i.coverage_plan} />
+        {isLTC && <RField label="Benefit Class" value={i.benefit_class_name} editing={editing}>
+          <select defaultValue={i.benefit_class_name} className={inputCls}>{["All Employees","Management"].map((o) => <option key={o}>{o}</option>)}</select>
+        </RField>}
+        {isLTC && <RField label="Face Amount" value={formatCents(i.employee_face_amount_cents)} />}
+        {isLTC && <RField label="Riders" value={i._riders} />}
+
+        {!isLTC && <RField label="DI Type" value={i.di_type === "STD+LTD" ? "STD+LTD" : "LTD Only"} />}
+        {!isLTC && <RField label="Employee Plan Selected" value={i.coverage_plan} />}
+        <RField label="Monthly Premium" value={formatCents(i.monthly_premium_cents)} />
+        {!isLTC && <div />}
+
+        <RField label="Enrollment Cycle" value={i.enrollment_cycle} />
+        <RField label="Persona" value={i.persona} />
+        <RField label="Active Date" value={fmtDate(i.active_date)} />
+        <RField label="Canceled Date" value={fmtDate(i.canceled_date)} />
+      </Grid>
+      {error && <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
+      {editing && <SectionActions onCancel={() => { setEditing(false); setStatus(i.coverage_status); setError(null); }} onSave={onSave} />}
+    </SectionCard>
+  );
+}
+
+function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof BILLING_GROUPS.find>; readOnly: boolean }) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <SectionCard title="Payment & Billing" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+      <Grid cols={4}>
+        <RField label="Last Payment Status">{paymentBadge(i.last_payment_status, i.retry_count)}</RField>
+        <RField label="Retry Count" value={String(i.retry_count)} locked={editing} />
+        <RField label="Failed Payment Reason" value={i.failed_payment_reason ?? "—"} locked={editing} />
+        <div />
+
+        <RField label="Last Charge Date" value={fmtDate(i.last_charge_date)} locked={editing} />
+        <RField label="Next Charge Date" value={fmtDate(i.next_charge_date)} editing={editing}>
+          <input type="date" defaultValue={i.next_charge_date ?? ""} className={inputCls} />
+        </RField>
+        <RField label="Failed Attempt Date" value={fmtDate(i.failed_attempt_date)} locked={editing} />
+        <RField label="Next Retry Date" value={fmtDate(i.next_retry_date)} locked={editing} />
+
+        <RField label="Billing Group">
+          <Link to="/billing-groups" className="text-sm underline hover:text-[#0a3d3e]">{bg?.name ?? i.billing_group_id}</Link>
+        </RField>
+        <RField label="Balance">
+          <span className={i.last_payment_status === "Failed" ? "text-red-700 font-medium" : "text-emerald-700"}>
+            {formatCents(i.last_payment_status === "Failed" ? i.monthly_premium_cents : -250)}
+          </span>
+        </RField>
+      </Grid>
+      <div className="mt-3">
+        <Link to="/payment-ledger" className="text-xs text-[#0a3d3e] hover:underline inline-flex items-center gap-1">
+          View full payment history <ChevronRight className="h-3 w-3" />
+        </Link>
+      </div>
+      {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
+    </SectionCard>
+  );
+}
+
+function ContributionSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const active = i.contribution_active;
+  return (
+    <SectionCard title="Employer Contribution" defaultOpen={active} editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+      <Grid cols={4}>
+        <RField label="Contribution Tier" value={i.contribution_tier ?? "—"} editing={editing}>
+          <select defaultValue={i.contribution_tier ?? ""} className={inputCls}>{TIERS.map((t) => <option key={t}>{t}</option>)}</select>
+        </RField>
+        <RField label="Duration (months)" value={i.contribution_duration_months ? String(i.contribution_duration_months) : "Indefinite"} editing={editing}>
+          <input defaultValue={i.contribution_duration_months?.toString() ?? ""} placeholder="Indefinite" className={inputCls} />
+        </RField>
+        <RField label="Active">
+          {active ? <Badge map={COVERAGE_BADGE} value="active" /> : <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">Inactive</span>}
+        </RField>
+        <div />
+        <RField label="Start Date" value={fmtDate(i.contribution_start_date)} editing={editing}>
+          <input type="date" defaultValue={i.contribution_start_date ?? ""} className={inputCls} />
+        </RField>
+        <RField label="End Date" value={i.contribution_duration_months ? `${i.contribution_start_date} + ${i.contribution_duration_months}mo` : "Indefinite"} />
+      </Grid>
+      {i.contribution_tier && (
+        <div className="mt-4 bg-blue-50 border-l-4 border-blue-400 text-sm text-black/75 p-3 rounded-r leading-relaxed">
+          The employer covers this enrollee's premium at the <b>{i.contribution_tier}</b> tier
+          {i.contribution_duration_months ? <> for <b>{i.contribution_duration_months} months</b></> : <> <b>indefinitely</b></>}
+          {i.contribution_start_date ? <> starting <b>{fmtDate(i.contribution_start_date)}</b></> : null}.
+          The dollar amount is derived at billing time from the rate table based on age and smoker status.
+        </div>
+      )}
+      {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
+    </SectionCard>
+  );
+}
+
+function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void }) {
+  const [editing, setEditing] = useState(false);
+  const summary = `${i.full_name} · ${i.email} · ${i.org_name ?? "Affiliate-sponsored"} · Hired ${fmtDate(i.hire_date)}`;
+  const onSave = () => {
+    setConfirm({
+      title: "Confirm identity changes",
+      message: "If you changed the organization, this will cascade to billing group, benefit class, and enrollment window.",
+      onConfirm: () => setEditing(false),
+    });
+  };
+  return (
+    <SectionCard title="Identity" summary={summary} editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+      <Grid cols={3}>
+        <RField label="First Name" value={i.first_name} editing={editing}><input defaultValue={i.first_name} className={inputCls} /></RField>
+        <RField label="Last Name" value={i.last_name} editing={editing}><input defaultValue={i.last_name} className={inputCls} /></RField>
+        <RField label="Email" value={i.email} editing={editing}><input type="email" defaultValue={i.email} className={inputCls} /></RField>
+        <RField label="Phone" value={i.phone} editing={editing}><input defaultValue={i.phone} className={inputCls} /></RField>
+        <RField label="Secondary Phone" value={i.secondary_phone ?? "—"} editing={editing}><input defaultValue={i.secondary_phone ?? ""} className={inputCls} /></RField>
+        <RField label="Date of Birth" value={fmtDate(i.date_of_birth)} editing={editing}><input type="date" defaultValue={i.date_of_birth} className={inputCls} /></RField>
+        <RField label="Organization">
+          {editing ? (
+            <select defaultValue={i.org_id ?? ""} className={inputCls}>
+              <option value="">— Affiliate-sponsored —</option>
+              {ORGS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          ) : i.org_id ? (
+            <Link to="/organizations/$id" params={{ id: i.org_id }} className="text-sm underline hover:text-[#0a3d3e]">{i.org_name}</Link>
+          ) : <span className="text-sm italic text-black/50">Affiliate-sponsored</span>}
+        </RField>
+        <RField label="Employment Relationship" value={i.employment_relationship} editing={editing}>
+          <select defaultValue={i.employment_relationship} className={inputCls}>{EMPLOYMENT_REL.map((o) => <option key={o}>{o}</option>)}</select>
+        </RField>
+        <RField label="Hire Date" value={fmtDate(i.hire_date)} editing={editing}><input type="date" defaultValue={i.hire_date} className={inputCls} /></RField>
+        <RField label="Gender" value={i.gender} editing={editing}>
+          <select defaultValue={i.gender} className={inputCls}>{GENDERS.map((o) => <option key={o}>{o}</option>)}</select>
+        </RField>
+        <RField label="Union Member"><Switch checked={i.union_member} disabled={!editing} /></RField>
+        <RField label="Union Local Name" value={i.union_local_name ?? "—"} editing={editing}><input defaultValue={i.union_local_name ?? ""} className={inputCls} /></RField>
+      </Grid>
+
+      <div className="mt-4 pt-4 border-t border-black/10">
+        <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">Address</div>
+        {editing ? (
+          <Grid cols={4}>
+            <RField label="Line 1" value={i.address_line_1} editing><input defaultValue={i.address_line_1} className={inputCls} /></RField>
+            <RField label="City" value={i.city} editing><input defaultValue={i.city} className={inputCls} /></RField>
+            <RField label="State" value={i.state} editing>
+              <select defaultValue={i.state} className={inputCls}>{US_STATES.map((s) => <option key={s}>{s}</option>)}</select>
+            </RField>
+            <RField label="Zip" value={i.zip_code} editing><input defaultValue={i.zip_code} className={inputCls} /></RField>
+          </Grid>
         ) : (
-          <div className="mt-4 pt-4 border-t border-black/10">
-            <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">LTC Identity</div>
-            <div className="grid grid-cols-4 gap-x-8">
-              <Field label="Income"><Input defaultValue={i.income} /></Field>
-              <Field label="Height"><Input defaultValue={i.height} /></Field>
-              <Field label="Weight"><Input defaultValue={i.weight} /></Field>
-              <Field label="Tobacco Use"><Switch checked={i.tobacco_use} /></Field>
-            </div>
-          </div>
+          <div className="text-sm text-gray-900">{i.address_line_1}, {i.city}, {i.state} {i.zip_code}</div>
         )}
-      </Section>
-
-      {/* Section 2: Coverage & Plan */}
-      <Section title={`Coverage & Plan · ${i.product}`}>
-        <div className="grid grid-cols-3 gap-x-8">
-          <Field label="Coverage Status"><Select defaultValue={i.coverage_status} options={COVERAGE_STATUSES} /></Field>
-          <Field label="Current Stage"><span className="text-sm">{i.stage}</span></Field>
-          <Field label="Effective Date"><input type="date" defaultValue={i.effective_date} className="w-full px-2 py-1 text-sm border border-black/15 rounded" /></Field>
-          <Field label="Active Date"><span className="text-sm text-black/60">{i.active_date ?? "—"}</span></Field>
-          <Field label="Canceled Date"><span className="text-sm text-black/60">{i.canceled_date ?? "—"}</span></Field>
-          <Field label="Application Status"><Input defaultValue={i.application_status} /></Field>
-          <Field label="Enrollment Cycle"><Input defaultValue={i.enrollment_cycle} /></Field>
-          <Field label="Persona"><Input defaultValue={i.persona} /></Field>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-black/10">
-          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">{isLTC ? "LTC Plan" : "DI Plan"}</div>
-          {!isLTC ? (
-            <div className="grid grid-cols-3 gap-x-8">
-              <Field label="Coverage Plan"><Input defaultValue={i.coverage_plan} /></Field>
-              <Field label="Monthly Benefit">{formatCents(i.monthly_benefit_cents)}</Field>
-              <Field label="Weekly Covered Benefit">{formatCents(i.weekly_covered_benefit_cents)}</Field>
-              <Field label="Payment Plan"><Input defaultValue={i.payment_plan} /></Field>
-              <Field label="Monthly Premium">{formatCents(i.monthly_premium_cents)}</Field>
-              <Field label="LTD Premium">{formatCents(i.ltd_premium_cents)}</Field>
-              <Field label="STD Premium">{formatCents(i.std_premium_cents)}</Field>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-x-8">
-              <Field label="Purchased Plan"><Input defaultValue={i.purchased_plan} /></Field>
-              <Field label="Employee Plan Selected"><Input defaultValue={i.employee_plan_selected} /></Field>
-              <Field label="Employee Face Amount">{formatCents(i.employee_face_amount_cents)}</Field>
-              <Field label="Employee Monthly Premium">{formatCents(i.employee_monthly_premium_cents)}</Field>
-              <Field label="Benefit Class"><Select defaultValue={i.benefit_class_name} options={["All Employees","Management"]} /></Field>
-              <Field label="Upgrade Applied For"><span className="text-sm">{i.upgrade_applied_for ? "yes" : "no"}</span></Field>
-              <Field label="Interested in Upgrading"><span className="text-sm">{i.interested_upgrading ? "yes" : "no"}</span></Field>
-              <Field label="Upgrade Carrier Decision">
-                {i.upgrade_carrier_decision ? <Select defaultValue={i.upgrade_carrier_decision} options={UPGRADE_DECISIONS} /> : <span className="text-sm text-black/40">—</span>}
-              </Field>
-              <Field label="Pre-Upgrade Premium">{i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"}</Field>
-            </div>
-          )}
-        </div>
-      </Section>
-
-      {/* Section 3: Spouse & Linked Individual (LTC only) */}
-      {isLTC ? (
-        <Section title="Spouse & Linked Individual">
-          <div className="grid grid-cols-3 gap-x-8">
-            <Field label="Relationship Type"><Pill>{i.relationship_type}</Pill></Field>
-            <Field label="Linked Individual">
-              {linked ? (
-                <Link to="/individuals/$id" params={{ id: linked.id }} className="text-sm underline hover:text-[#0a3d3e]">{linked.full_name}</Link>
-              ) : <span className="text-sm text-black/50">None</span>}
-            </Field>
-            <div />
-          </div>
-          {i.relationship_type === "primary" ? (
-            <div className="mt-4 pt-4 border-t border-black/10">
-              <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">Spouse Interest</div>
-              <div className="grid grid-cols-3 gap-x-8">
-                <Field label="Interested in Spousal Coverage"><Input defaultValue={i.interested_spousal_text} /></Field>
-                <Field label="Spouse Authorization"><Input defaultValue={i.spouse_authorization} /></Field>
-                <Field label="Clicked Spouse Link"><Input defaultValue={i.clicked_spouse_link} /></Field>
-                <Field label="Sent Spouse Invite"><Input defaultValue={i.sent_spouse_invite} /></Field>
-                <Field label="Why No Spouse"><Input defaultValue={i.why_no_spouse ?? ""} /></Field>
-              </div>
-            </div>
-          ) : null}
-          {linkedDetail ? (
-            <div className="mt-4 pt-4 border-t border-black/10">
-              <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">Spouse Coverage (read-only)</div>
-              <div className="grid grid-cols-3 gap-x-8">
-                <Field label="Spouse Purchased Plan"><span className="text-sm">{linkedDetail.purchased_plan}</span></Field>
-                <Field label="Spouse Face Amount"><span className="text-sm">{formatCents(linkedDetail.employee_face_amount_cents)}</span></Field>
-                <Field label="Spouse Monthly Premium"><span className="text-sm">{formatCents(linkedDetail.monthly_premium_cents)}</span></Field>
-              </div>
-            </div>
-          ) : null}
-        </Section>
-      ) : null}
-
-      {/* Section 4: Employer Contribution */}
-      <Section title="Employer Contribution">
-        <Card className="p-4 bg-[#fbf8f1] border-[#0a3d3e]/20">
-          {i.contribution_tier ? (
-            <>
-              <div className="grid grid-cols-4 gap-x-6">
-                <Field label="Contribution Tier"><Select defaultValue={i.contribution_tier} options={TIERS} /></Field>
-                <Field label="Duration (months)"><Input defaultValue={i.contribution_duration_months?.toString() ?? ""} placeholder="leave empty for indefinite" /></Field>
-                <Field label="Start Date"><input type="date" defaultValue={i.contribution_start_date ?? ""} className="w-full px-2 py-1 text-sm border border-black/15 rounded" /></Field>
-                <Field label="End Date">
-                  <span className="text-sm text-black/60">
-                    {i.contribution_duration_months ? `${i.contribution_start_date} + ${i.contribution_duration_months}mo` : "Indefinite"}
-                  </span>
-                </Field>
-                <Field label="Active">
-                  {i.contribution_active ? <Pill tone="ok">active</Pill> : <Pill tone="bad">inactive</Pill>}
-                </Field>
-              </div>
-              <div className="mt-3 p-3 rounded bg-white border border-black/10 text-[12px] text-black/70 leading-relaxed">
-                The employer covers this enrollee's premium at the <b>{i.contribution_tier}</b> tier level
-                {i.contribution_duration_months ? <> for <b>{i.contribution_duration_months} months</b></> : <> <b>indefinitely</b></>}
-                {i.contribution_start_date ? <> starting <b>{i.contribution_start_date}</b></> : null}.
-                The dollar amount is derived at billing time by looking up the {i.contribution_tier} tier premium for the enrollee's
-                current age and smoker status in the rate table — no stored dollar amount.
-                When the contribution ends, the enrollee pays the full premium and a Klaviyo notification fires
-                when <code className="text-[11px]">employer_contribution_active</code> flips to false.
-              </div>
-            </>
-          ) : (
-            <div className="text-sm text-black/60 italic">No employer contribution. Enrollee pays full premium.</div>
-          )}
-        </Card>
-      </Section>
-
-      {/* Section 5: Payment & Billing */}
-      <Section title="Payment & Billing">
-        <div className="grid grid-cols-2 gap-x-8">
-          <div>
-            <Field label="Billing Group">
-              <Link to="/billing-groups" className="text-sm underline hover:text-[#0a3d3e]">{bg?.name ?? i.billing_group_id}</Link>
-            </Field>
-            {!isLTC ? <Field label="Should Be Charged"><Pill tone={i.should_be_charged ? "ok" : "neutral"}>{i.should_be_charged ? "yes" : "no"}</Pill></Field> : null}
-            <Field label="Last Payment Status">
-              <Pill tone={i.last_payment_status === "successful" ? "ok" : i.last_payment_status === "failed" ? "bad" : "info"}>{i.last_payment_status}</Pill>
-            </Field>
-            <Field label="Last Charge Date"><span className="text-sm">{i.last_charge_date}</span></Field>
-            <Field label="Next Charge Date"><span className="text-sm">{i.next_charge_date}</span></Field>
-          </div>
-          <div>
-            <Field label="Retry Count"><span className="text-sm">{i.retry_count}</span></Field>
-            <Field label="Next Retry Date"><span className="text-sm">{i.next_retry_date ?? "—"}</span></Field>
-            <Field label="Failed Attempt Date"><span className="text-sm">{i.failed_attempt_date ?? "—"}</span></Field>
-            <Field label="Failed Payment Reason">
-              <span className="text-sm">{i.failed_payment_reason ?? <span className="text-black/40">None</span>}</span>
-            </Field>
-          </div>
-        </div>
-        <div className="mt-2">
-          <Link to="/payment-ledger" className="text-xs text-[#0a3d3e] hover:underline inline-flex items-center gap-1">
-            View full payment history <ChevronRight className="h-3 w-3" />
-          </Link>
-        </div>
-      </Section>
-
-      {/* Section 6: Enrollment Window & Affiliations */}
-      <Section title="Enrollment Window & Affiliations">
-        <div className="grid grid-cols-2 gap-x-8">
-          <div>
-            <Field label="Enrollment Window">
-              {i.org_id ? (
-                <Link to="/organizations/$id" params={{ id: i.org_id }} className="text-sm underline hover:text-[#0a3d3e]">annual · 2025-09 (on org)</Link>
-              ) : <span className="text-sm text-black/50">—</span>}
-            </Field>
-            <Field label="Enrollment Deadline"><span className="text-sm">{i.enrollment_deadline ?? "—"}</span></Field>
-          </div>
-          <div>
-            <Field label="Affiliations">
-              {i.affiliations.length === 0 ? (
-                <span className="text-sm text-black/50">No affiliations</span>
-              ) : (
-                <div className="flex flex-wrap gap-1">
-                  {i.affiliations.map((a) => (
-                    <span key={a.id} className="px-1.5 py-0.5 rounded text-[11px] bg-[#d4b87a]/40 text-[#0a3d3e]">{a.name}</span>
-                  ))}
-                </div>
-              )}
-            </Field>
-          </div>
-        </div>
-      </Section>
-
-      {/* Section 7: System References (collapsible) */}
-      <div className="mt-6">
-        <button
-          onClick={() => setRefsOpen((v) => !v)}
-          className="inline-flex items-center gap-1 text-xs text-black/60 hover:text-black"
-        >
-          {refsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-          System References
-        </button>
-        {refsOpen ? (
-          <Card className="p-4 mt-2 bg-black/[0.02]">
-            <div className="grid grid-cols-2 gap-x-8 font-mono text-[11px]">
-              <Ref label="Individual ID" value={i.id} />
-              <Ref label="Klaviyo Main ID" value={i.klaviyo_main_id} />
-              <Ref label="Magic Link" value={i.magic_link} />
-              <Ref label="Magic Link Portal" value={i.magic_link_portal} />
-              {!isLTC ? <Ref label="CCA Portal Link" value={i.cca_portal_link} /> : null}
-              <Ref label="Signature URL" value={i.signature_url} />
-            </div>
-          </Card>
-        ) : null}
       </div>
 
-      {/* Edit drawer */}
-      <Drawer open={editDrawer.state.open} onClose={editDrawer.close} title={`Edit · ${i.full_name}`}>
-        <div className="space-y-3">
-          <DField label="First Name"><Input defaultValue={i.first_name} /></DField>
-          <DField label="Last Name"><Input defaultValue={i.last_name} /></DField>
-          <DField label="Email"><Input defaultValue={i.email} /></DField>
-          <DField label="Phone"><Input defaultValue={i.phone} /></DField>
-          <DField label="Coverage Status"><Select defaultValue={i.coverage_status} options={COVERAGE_STATUSES} /></DField>
-          <DField label="Organization">
-            <Select defaultValue={i.org_id ?? ""} options={["", ...ORGS.map((o) => o.id)]} />
-          </DField>
-          <DField label="Employment Relationship"><Select defaultValue={i.employment_relationship} options={EMPLOYMENT_REL} /></DField>
-          <DField label="Gender"><Select defaultValue={i.gender} options={GENDERS} /></DField>
-          <DField label="State"><Select defaultValue={i.state} options={US_STATES} /></DField>
-          <div className="pt-3 flex justify-end gap-2 border-t border-black/10">
-            <Btn onClick={editDrawer.close}>Cancel</Btn>
-            <Btn variant="primary" onClick={editDrawer.close}>Save</Btn>
-          </div>
+      <div className="mt-4 pt-4 border-t border-black/10">
+        <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">SSN</div>
+        {editing ? (
+          <input placeholder={i.ssn_on_file ? `•••-••-${i.ssn_last4}` : "9 digits"} className={`${inputCls} max-w-xs`} />
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-black/5 text-black/70">
+            <Lock className="h-3 w-3" /> {i.ssn_on_file ? `SSN on file (••• •• ${i.ssn_last4})` : "No SSN"}
+          </span>
+        )}
+      </div>
+
+      {editing && <SectionActions onCancel={() => setEditing(false)} onSave={onSave} />}
+    </SectionCard>
+  );
+}
+
+function UnderwritingSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <SectionCard title="Underwriting" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+      <Grid cols={4}>
+        <RField label="Income" value={i.income || "—"} editing={editing}><input defaultValue={i.income} className={inputCls} /></RField>
+        <RField label="Height" value={i.height || "—"} editing={editing}><input defaultValue={i.height} className={inputCls} /></RField>
+        <RField label="Weight" value={i.weight || "—"} editing={editing}><input defaultValue={i.weight} className={inputCls} /></RField>
+        <RField label="Tobacco Use">
+          {i.tobacco_use
+            ? <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Yes</span>
+            : <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">No</span>}
+        </RField>
+      </Grid>
+      {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
+    </SectionCard>
+  );
+}
+
+function SpouseSection({ i, isLTC, linked, linkedDetail, readOnly }: { i: Detail; isLTC: boolean; linked: ReturnType<typeof INDIVIDUALS.find>; linkedDetail: Detail | null; readOnly: boolean }) {
+  const [editing, setEditing] = useState(false);
+  let summary = "No spouse";
+  if (linked && linkedDetail) summary = `Spouse: ${linked.full_name} (${linkedDetail.coverage_status}, ${linkedDetail.purchased_plan || linkedDetail.coverage_plan})`;
+  else if (isLTC && i.interested_spousal_text === "yes") summary = "Interested in spousal coverage";
+  const showUpgrade = isLTC && (i.upgrade_applied_for || i.interested_upgrading || i.pre_upgrade_premium_cents);
+  return (
+    <SectionCard title="Spouse & Linked Individual" summary={summary} editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+      <Grid cols={3}>
+        <RField label="Relationship Type" value={i.relationship_type} />
+        <RField label="Linked Individual">
+          {editing ? (
+            <input placeholder="Search individual…" className={inputCls} />
+          ) : linked ? (
+            <Link to="/individuals/$id" params={{ id: linked.id }} className="text-sm underline hover:text-[#0a3d3e]">{linked.full_name}</Link>
+          ) : <span className="text-sm text-black/50">—</span>}
+        </RField>
+        <div />
+        {isLTC && i.relationship_type === "primary" && (
+          <>
+            <RField label="Interested in Spousal Coverage" value={i.interested_spousal_text} editing={editing}>
+              <select defaultValue={i.interested_spousal_text} className={inputCls}>{["yes","no",""].map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select>
+            </RField>
+            <RField label="Spouse Authorization" value={i.spouse_authorization} />
+            <RField label="Clicked Spouse Link" value={i.clicked_spouse_link} />
+            <RField label="Sent Spouse Invite" value={i.sent_spouse_invite} />
+            <RField label="Why No Spouse" value={i.why_no_spouse ?? "—"} editing={editing}>
+              <input defaultValue={i.why_no_spouse ?? ""} className={inputCls} />
+            </RField>
+          </>
+        )}
+      </Grid>
+      {showUpgrade && (
+        <div className="mt-4 pt-4 border-t border-black/10">
+          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">LTC Upgrade</div>
+          <Grid cols={3}>
+            <RField label="Interested in Upgrading" value={i.interested_upgrading ? "yes" : "no"} />
+            <RField label="Upgrade Applied For" value={i.upgrade_applied_for ? "yes" : "no"} />
+            <RField label="Upgrade Carrier Decision" value={i.upgrade_carrier_decision ?? "—"} />
+            <RField label="Pre-Upgrade Premium" value={i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"} />
+            <RField label="Upgrade Submitted At" value={fmtDate(i.upgrade_submitted_at)} />
+            <RField label="Upgrade Carrier Decision At" value={fmtDate(i.upgrade_carrier_decision_at)} />
+          </Grid>
         </div>
-      </Drawer>
+      )}
+      {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
+    </SectionCard>
+  );
+}
+
+function EnrollmentSection({ i }: { i: Detail }) {
+  return (
+    <SectionCard title="Enrollment Window & Affiliations">
+      <Grid cols={2}>
+        <RField label="Enrollment Window">
+          {i.org_id ? (
+            <Link to="/organizations/$id" params={{ id: i.org_id }} className="text-sm underline hover:text-[#0a3d3e]">annual · 2025-09</Link>
+          ) : <span className="text-sm text-black/50">—</span>}
+        </RField>
+        <RField label="Enrollment Deadline" value={fmtDate(i.enrollment_deadline)} />
+        <RField label="Affiliations">
+          {i.affiliations.length === 0 ? <span className="text-sm text-black/50">None</span> : (
+            <div className="flex flex-wrap gap-1">
+              {i.affiliations.map((a) => (
+                <span key={a.id} className="px-1.5 py-0.5 rounded text-[11px] bg-[#d4b87a]/40 text-[#0a3d3e]">{a.name}</span>
+              ))}
+            </div>
+          )}
+        </RField>
+      </Grid>
+    </SectionCard>
+  );
+}
+
+function SystemRefsSection({ i }: { i: Detail }) {
+  return (
+    <SectionCard title="System References">
+      <div className="grid grid-cols-2 gap-x-8 font-mono text-[11px]">
+        <Ref label="Individual ID" value={i.id} />
+        <Ref label="Klaviyo Main ID" value={i.klaviyo_main_id} />
+        <Ref label="Magic Link" value={i.magic_link} />
+        <Ref label="Magic Link Portal" value={i.magic_link_portal} />
+        <Ref label="Signature URL" value={i.signature_url} />
+      </div>
+    </SectionCard>
+  );
+}
+
+/* =============================================================
+   BUILDING BLOCKS
+============================================================= */
+
+const inputCls = "w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400";
+
+function SectionCard({
+  title, children, defaultOpen = false, summary, editing = false, canEdit = false, onEdit,
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  summary?: string;
+  editing?: boolean;
+  canEdit?: boolean;
+  onEdit?: () => void;
+}) {
+  const [open, setOpen] = useState(defaultOpen || editing);
+  const isOpen = open || editing;
+  return (
+    <div className={`bg-white border rounded-lg p-5 ${editing ? "border-blue-300 ring-1 ring-blue-100" : "border-gray-200"}`}>
+      <div className="flex items-center justify-between gap-2">
+        <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 text-left flex-1 min-w-0">
+          {isOpen ? <ChevronDown className="h-4 w-4 text-black/40 shrink-0" /> : <ChevronRight className="h-4 w-4 text-black/40 shrink-0" />}
+          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+          {!isOpen && summary && <span className="text-xs text-black/50 truncate">· {summary}</span>}
+        </button>
+        {canEdit && !editing && isOpen && onEdit && (
+          <button onClick={onEdit} className="text-black/40 hover:text-[#0a3d3e] p-1" title="Edit section">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {isOpen && <div className="mt-4">{children}</div>}
     </div>
   );
 }
 
-/* ---------- Local building blocks ---------- */
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionActions({ onCancel, onSave }: { onCancel: () => void; onSave: () => void }) {
   return (
-    <div className="mt-5 pt-5 border-t border-black/10 first:border-t-0 first:pt-0 first:mt-0">
-      <h2 className="text-sm font-semibold text-black/80 mb-3">{title}</h2>
-      {children}
+    <div className="mt-4 pt-4 border-t border-black/10 flex justify-end gap-2">
+      <Btn onClick={onCancel}>Cancel</Btn>
+      <Btn variant="primary" onClick={onSave}>Save</Btn>
     </div>
   );
 }
 
-function Select({ defaultValue, options }: { defaultValue?: string; options: string[] }) {
+function Grid({ cols, children }: { cols: 2 | 3 | 4; children: React.ReactNode }) {
+  const cls = cols === 2 ? "grid-cols-2" : cols === 3 ? "grid-cols-3" : "grid-cols-4";
+  return <div className={`grid ${cls} gap-x-6 gap-y-4`}>{children}</div>;
+}
+
+function RField({ label, value, children, editing, locked }: { label: string; value?: React.ReactNode; children?: React.ReactNode; editing?: boolean; locked?: boolean }) {
   return (
-    <select defaultValue={defaultValue} className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
-      {options.map((o) => <option key={o} value={o}>{o === "" ? "— none —" : o}</option>)}
-    </select>
+    <div>
+      <div className="text-xs text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+        {label}
+        {locked && <Lock className="h-3 w-3 text-black/30" />}
+      </div>
+      <div className="text-sm text-gray-900">
+        {editing && children && !locked
+          ? children
+          : (value !== undefined ? (value === null || value === "" ? <span className="text-gray-400">—</span> : value) : children)}
+      </div>
+    </div>
   );
 }
 
-function SummaryChip({ label, value, onClick, tone, hint }: { label: string; value: React.ReactNode; onClick?: () => void; tone?: "ok" | "warn"; hint?: string }) {
-  const valueColor = tone === "warn" ? "text-amber-700" : tone === "ok" ? "text-emerald-700" : "text-black/85";
+function SummaryChip({ label, value, onClick, tone }: { label: string; value: React.ReactNode; onClick?: () => void; tone?: "ok" | "bad" | "warn" }) {
+  const valueColor = tone === "bad" ? "text-red-700" : tone === "warn" ? "text-amber-700" : tone === "ok" ? "text-emerald-700" : "text-black/85";
   return (
     <button
       onClick={onClick}
       disabled={!onClick}
-      title={hint}
-      className={`text-left bg-white border border-black/10 rounded-md p-2 ${onClick ? "hover:bg-[#f7f3eb] cursor-pointer" : "cursor-default"}`}
+      className={`text-left bg-white border border-black/10 rounded-md px-2.5 py-1.5 ${onClick ? "hover:bg-[#f7f3eb] cursor-pointer" : "cursor-default"}`}
     >
       <div className="text-[9px] uppercase tracking-wider text-black/50">{label}</div>
       <div className={`text-sm font-semibold mt-0.5 truncate ${valueColor}`}>{value}</div>
     </button>
-  );
-}
-
-function DField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">{label}</div>
-      {children}
-    </div>
   );
 }
 
@@ -519,6 +662,29 @@ function Ref({ label, value }: { label: string; value: string }) {
     <div className="mb-2">
       <div className="text-[9px] uppercase tracking-wider text-black/40 mb-0.5 font-sans">{label}</div>
       <div className="text-black/70 break-all">{value || "—"}</div>
+    </div>
+  );
+}
+
+function ConfirmModal({ title, message, confirmLabel = "Confirm", danger, onCancel, onConfirm }: { title: string; message: string; confirmLabel?: string; danger?: boolean; onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-5">
+        <div className="flex items-start gap-3">
+          <div className={`p-2 rounded-full ${danger ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}>
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+            <p className="text-sm text-gray-600 mt-1">{message}</p>
+          </div>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <Btn onClick={onCancel}>Cancel</Btn>
+          <Btn variant={danger ? "danger" : "primary"} onClick={onConfirm}>{confirmLabel}</Btn>
+        </div>
+      </div>
     </div>
   );
 }
