@@ -5,14 +5,14 @@ export type Product = "DI" | "LTC";
 export type Role = "admin" | "ops" | "read-only";
 
 export const ORGS = [
-  { id: "org_1", name: "Acme Widgets Co", product: "DI", situs_state: "TX", enrollment_status: "active", individuals_count: 12, policy_owner_type: "employer", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false },
-  { id: "org_2", name: "Bluefin Logistics", product: "DI", situs_state: "CA", enrollment_status: "active", individuals_count: 7, policy_owner_type: "employer", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false },
-  { id: "org_3", name: "Coastal Credit Union", product: "LTC", situs_state: "FL", enrollment_status: "active", individuals_count: 9, policy_owner_type: "individual", type_of_rate: null, extension_of_benefits_rider: true, benefit_restoration_rider: true },
-  { id: "org_4", name: "Delta Manufacturing", product: "DI", situs_state: "OH", enrollment_status: "closed", individuals_count: 4, policy_owner_type: "employer", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false },
-  { id: "org_5", name: "Evergreen Health", product: "LTC", situs_state: "NY", enrollment_status: "active", individuals_count: 6, policy_owner_type: "individual", type_of_rate: null, extension_of_benefits_rider: true, benefit_restoration_rider: false },
-  { id: "org_6", name: "Foxtail Education Trust", product: "LTC", situs_state: "WA", enrollment_status: "pending", individuals_count: 2, policy_owner_type: "individual", type_of_rate: null, extension_of_benefits_rider: false, benefit_restoration_rider: false },
-  { id: "org_7", name: "Greylock Partners LLC", product: "DI", situs_state: "MA", enrollment_status: "active", individuals_count: 5, policy_owner_type: "employer", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false },
-  { id: "org_8", name: "Harborline Shipping", product: "DI", situs_state: "WA", enrollment_status: "active", individuals_count: 8, policy_owner_type: "employer", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false },
+  { id: "org_1", name: "Acme Widgets Co", product: "DI", situs_state: "TX", enrollment_status: "active", individuals_count: 12, policy_owner_type: "employer", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: true },
+  { id: "org_2", name: "Bluefin Logistics", product: "DI", situs_state: "CA", enrollment_status: "active", individuals_count: 7, policy_owner_type: "employer", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
+  { id: "org_3", name: "Coastal Credit Union", product: "LTC", situs_state: "FL", enrollment_status: "active", individuals_count: 9, policy_owner_type: "individual", type_of_rate: null, extension_of_benefits_rider: true, benefit_restoration_rider: true, cca_group: false },
+  { id: "org_4", name: "Delta Manufacturing", product: "DI", situs_state: "OH", enrollment_status: "closed", individuals_count: 4, policy_owner_type: "employer", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
+  { id: "org_5", name: "Evergreen Health", product: "LTC", situs_state: "NY", enrollment_status: "active", individuals_count: 6, policy_owner_type: "individual", type_of_rate: null, extension_of_benefits_rider: true, benefit_restoration_rider: false, cca_group: false },
+  { id: "org_6", name: "Foxtail Education Trust", product: "LTC", situs_state: "WA", enrollment_status: "pending", individuals_count: 2, policy_owner_type: "individual", type_of_rate: null, extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
+  { id: "org_7", name: "Greylock Partners LLC", product: "DI", situs_state: "MA", enrollment_status: "active", individuals_count: 5, policy_owner_type: "employer", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: true },
+  { id: "org_8", name: "Harborline Shipping", product: "DI", situs_state: "WA", enrollment_status: "active", individuals_count: 8, policy_owner_type: "employer", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
 ];
 
 export const LTC_FACE_TIERS_CENTS = [2500000, 5000000, 7500000, 10000000, 15000000, 20000000, 25000000]; // $25K..$250K
