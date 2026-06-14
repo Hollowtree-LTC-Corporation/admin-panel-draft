@@ -746,7 +746,7 @@ function LinksRefsSection({ org, product, readOnly }: { org: OrgDetail; product:
         <RField label="Meeting Link">
           {e.editing ? <input className={inputCls} defaultValue={org.meeting_link} /> : <ExtLink href={org.meeting_link}>{org.meeting_link}</ExtLink>}
         </RField>
-        <RField label="Gmail Label ID">{e.editing ? <input className={inputCls} defaultValue={org.gmail_label_id} /> : <span className="font-mono text-xs">{org.gmail_label_id}</span>}</RField>
+        
         <RField label="Attio Deal">
           <ExtLink href={`https://app.attio.com/deals/${org.attio_deal_id}`}><span className="font-mono text-xs">{org.attio_deal_id}</span></ExtLink>
         </RField>
