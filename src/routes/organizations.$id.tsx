@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   PageHeader, Card, Field, Btn, Pill, TableShell, THead, TRow, TCell, ProductBadge,
   Drawer, useDrawer, Input,
@@ -7,11 +7,22 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { ORGS, BENEFIT_CLASSES, formatCents } from "@/lib/wireframe/data";
+import { ORGS, BENEFIT_CLASSES, INDIVIDUALS, POLICIES, PAYMENT_LEDGER, CARRIERS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/organizations/$id")({ component: OrgDetail });
+
+// Enum vocabularies (mirror prod CHECK constraints)
+const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
+const INDUSTRIES = ["education","healthcare","government","manufacturing","professional_services","transportation","hospitality","other"];
+const ORG_TYPES = ["Employer Group","Association","Union","PEO","CPA Firm","P&C Firm"];
+const ORG_STATUSES = ["active","pending_review","closed","suspended"];
+const DI_HC_TYPES = ["MSO","Healthcare Practice","Medical Group","Dental","Other","General"];
+const WINDOW_TYPES = ["initial","annual","new_joiner","special"];
+const SPONSOR_TYPES = ["employer","affiliate"];
+const WINDOW_STATUSES = ["upcoming","open","closed"];
+const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
 
 // Dummy enrollment windows scoped per org for this iteration
 const DUMMY_WINDOWS = [
@@ -40,8 +51,9 @@ function isCCA(orgId: string) {
 
 function OrgDetail() {
   const { id } = Route.useParams();
-  const { product } = useStore();
+  const { product, role } = useStore();
   const can = usePermission();
+  const navigate = useNavigate();
   const editDrawer = useDrawer<typeof ORGS[number]>();
   const windowDrawer = useDrawer<typeof DUMMY_WINDOWS[number]>();
   const bcDrawer = useDrawer<typeof BENEFIT_CLASSES[number]>();
@@ -56,6 +68,20 @@ function OrgDetail() {
   if (product === "LTC" && classes.length === 0) {
     classes = [{ id: `bc_synth_${id}`, org_id: id, name: "All Employees", gi_offer_cents: 15000000, bronze: 0, silver: 7500000, gold: 15000000, platinum: 20000000, diamond: 25000000, is_default: true }];
   }
+
+  // ---- Summary metrics ----
+  const orgIndividuals = INDIVIDUALS.filter((i) => i.org_id === id);
+  const activeEnrollees = orgIndividuals.filter((i) => i.coverage_status === "active").length;
+  const totalEnrollees = orgIndividuals.length;
+  const policies = POLICIES.filter((p) => p.org_id === id).length;
+  const orgIndIds = new Set(orgIndividuals.map((i) => i.id));
+  const currentCycle = "2025-06";
+  const collectedCents = PAYMENT_LEDGER
+    .filter((p) => orgIndIds.has(p.individual_id) && p.status === "successful" && p.date.startsWith(currentCycle))
+    .reduce((s, p) => s + p.amount_cents, 0);
+  // Outstanding = synthesized net balance (dummy: ~10% of monthly premium sum)
+  const outstandingCents = Math.round(orgIndividuals.reduce((s, i) => s + i.monthly_premium_cents, 0) * 0.1);
+  const openWindows = windows.filter((w) => w.status === "open").length;
 
   return (
     <div>
@@ -74,6 +100,16 @@ function OrgDetail() {
         }
       />
 
+      {/* Summary header */}
+      <div className="grid grid-cols-6 gap-2 mb-4">
+        <SummaryChip label="Active Enrollees" value={activeEnrollees} hint={`filter: org=${id} · active`} onClick={() => navigate({ to: "/individuals" })} />
+        <SummaryChip label="Total Enrollees" value={totalEnrollees} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/individuals" })} />
+        <SummaryChip label="Policies" value={policies} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/policies" })} />
+        <SummaryChip label="Collected This Cycle" value={formatCents(collectedCents)} hint={`${currentCycle} · org=${id}`} onClick={() => navigate({ to: "/payment-ledger" })} />
+        <SummaryChip label="Outstanding" value={formatCents(outstandingCents)} tone={outstandingCents > 0 ? "warn" : "ok"} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/enrollee-balance" })} />
+        <SummaryChip label="Open Windows" value={openWindows} />
+      </div>
+
       <Tabs defaultValue="config" className="w-full">
         <TabsList>
           <TabsTrigger value="config">Config</TabsTrigger>
@@ -84,7 +120,7 @@ function OrgDetail() {
         </TabsList>
 
         <TabsContent value="config">
-          <ConfigTab org={org} product={product} readOnly={readOnly} />
+          <ConfigTab org={org} product={product} readOnly={readOnly} isAdmin={role === "admin"} />
         </TabsContent>
         <TabsContent value="fees">
           <FeesTab org={org} readOnly={readOnly} />
@@ -118,9 +154,9 @@ function OrgDetail() {
       {/* Edit drawer (reuses create form shape) */}
       <Drawer open={editDrawer.state.open} onClose={editDrawer.close} title={`Edit · ${org.name}`}>
         <Field label="Name"><Input defaultValue={org.name} /></Field>
-        <Field label="Product"><Input defaultValue={org.product} /></Field>
-        <Field label="Situs State"><Input defaultValue={org.situs_state} /></Field>
-        <Field label="Policy Owner Type"><Input defaultValue={org.policy_owner_type} /></Field>
+        <Field label="Product"><DSelect defaultValue={org.product} options={["DI","LTC"]} /></Field>
+        <Field label="Situs State"><DSelect defaultValue={org.situs_state} options={US_STATES} /></Field>
+        <Field label="Policy Owner Type"><DSelect defaultValue={org.policy_owner_type === "employer" ? "employer_group" : "cca"} options={["employer_group","cca"]} /></Field>
         <div className="flex gap-2 mt-4">
           <Btn variant="primary" disabled={readOnly}>Save</Btn>
           <Btn onClick={editDrawer.close}>Cancel</Btn>
@@ -128,13 +164,21 @@ function OrgDetail() {
       </Drawer>
 
       <Drawer open={windowDrawer.state.open} onClose={windowDrawer.close} title={windowDrawer.state.mode === "create" ? "New Enrollment Window" : "Edit Window"}>
-        <Field label="Window Type"><Input defaultValue={windowDrawer.state.data?.window_type ?? "initial"} /></Field>
-        <Field label="Sponsor Type"><Input defaultValue={windowDrawer.state.data?.sponsor_type ?? "employer"} /></Field>
+        <Field label="Window Type"><DSelect defaultValue={windowDrawer.state.data?.window_type ?? "initial"} options={WINDOW_TYPES} /></Field>
+        <Field label="Sponsor Type"><DSelect defaultValue={windowDrawer.state.data?.sponsor_type ?? "employer"} options={SPONSOR_TYPES} /></Field>
         <Field label="Affiliate Org (if any)"><Input defaultValue={windowDrawer.state.data?.affiliate ?? ""} placeholder="e.g. CCA Member Foundation" /></Field>
         <Field label="Start Date"><Input defaultValue={windowDrawer.state.data?.start ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" /></Field>
         <Field label="End Date"><Input defaultValue={windowDrawer.state.data?.end ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" /></Field>
         <Field label="Default Effective Date"><Input defaultValue={windowDrawer.state.data?.effective ?? ""} /></Field>
-        <Field label="Carrier"><Input defaultValue={windowDrawer.state.data?.carrier ?? ""} /></Field>
+        <Field label="Carrier"><DSelect defaultValue={windowDrawer.state.data?.carrier ?? CARRIER_NAMES[0]} options={CARRIER_NAMES} /></Field>
+        <Field label="Status"><DSelect defaultValue={windowDrawer.state.data?.status ?? "upcoming"} options={WINDOW_STATUSES} /></Field>
+        <div className="mb-3">
+          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">GI Eligible</div>
+          <div className="flex items-center gap-2">
+            <Switch defaultChecked={windowDrawer.state.data?.gi_eligible ?? true} />
+            <span className="text-xs text-black/60">Guaranteed-issue pricing (no medical underwriting)</span>
+          </div>
+        </div>
         <Field label="Notes"><Input defaultValue={windowDrawer.state.data?.notes ?? ""} /></Field>
         <div className="flex gap-2 mt-4">
           <Btn variant="primary" disabled={!can("enrollment_windows", "update")}>Save</Btn>
@@ -162,6 +206,33 @@ function OrgDetail() {
   );
 }
 
+/* ---------- Summary chip ---------- */
+
+function SummaryChip({ label, value, onClick, tone, hint }: { label: string; value: React.ReactNode; onClick?: () => void; tone?: "ok" | "warn"; hint?: string }) {
+  const valueColor = tone === "warn" ? "text-amber-700" : tone === "ok" ? "text-emerald-700" : "text-black/85";
+  return (
+    <button
+      onClick={onClick}
+      disabled={!onClick}
+      title={hint}
+      className={`text-left bg-white border border-black/10 rounded-md p-2 ${onClick ? "hover:bg-[#f7f3eb] cursor-pointer" : "cursor-default"}`}
+    >
+      <div className="text-[9px] uppercase tracking-wider text-black/50">{label}</div>
+      <div className={`text-sm font-semibold mt-0.5 ${valueColor}`}>{value}</div>
+    </button>
+  );
+}
+
+/* ---------- Drawer Select ---------- */
+
+function DSelect({ defaultValue, options }: { defaultValue?: string; options: string[] }) {
+  return (
+    <select defaultValue={defaultValue} className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
+      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+}
+
 /* ---------- Tabs ---------- */
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -182,10 +253,10 @@ function RO({ value, readOnly, placeholder }: { value?: string | number; readOnl
   return <Input defaultValue={value === undefined || value === null ? "" : String(value)} placeholder={placeholder} />;
 }
 
-function Select({ value, options, readOnly }: { value: string; options: string[]; readOnly: boolean }) {
+function Select({ value, options, readOnly, disabled }: { value: string; options: string[]; readOnly: boolean; disabled?: boolean }) {
   if (readOnly) return <span className="text-black/80">{value}</span>;
   return (
-    <select defaultValue={value} className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
+    <select defaultValue={value} disabled={disabled} className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white disabled:bg-black/5 disabled:text-black/60">
       {options.map((o) => <option key={o} value={o}>{o}</option>)}
     </select>
   );
@@ -195,8 +266,10 @@ function Toggle({ checked, readOnly }: { checked: boolean; readOnly: boolean }) 
   return <Switch defaultChecked={checked} disabled={readOnly} />;
 }
 
-function ConfigTab({ org, product, readOnly }: { org: typeof ORGS[number]; product: "DI" | "LTC"; readOnly: boolean }) {
+function ConfigTab({ org, product, readOnly, isAdmin }: { org: typeof ORGS[number]; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
   const cca = isCCA(org.id);
+  const [sysOpen, setSysOpen] = useState(false);
+  const statusValue = org.enrollment_status === "active" ? "active" : org.enrollment_status === "closed" ? "closed" : "pending_review";
   return (
     <div className="mt-3">
       <div className="grid grid-cols-2 gap-x-8">
@@ -204,10 +277,10 @@ function ConfigTab({ org, product, readOnly }: { org: typeof ORGS[number]; produ
           <SubHead>Identity</SubHead>
           <Row label="Name"><RO value={org.name} readOnly={readOnly} /></Row>
           <Row label="Domain"><RO value={`${org.name.toLowerCase().replace(/[^a-z]/g, "")}.example.com`} readOnly={readOnly} /></Row>
-          <Row label="Industry"><Select value={["professional_services", "healthcare", "manufacturing", "transportation"][["org_1","org_3","org_4","org_8"].indexOf(org.id) % 4] || "other"} options={["education","healthcare","government","manufacturing","professional_services","transportation","hospitality","other"]} readOnly={readOnly} /></Row>
-          <Row label="Org Type"><RO value={cca ? "CPA Firm" : "Employer Group"} readOnly={readOnly} /></Row>
-          <Row label="Status"><Pill tone={org.enrollment_status === "active" ? "ok" : org.enrollment_status === "closed" ? "bad" : "info"}>{org.enrollment_status}</Pill></Row>
-          <Row label="Situs State"><RO value={org.situs_state} readOnly={readOnly} /></Row>
+          <Row label="Industry"><Select value={["professional_services", "healthcare", "manufacturing", "transportation"][["org_1","org_3","org_4","org_8"].indexOf(org.id) % 4] || "other"} options={INDUSTRIES} readOnly={readOnly} /></Row>
+          <Row label="Org Type"><Select value={cca ? "CPA Firm" : "Employer Group"} options={ORG_TYPES} readOnly={readOnly} /></Row>
+          <Row label="Status"><Select value={statusValue} options={ORG_STATUSES} readOnly={readOnly} disabled={!isAdmin} /></Row>
+          <Row label="Situs State"><Select value={org.situs_state} options={US_STATES} readOnly={readOnly} /></Row>
           <Row label="Situs City"><RO value="Austin" readOnly={readOnly} /></Row>
           <Row label="Eligible Lives"><RO value={org.individuals_count * 3} readOnly={readOnly} /></Row>
           <Row label="Policy Owner Type"><Select value={org.policy_owner_type === "employer" ? "employer_group" : "cca"} options={["employer_group","cca"]} readOnly={readOnly} /></Row>
@@ -218,7 +291,7 @@ function ConfigTab({ org, product, readOnly }: { org: typeof ORGS[number]; produ
           {product === "DI" ? (
             <>
               <SubHead>DI Settings</SubHead>
-              <Row label="DI Healthcare Type"><Select value="Healthcare Practice" options={["MSO","Healthcare Practice","Medical Group","Dental","Other"]} readOnly={readOnly} /></Row>
+              <Row label="DI Healthcare Type"><Select value="Healthcare Practice" options={DI_HC_TYPES} readOnly={readOnly} /></Row>
               <Row label="Inbound Type"><RO value="Broker Referral" readOnly={readOnly} /></Row>
               <Row label="Type of Rate"><RO value="Issue Age" readOnly={readOnly} /></Row>
               <Row label="LTD Benefit %"><RO value="60.0" readOnly={readOnly} /></Row>
@@ -277,6 +350,31 @@ function ConfigTab({ org, product, readOnly }: { org: typeof ORGS[number]; produ
           ))}
         </div>
       </Card>
+
+      {/* System References (collapsible) */}
+      <div className="mt-6 border-t border-black/10 pt-3">
+        <button
+          onClick={() => setSysOpen((o) => !o)}
+          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider text-black/50 hover:text-black/80"
+        >
+          {sysOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          System References
+        </button>
+        {sysOpen ? (
+          <Card className="p-3 mt-2 bg-black/[0.02]">
+            <div className="grid grid-cols-[200px_1fr] gap-x-3 gap-y-1.5 text-xs text-black/60">
+              <div className="font-medium">Attio Deal ID</div>
+              <div><a className="text-sky-700 hover:underline font-mono" href={`https://app.attio.com/deals/deal_${org.id}_abc123`} target="_blank" rel="noopener noreferrer">deal_{org.id}_abc123</a></div>
+              <div className="font-medium">Attio Company ID</div>
+              <div><a className="text-sky-700 hover:underline font-mono" href={`https://app.attio.com/companies/cmp_${org.id}_xyz789`} target="_blank" rel="noopener noreferrer">cmp_{org.id}_xyz789</a></div>
+              <div className="font-medium">Google Drive Folder</div>
+              <div><a className="text-sky-700 hover:underline" href="#">drive.google.com/.../{org.id}</a></div>
+              <div className="font-medium">Org ID (Supabase)</div>
+              <div className="font-mono">{`${org.id}-${"0000-0000-0000-000000000000".slice(0, 28)}`}</div>
+            </div>
+          </Card>
+        ) : null}
+      </div>
     </div>
   );
 }
