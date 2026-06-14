@@ -124,11 +124,17 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
   };
 });
 
+const PM_TYPES = ["ach", "card-payment", "ach", "apple-pay", "ach", "card-payment", null, "ach"] as const;
+const PM_INSTITUTIONS = ["Chase", null, "Wells Fargo", null, "Bank of America", null, null, "Citibank"];
+const PM_LAST4 = [null, "4242", null, null, null, "1881", null, null];
 export const BILLING_GROUPS = Array.from({ length: 8 }, (_, i) => ({
   id: `bg_${i + 1}`,
   name: `Billing Group ${i + 1}`,
   individuals_count: INDIVIDUALS.filter((x) => x.billing_group_id === `bg_${i + 1}`).length,
   payment_method: ["ACH", "Card", "ACH", "Card"][i % 4],
+  payment_method_type: PM_TYPES[i] as "ach" | "card-payment" | "apple-pay" | null,
+  plaid_institution: PM_INSTITUTIONS[i],
+  card_last4: PM_LAST4[i],
   moov_account_id: `moov_${1000 + i}`,
 }));
 
