@@ -219,29 +219,30 @@ function IndividualDetail() {
       </div>
 
       <div className="space-y-4">
-        {/* Section 1: Coverage & Plan */}
-        <CoverageSection i={i} isLTC={isLTC} readOnly={readOnly} setConfirm={setConfirm} />
-
-        {/* Section 2: Payment & Billing */}
-        <PaymentSection i={i} bg={bg} readOnly={readOnly} />
-
-        {/* Section 3: Employer Contribution */}
-        <ContributionSection i={i} readOnly={readOnly} />
-
-        {/* Section 4: Identity */}
-        <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
-
-        {/* Section 5: Underwriting (LTC only) */}
-        {isLTC && <UnderwritingSection i={i} readOnly={readOnly} />}
-
-        {/* Section 6: Spouse & Linked Individual */}
-        <SpouseSection i={i} isLTC={isLTC} linked={linked ?? undefined} linkedDetail={linkedDetail} readOnly={readOnly} />
-
-        {/* Section 7: Enrollment Window & Affiliations */}
-        <EnrollmentSection i={i} />
-
-        {/* Section 8: System References */}
-        <SystemRefsSection i={i} />
+        {isLTC ? (
+          <>
+            <LTCCoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <PaymentSection i={i} bg={bg} readOnly={readOnly} />
+            <ContributionSection i={i} readOnly={readOnly} />
+            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <UnderwritingSection i={i} readOnly={readOnly} />
+            <SpouseSection i={i} linked={linked ?? undefined} linkedDetail={linkedDetail} readOnly={readOnly} />
+            <UpgradeSection i={i} readOnly={readOnly} />
+            <EnrollmentSection i={i} />
+            <SystemRefsSection i={i} />
+          </>
+        ) : (
+          <>
+            <DICoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <PaymentSection i={i} bg={bg} readOnly={readOnly} />
+            <ContributionSection i={i} readOnly={readOnly} />
+            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <ProfessionalClassificationSection i={i} readOnly={readOnly} />
+            <EnrollmentSection i={i} />
+            {i._org?.cca_group && i.cca_portal_link && <CCAPortalSection link={i.cca_portal_link} />}
+            <SystemRefsSection i={i} />
+          </>
+        )}
       </div>
 
       {/* Deactivate confirmation */}
