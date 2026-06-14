@@ -73,10 +73,11 @@ export const Route = createFileRoute("/individuals/")({
     stage: typeof s.stage === "string" ? s.stage : undefined,
     type: typeof s.type === "string" ? s.type : undefined,
     di_type: typeof s.di_type === "string" ? s.di_type : undefined,
+    payment: typeof s.payment === "string" ? s.payment : undefined,
   }),
 });
 
-type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type" | "di_type";
+type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type" | "di_type" | "employee_face_amount_cents" | "last_payment_status";
 
 const COVERAGE_OPTIONS = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"];
 
@@ -95,6 +96,7 @@ function IndividualsView() {
   const [stageFilter, setStageFilter] = useState<string>(searchParams.stage ?? "all");
   const [typeFilter, setTypeFilter] = useState<string>(searchParams.type ?? "all");
   const [diTypeFilter, setDiTypeFilter] = useState<string>(searchParams.di_type ?? "all");
+  const [paymentFilter, setPaymentFilter] = useState<string>(searchParams.payment ?? "all");
   const sort = useSort<SortKey>("full_name", "asc");
 
   useEffect(() => {
@@ -103,7 +105,8 @@ function IndividualsView() {
     if (searchParams.stage !== undefined) setStageFilter(searchParams.stage);
     if (searchParams.type !== undefined) setTypeFilter(searchParams.type);
     if (searchParams.di_type !== undefined) setDiTypeFilter(searchParams.di_type);
-  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type]);
+    if (searchParams.payment !== undefined) setPaymentFilter(searchParams.payment);
+  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type, searchParams.payment]);
 
   const productRows = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
@@ -122,6 +125,7 @@ function IndividualsView() {
         if (typeFilter === "Employee" && isSpouse) return false;
       }
       if (!isLTC && diTypeFilter !== "all" && i.di_type !== diTypeFilter) return false;
+      if (paymentFilter !== "all" && i.last_payment_status !== paymentFilter) return false;
       return true;
     });
     return sort.applySort(rows, (r, k) => {
@@ -129,9 +133,9 @@ function IndividualsView() {
       if (k === "relationship_type") return r.relationship_type === "spouse" ? "Spouse" : "Employee";
       return (r as unknown as Record<string, string | number>)[k];
     });
-  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, sort, isLTC]);
+  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, paymentFilter, sort, isLTC]);
 
-  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || !sort.isDefault;
+  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || paymentFilter !== "all" || !sort.isDefault;
 
   const clearAll = () => {
     setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all");
