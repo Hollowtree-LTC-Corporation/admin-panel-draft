@@ -66,7 +66,7 @@ function IndividualsView() {
     return sort.applySort(rows, (r, k) => {
       if (k === "plan") return isLTC ? r.purchased_plan : r.coverage_plan;
       if (k === "relationship_type") return r.relationship_type === "spouse" ? "Spouse" : "Employee";
-      return (r as Record<string, string | number>)[k] as string | number;
+      return (r as unknown as Record<string, string | number>)[k];
     });
   }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, sort, isLTC]);
 
