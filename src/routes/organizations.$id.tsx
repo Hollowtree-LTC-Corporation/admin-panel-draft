@@ -547,15 +547,15 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
             : <span className="text-black/40 text-xs">N/A for LTC</span>}
         </RField>
         <RField label="Domain">{e.editing ? <input className={inputCls} defaultValue={org.domain} /> : org.domain}</RField>
-        <RField label={product === "DI" ? "GI Offer" : "NAIC Code"}>
-          {product === "DI"
-            ? (e.editing ? <input className={inputCls} defaultValue={String(org.gi_offer_cents / 100)} /> : formatCents(org.gi_offer_cents))
-            : (e.editing ? <input className={inputCls} defaultValue={org.naic_code} /> : org.naic_code)}
-        </RField>
+        {product === "LTC" ? (
+          <RField label="NAIC Code">
+            {e.editing ? <input className={inputCls} defaultValue={org.naic_code} /> : org.naic_code}
+          </RField>
+        ) : <div />}
         <RField label="Industry">
           {e.editing
             ? <select className={inputCls} defaultValue={org.industry}>{INDUSTRIES.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.industry}
+            : titleCase(org.industry)}
         </RField>
         <RField label="Microsite URL"><ExtLink href={org.microsite_url}>{org.microsite_url}</ExtLink></RField>
         <RField label="Org Type">
@@ -563,13 +563,19 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
             ? <select className={inputCls} defaultValue={org.org_type}>{ORG_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
             : org.org_type}
         </RField>
-        {product === "LTC" ? (
+        {product === "DI" ? (
+          <RField label="Contact Email">
+            {e.editing
+              ? <input className={inputCls} type="email" defaultValue={org.contact_email ?? ""} />
+              : (org.contact_email ? <a href={`mailto:${org.contact_email}`} className="text-sky-700 hover:underline">{org.contact_email}</a> : <Empty />)}
+          </RField>
+        ) : (
           <RField label="Company Years in Existence">{e.editing ? <input className={inputCls} type="number" defaultValue={org.company_years_in_existence} /> : org.company_years_in_existence}</RField>
-        ) : <div />}
+        )}
         <RField label="Status">
           {e.editing
             ? <select className={inputCls} defaultValue={statusValue} disabled={!isAdmin}>{ORG_STATUSES.map((o) => <option key={o}>{o}</option>)}</select>
-            : statusValue}
+            : titleCase(statusValue)}
         </RField>
         {product === "LTC" ? (
           <RField label="Org Website"><ExtLink href={org.org_website}>{org.org_website}</ExtLink></RField>
@@ -581,11 +587,13 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
         </RField>
         <RField label="Situs City">{e.editing ? <input className={inputCls} defaultValue={org.situs_city} /> : org.situs_city}</RField>
         <RField label="Eligible Lives">{e.editing ? <input className={inputCls} type="number" defaultValue={org.eligible_lives} /> : org.eligible_lives}</RField>
-        <RField label="Policy Owner Type">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.policy_owner_type}>{["employer","individual"].map((o) => <option key={o}>{o}</option>)}</select>
-            : org.policy_owner_type}
-        </RField>
+        {!(product === "DI" && org.cca_group) && (
+          <RField label="Policy Owner Type">
+            {e.editing
+              ? <select className={inputCls} defaultValue={org.policy_owner_type}>{["employer_group","cca"].map((o) => <option key={o}>{o}</option>)}</select>
+              : policyOwnerLabel(org.policy_owner_type)}
+          </RField>
+        )}
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
