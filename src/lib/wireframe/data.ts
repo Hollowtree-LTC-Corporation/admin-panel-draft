@@ -95,7 +95,7 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     interested_spousal: n % 4 === 0,
     relationship_type: isSpouse ? "spouse" : (isLTC ? "primary" : "employee"),
     linked_individual_id: isSpouse ? `ind_${SPOUSE_PAIRS[n]}` : null,
-    employee_face_amount_cents: 10000000 + (n % 5) * 2500000,
+    employee_face_amount_cents: LTC_FACE_TIERS_CENTS[isSpouse ? (n % 3) : 2 + (n % 5)],
     // Employer contribution
     contribution_tier: ["100%", "75%", "50%", "0%"][n % 4],
     contribution_duration_months: [12, 24, 36][n % 3],
