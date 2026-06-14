@@ -25,6 +25,14 @@ function StatusBadge({ map, value }: { map: typeof COVERAGE_BADGE; value: string
   const m = map[value] ?? { label: value, cls: "bg-black/5 text-black/70" };
   return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${m.cls}`}>{m.label}</span>;
 }
+
+const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function formatDate(d: string | null | undefined): string {
+  if (!d) return "—";
+  const [y, m, day] = d.split("-").map(Number);
+  if (!y || !m || !day) return "—";
+  return `${MONTH_ABBR[m - 1]} ${day}, ${y}`;
+}
 import { INDIVIDUALS, ORGS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
@@ -41,7 +49,7 @@ export const Route = createFileRoute("/individuals/")({
   }),
 });
 
-type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "monthly_premium_cents" | "billing_group_id" | "relationship_type";
+type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type";
 
 const COVERAGE_OPTIONS = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"];
 
@@ -52,7 +60,7 @@ function IndividualsView() {
   const createDrawer = useDrawer();
   const searchParams = useSearch({ from: "/individuals/" });
   const isLTC = product === "LTC";
-  const planLabel = isLTC ? "Purchased Plan" : "Coverage Plan";
+  
 
   const [search, setSearch] = useState("");
   const [orgFilter, setOrgFilter] = useState<string>(searchParams.org ?? "all");
@@ -133,9 +141,9 @@ function IndividualsView() {
             { key: "org_name", label: "Org" },
             { key: "coverage_status", label: "Coverage Status" },
             { key: "stage", label: "Stage" },
-            { key: "plan", label: planLabel },
+            { key: "plan", label: "Coverage Plan" },
+            { key: "effective_date", label: "Effective Date" },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
-            { key: "billing_group_id", label: "Billing Group" },
           ]}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}
@@ -144,6 +152,7 @@ function IndividualsView() {
         <tbody>
           {filtered.map((i) => {
             const isSpouse = i.relationship_type === "spouse";
+            const unpurchased = i.coverage_status === "not_started" || i.coverage_status === "in_progress";
             return (
               <TRow key={i.id} onClick={() => navigate({ to: "/individuals/$id", params: { id: i.id } })}>
                 <TCell className="font-medium">
@@ -160,9 +169,9 @@ function IndividualsView() {
                 <TCell>{i.org_name}</TCell>
                 <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
                 <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
-                <TCell>{isLTC ? i.purchased_plan : i.coverage_plan}</TCell>
-                <TCell>{formatCents(i.monthly_premium_cents)}</TCell>
-                <TCell className="text-black/60">{i.billing_group_id}</TCell>
+                <TCell>{unpurchased ? "—" : (isLTC ? i.purchased_plan : i.coverage_plan)}</TCell>
+                <TCell className={i.coverage_status === "in_progress" ? "text-black/40" : ""}>{formatDate(i.effective_date)}</TCell>
+                <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>
               </TRow>
             );
           })}
