@@ -223,7 +223,7 @@ function IndividualDetail() {
         {isLTC && <UnderwritingSection i={i} readOnly={readOnly} />}
 
         {/* Section 6: Spouse & Linked Individual */}
-        <SpouseSection i={i} isLTC={isLTC} linked={linked} linkedDetail={linkedDetail} readOnly={readOnly} />
+        <SpouseSection i={i} isLTC={isLTC} linked={linked ?? undefined} linkedDetail={linkedDetail} readOnly={readOnly} />
 
         {/* Section 7: Enrollment Window & Affiliations */}
         <EnrollmentSection i={i} />
