@@ -65,30 +65,6 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     effective_date = `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-15`;
   }
   return {
-    const pair = COVERAGE_STAGE_PAIRS[i % COVERAGE_STAGE_PAIRS.length];
-    const cov = pair[0];
-    const hasPlan = cov !== "not_started" && cov !== "in_progress";
-    // Deterministic effective date by status
-    let effective_date: string | null = null;
-    if (cov === "active" || cov === "suspended" || cov === "lapsed") {
-      // past: Jan 2025 – Apr 2026
-      const month = (n * 3) % 16; // 0..15 from Jan 2025
-      const y = 2025 + Math.floor(month / 12);
-      const m = (month % 12) + 1;
-      const d = ((n * 7) % 27) + 1;
-      effective_date = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    } else if (cov === "purchased") {
-      // near future within 30 days (June 14, 2026 baseline)
-      const d = 15 + (n % 30);
-      const m = d > 30 ? 7 : 6;
-      const day = d > 30 ? d - 30 : d;
-      effective_date = `2026-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    } else if (cov === "in_progress") {
-      // proposed effective date in some rows
-      effective_date = n % 2 === 0 ? `2026-07-01` : null;
-    } else if (cov === "canceled") {
-      effective_date = `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-15`;
-    }
     id: `ind_${n}`,
     full_name: `Test Person ${n}`,
     email: `person${n}@example.com`,
