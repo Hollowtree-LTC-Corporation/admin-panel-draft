@@ -427,6 +427,7 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
         </RField>
         <RField label="Failed Attempt Date" value={fmtDate(i.failed_attempt_date)} locked={editing} />
         <RField label="Next Retry Date" value={fmtDate(i.next_retry_date)} locked={editing} />
+      </Grid>
       <div className="mt-3">
         <Link to="/payment-ledger" className="text-xs text-[#0a3d3e] hover:underline inline-flex items-center gap-1">
           View full payment history <ChevronRight className="h-3 w-3" />
