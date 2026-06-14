@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader, TableShell, THead, TRow, TCell, Pill, Btn, FilterBar, Drawer, useDrawer, Field, Input, ProductBadge } from "@/components/wireframe/Bits";
 import { ORGS } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
@@ -8,6 +8,7 @@ export const Route = createFileRoute("/organizations")({ component: OrgsView });
 function OrgsView() {
   const { product } = useStore();
   const can = usePermission();
+  const navigate = useNavigate();
   const d = useDrawer<typeof ORGS[number]>();
   const rows = ORGS.filter((o) => o.product === product);
 
@@ -27,12 +28,8 @@ function OrgsView() {
         <THead cols={["Name", "Product", "Situs", "Status", "# Individuals", "Owner Type", ""]} />
         <tbody>
           {rows.map((o) => (
-            <TRow key={o.id} onClick={() => d.open(o, "view")}>
-              <TCell className="font-medium">
-                <Link to="/organizations/$id" params={{ id: o.id }} className="hover:underline" onClick={(e) => e.stopPropagation()}>
-                  {o.name}
-                </Link>
-              </TCell>
+            <TRow key={o.id} onClick={() => navigate({ to: "/organizations/$id", params: { id: o.id } })}>
+              <TCell className="font-medium">{o.name}</TCell>
               <TCell><ProductBadge product={o.product} /></TCell>
               <TCell>{o.situs_state}</TCell>
               <TCell><Pill tone={o.enrollment_status === "active" ? "ok" : o.enrollment_status === "closed" ? "bad" : "info"}>{o.enrollment_status}</Pill></TCell>
@@ -48,13 +45,13 @@ function OrgsView() {
         </tbody>
       </TableShell>
 
-      <Drawer open={d.state.open} onClose={d.close} title={d.state.mode === "create" ? "New Organization" : d.state.data?.name ?? "Organization"}>
-        <Field label="Name"><Input defaultValue={d.state.data?.name} placeholder="Organization name" /></Field>
-        <Field label="Product"><Input defaultValue={d.state.data?.product ?? product} /></Field>
-        <Field label="Situs State"><Input defaultValue={d.state.data?.situs_state} /></Field>
-        <Field label="Policy Owner Type"><Input defaultValue={d.state.data?.policy_owner_type} /></Field>
+      <Drawer open={d.state.open} onClose={d.close} title="New Organization">
+        <Field label="Name"><Input placeholder="Organization name" /></Field>
+        <Field label="Product"><Input defaultValue={product} /></Field>
+        <Field label="Situs State"><Input placeholder="TX" /></Field>
+        <Field label="Policy Owner Type"><Input placeholder="employer_group" /></Field>
         <div className="flex gap-2 mt-4">
-          <Btn variant="primary" disabled={!can("organizations", d.state.mode === "create" ? "create" : "update")}>Save</Btn>
+          <Btn variant="primary" disabled={!can("organizations", "create")}>Save</Btn>
           <Btn onClick={d.close}>Cancel</Btn>
         </div>
       </Drawer>
