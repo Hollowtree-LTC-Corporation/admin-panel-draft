@@ -144,6 +144,7 @@ function IndividualsView() {
         <tbody>
           {filtered.map((i) => {
             const isSpouse = i.relationship_type === "spouse";
+            const unpurchased = i.coverage_status === "not_started" || i.coverage_status === "in_progress";
             return (
               <TRow key={i.id} onClick={() => navigate({ to: "/individuals/$id", params: { id: i.id } })}>
                 <TCell className="font-medium">
