@@ -3,7 +3,7 @@ import { PageHeader, TableShell, THead, TRow, TCell, Pill, Btn, FilterBar, Drawe
 import { ORGS } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 
-export const Route = createFileRoute("/organizations")({ component: OrgsView });
+export const Route = createFileRoute("/organizations/")({ component: OrgsView });
 
 function OrgsView() {
   const { product } = useStore();

@@ -38,18 +38,18 @@ function isCCA(orgId: string) {
   return orgId === "org_3"; // Coastal Credit Union as the CCA example
 }
 
-export default function OrgDetail() {
+function OrgDetail() {
   const { id } = Route.useParams();
   const { product } = useStore();
   const can = usePermission();
+  const editDrawer = useDrawer<typeof ORGS[number]>();
+  const windowDrawer = useDrawer<typeof DUMMY_WINDOWS[number]>();
+  const bcDrawer = useDrawer<typeof BENEFIT_CLASSES[number]>();
   const org = ORGS.find((o) => o.id === id);
-  const editDrawer = useDrawer<typeof org>();
   if (!org) return <div className="p-4">Org not found.</div>;
 
   const readOnly = !can("organizations", "update");
   const windows = DUMMY_WINDOWS.filter((w) => w.org_id === id);
-  const windowDrawer = useDrawer<typeof windows[number]>();
-  const bcDrawer = useDrawer<typeof BENEFIT_CLASSES[number]>();
 
   // Per-org benefit classes; synthesize a default for orgs with none
   let classes = BENEFIT_CLASSES.filter((b) => b.org_id === id);
