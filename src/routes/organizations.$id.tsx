@@ -45,13 +45,58 @@ const DUMMY_WINDOWS = [
   { id: "ew_i", org_id: "org_6", window_type: "special", sponsor_type: "affiliate", affiliate: "Foxtail Alumni Assoc", start: "2025-07-15", end: "2025-08-15", effective: "2025-09-01", status: "open", gi_eligible: false, carrier: "Sequoia Care Partners", notes: "Affiliate-sponsored" },
 ];
 
-const DI_PLAN_DETAILS: Record<string, string> = {
-  "Benefit Period": "24 months",
-  "Elimination Period": "90 days",
-  "Monthly Benefit": "Up to 60% of base salary, capped at $10,000/mo",
-  "Definition of Disability": "Own occupation for first 24 months, then any occupation",
-  "Pre-existing Conditions": "12/12 look-back; excluded if treated in prior 12 months",
+const DI_PLAN_DETAILS = {
+  ltd: {
+    benefit_pct_text: "60% of base salary",
+    monthly_cap_text: "Capped at $10,000/month",
+    elimination_period_text: "90 days",
+    benefit_duration_text: "To age 65",
+    own_occupation_period_text: "24 months, then any occupation",
+    definition_of_disability: "Own occupation for first 24 months, then any occupation",
+    pre_existing_conditions: "12/12 look-back; excluded if treated in prior 12 months",
+    exclusions: "Standard carrier exclusions apply",
+  },
+  std: {
+    benefit_pct_text: "66.7% of base salary",
+    weekly_cap_text: "Capped at $2,500/week",
+    elimination_period_text: "7 days accident / 14 days illness",
+    benefit_duration_text: "13 weeks",
+    pre_existing_conditions: "Not applicable",
+  },
 };
+
+const LTD_LABELS: Record<string, string> = {
+  benefit_pct_text: "Benefit",
+  monthly_cap_text: "Monthly Cap",
+  elimination_period_text: "Elimination Period",
+  benefit_duration_text: "Benefit Duration",
+  own_occupation_period_text: "Own-Occupation Period",
+  definition_of_disability: "Definition of Disability",
+  pre_existing_conditions: "Pre-existing Conditions",
+  exclusions: "Exclusions",
+};
+const STD_LABELS: Record<string, string> = {
+  benefit_pct_text: "Benefit",
+  weekly_cap_text: "Weekly Cap",
+  elimination_period_text: "Elimination Period",
+  benefit_duration_text: "Benefit Duration",
+  pre_existing_conditions: "Pre-existing Conditions",
+};
+
+function titleCase(s: string | null | undefined): string {
+  if (!s) return "—";
+  return s.split(/[_\s]+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
+function productMixLabel(v: string | null | undefined): string {
+  if (v === "LTD") return "LTD only";
+  if (v === "STD+LTD") return "STD + LTD";
+  return "—";
+}
+function policyOwnerLabel(v: string | null | undefined): string {
+  if (v === "employer_group") return "Employer Group";
+  if (v === "cca") return "CCA";
+  return v ?? "—";
+}
 
 const LTC_TIER_DETAILS = {
   bronze:   { benefit_trigger: "2 of 6 ADLs or cognitive impairment", portability: "Available at group rates", inflation_protection: "None" },
