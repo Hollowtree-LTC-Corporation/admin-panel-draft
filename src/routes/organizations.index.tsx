@@ -32,7 +32,7 @@ function OrgsView() {
       if (owner !== "all" && o.policy_owner_type !== owner) return false;
       return true;
     });
-    return sort.applySort(rows, (r, k) => (r as Record<string, string | number>)[k] as string | number);
+    return sort.applySort(rows, (r, k) => (r as unknown as Record<string, string | number>)[k] as string | number);
   }, [productRows, search, status, situs, owner, sort]);
 
   const active = search !== "" || status !== "all" || situs !== "all" || owner !== "all" || !sort.isDefault;

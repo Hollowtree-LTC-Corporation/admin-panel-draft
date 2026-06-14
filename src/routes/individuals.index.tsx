@@ -34,6 +34,19 @@ function formatDate(d: string | null | undefined): string {
   return `${MONTH_ABBR[m - 1]} ${day}, ${y}`;
 }
 import { INDIVIDUALS, ORGS, formatCents } from "@/lib/wireframe/data";
+
+function formatFaceAmount(cents: number): string {
+  return `$${Math.round(cents / 100000)}K`;
+}
+function ridersFor(orgId: string): string {
+  const o = ORGS.find((x) => x.id === orgId);
+  const eob = !!o?.extension_of_benefits_rider;
+  const br = !!o?.benefit_restoration_rider;
+  if (eob && br) return "EOB + BR";
+  if (eob) return "EOB";
+  if (br) return "BR";
+  return "—";
+}
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 
@@ -149,6 +162,7 @@ function IndividualsView() {
             { key: "coverage_status", label: "Coverage Status" },
             { key: "stage", label: "Stage" },
             { key: "plan", label: "Coverage Plan" },
+            ...(isLTC ? [{ key: "employee_face_amount_cents" as SortKey, label: "Face Amount" }, { key: null, label: "Riders" }] : []),
             { key: "effective_date", label: "Effective Date" },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
           ]}
@@ -184,13 +198,19 @@ function IndividualsView() {
                 <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
                 <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
                 <TCell>{unpurchased ? "—" : (isLTC ? i.purchased_plan : i.coverage_plan)}</TCell>
+                {isLTC && (
+                  <>
+                    <TCell className="text-right">{unpurchased ? "—" : formatFaceAmount(i.employee_face_amount_cents)}</TCell>
+                    <TCell className="text-slate-500 text-[11px]">{ridersFor(i.org_id)}</TCell>
+                  </>
+                )}
                 <TCell className={i.coverage_status === "in_progress" ? "text-black/40" : ""}>{formatDate(i.effective_date)}</TCell>
                 <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>
               </TRow>
             );
           })}
           {filtered.length === 0 && (
-            <tr><td colSpan={8} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
+            <tr><td colSpan={10} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
