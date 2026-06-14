@@ -45,13 +45,58 @@ const DUMMY_WINDOWS = [
   { id: "ew_i", org_id: "org_6", window_type: "special", sponsor_type: "affiliate", affiliate: "Foxtail Alumni Assoc", start: "2025-07-15", end: "2025-08-15", effective: "2025-09-01", status: "open", gi_eligible: false, carrier: "Sequoia Care Partners", notes: "Affiliate-sponsored" },
 ];
 
-const DI_PLAN_DETAILS: Record<string, string> = {
-  "Benefit Period": "24 months",
-  "Elimination Period": "90 days",
-  "Monthly Benefit": "Up to 60% of base salary, capped at $10,000/mo",
-  "Definition of Disability": "Own occupation for first 24 months, then any occupation",
-  "Pre-existing Conditions": "12/12 look-back; excluded if treated in prior 12 months",
+const DI_PLAN_DETAILS = {
+  ltd: {
+    benefit_pct_text: "60% of base salary",
+    monthly_cap_text: "Capped at $10,000/month",
+    elimination_period_text: "90 days",
+    benefit_duration_text: "To age 65",
+    own_occupation_period_text: "24 months, then any occupation",
+    definition_of_disability: "Own occupation for first 24 months, then any occupation",
+    pre_existing_conditions: "12/12 look-back; excluded if treated in prior 12 months",
+    exclusions: "Standard carrier exclusions apply",
+  },
+  std: {
+    benefit_pct_text: "66.7% of base salary",
+    weekly_cap_text: "Capped at $2,500/week",
+    elimination_period_text: "7 days accident / 14 days illness",
+    benefit_duration_text: "13 weeks",
+    pre_existing_conditions: "Not applicable",
+  },
 };
+
+const LTD_LABELS: Record<string, string> = {
+  benefit_pct_text: "Benefit",
+  monthly_cap_text: "Monthly Cap",
+  elimination_period_text: "Elimination Period",
+  benefit_duration_text: "Benefit Duration",
+  own_occupation_period_text: "Own-Occupation Period",
+  definition_of_disability: "Definition of Disability",
+  pre_existing_conditions: "Pre-existing Conditions",
+  exclusions: "Exclusions",
+};
+const STD_LABELS: Record<string, string> = {
+  benefit_pct_text: "Benefit",
+  weekly_cap_text: "Weekly Cap",
+  elimination_period_text: "Elimination Period",
+  benefit_duration_text: "Benefit Duration",
+  pre_existing_conditions: "Pre-existing Conditions",
+};
+
+function titleCase(s: string | null | undefined): string {
+  if (!s) return "—";
+  return s.split(/[_\s]+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
+function productMixLabel(v: string | null | undefined): string {
+  if (v === "LTD") return "LTD only";
+  if (v === "STD+LTD") return "STD + LTD";
+  return "—";
+}
+function policyOwnerLabel(v: string | null | undefined): string {
+  if (v === "employer_group") return "Employer Group";
+  if (v === "cca") return "CCA";
+  return v ?? "—";
+}
 
 const LTC_TIER_DETAILS = {
   bronze:   { benefit_trigger: "2 of 6 ADLs or cognitive impairment", portability: "Available at group rates", inflation_protection: "None" },
@@ -98,6 +143,7 @@ function synthesize(org: typeof ORGS[number]) {
     ltd_benefit_pct: 60,
     std_benefit_pct: 66.7,
     next_sun_life_report_date: "2026-07-15",
+    contact_email: idx % 4 === 0 ? null : `hr@${slug}.example.com`,
     // Coverage / Billing
     contribution_type: cca ? "voluntary" : "employer_paid",
     pay_mode: "Monthly",
@@ -501,15 +547,15 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
             : <span className="text-black/40 text-xs">N/A for LTC</span>}
         </RField>
         <RField label="Domain">{e.editing ? <input className={inputCls} defaultValue={org.domain} /> : org.domain}</RField>
-        <RField label={product === "DI" ? "GI Offer" : "NAIC Code"}>
-          {product === "DI"
-            ? (e.editing ? <input className={inputCls} defaultValue={String(org.gi_offer_cents / 100)} /> : formatCents(org.gi_offer_cents))
-            : (e.editing ? <input className={inputCls} defaultValue={org.naic_code} /> : org.naic_code)}
-        </RField>
+        {product === "LTC" ? (
+          <RField label="NAIC Code">
+            {e.editing ? <input className={inputCls} defaultValue={org.naic_code} /> : org.naic_code}
+          </RField>
+        ) : <div />}
         <RField label="Industry">
           {e.editing
             ? <select className={inputCls} defaultValue={org.industry}>{INDUSTRIES.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.industry}
+            : titleCase(org.industry)}
         </RField>
         <RField label="Microsite URL"><ExtLink href={org.microsite_url}>{org.microsite_url}</ExtLink></RField>
         <RField label="Org Type">
@@ -517,13 +563,19 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
             ? <select className={inputCls} defaultValue={org.org_type}>{ORG_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
             : org.org_type}
         </RField>
-        {product === "LTC" ? (
+        {product === "DI" ? (
+          <RField label="Contact Email">
+            {e.editing
+              ? <input className={inputCls} type="email" defaultValue={org.contact_email ?? ""} />
+              : (org.contact_email ? <a href={`mailto:${org.contact_email}`} className="text-sky-700 hover:underline">{org.contact_email}</a> : <Empty />)}
+          </RField>
+        ) : (
           <RField label="Company Years in Existence">{e.editing ? <input className={inputCls} type="number" defaultValue={org.company_years_in_existence} /> : org.company_years_in_existence}</RField>
-        ) : <div />}
+        )}
         <RField label="Status">
           {e.editing
             ? <select className={inputCls} defaultValue={statusValue} disabled={!isAdmin}>{ORG_STATUSES.map((o) => <option key={o}>{o}</option>)}</select>
-            : statusValue}
+            : titleCase(statusValue)}
         </RField>
         {product === "LTC" ? (
           <RField label="Org Website"><ExtLink href={org.org_website}>{org.org_website}</ExtLink></RField>
@@ -535,11 +587,13 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
         </RField>
         <RField label="Situs City">{e.editing ? <input className={inputCls} defaultValue={org.situs_city} /> : org.situs_city}</RField>
         <RField label="Eligible Lives">{e.editing ? <input className={inputCls} type="number" defaultValue={org.eligible_lives} /> : org.eligible_lives}</RField>
-        <RField label="Policy Owner Type">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.policy_owner_type}>{["employer","individual"].map((o) => <option key={o}>{o}</option>)}</select>
-            : org.policy_owner_type}
-        </RField>
+        {!(product === "DI" && org.cca_group) && (
+          <RField label="Policy Owner Type">
+            {e.editing
+              ? <select className={inputCls} defaultValue={org.policy_owner_type}>{["employer_group","cca"].map((o) => <option key={o}>{o}</option>)}</select>
+              : policyOwnerLabel(org.policy_owner_type)}
+          </RField>
+        )}
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
@@ -548,18 +602,33 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
 
 function DISettingsSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
   const e = useSectionEdit();
+  const hasStd = org.type_of_rate === "STD+LTD";
   return (
-    <SectionCard title="DI Settings" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+    <SectionCard title="DI Product" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
       <Grid2>
+        <div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Product Mix</div>
+          <div className="text-sm text-gray-900 font-medium">
+            {e.editing
+              ? <select className={inputCls} defaultValue={org.type_of_rate ?? "LTD"}>{["LTD","STD+LTD"].map((o) => <option key={o} value={o}>{productMixLabel(o)}</option>)}</select>
+              : productMixLabel(org.type_of_rate)}
+          </div>
+          <div className="text-[11px] text-black/50 mt-1 italic">
+            Drives plan details, rate config, and which premium fields apply to individuals.
+          </div>
+        </div>
+        <RField label="LTD Benefit %">{e.editing ? <input className={inputCls} defaultValue={String(org.ltd_benefit_pct)} /> : `${org.ltd_benefit_pct}%`}</RField>
         <RField label="DI Healthcare Type">
           {e.editing
             ? <select className={inputCls} defaultValue={org.di_healthcare_type}>{DI_HC_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
             : org.di_healthcare_type}
         </RField>
-        <RField label="LTD Benefit %">{e.editing ? <input className={inputCls} defaultValue={String(org.ltd_benefit_pct)} /> : `${org.ltd_benefit_pct}%`}</RField>
+        <RField label="STD Benefit %">
+          {hasStd
+            ? (e.editing ? <input className={inputCls} defaultValue={String(org.std_benefit_pct)} /> : `${org.std_benefit_pct}%`)
+            : <Empty />}
+        </RField>
         <RField label="Inbound Type">{e.editing ? <input className={inputCls} defaultValue={org.inbound_type} /> : org.inbound_type}</RField>
-        <RField label="STD Benefit %">{e.editing ? <input className={inputCls} defaultValue={String(org.std_benefit_pct)} /> : `${org.std_benefit_pct}%`}</RField>
-        <RField label="Type of Rate">{e.editing ? <input className={inputCls} defaultValue={org.type_of_rate ?? ""} /> : val(org.type_of_rate)}</RField>
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
@@ -597,7 +666,7 @@ function CoverageBillingSection({ org, readOnly }: { org: OrgDetail; readOnly: b
         <RField label="Contribution Type">
           {e.editing
             ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.contribution_type}
+            : titleCase(org.contribution_type === "buy_up" ? "Buy-Up" : org.contribution_type)}
         </RField>
         <RField label="TPA Fee">{e.editing ? <input className={inputCls} defaultValue={String(org.tpa_fee_cents / 100)} /> : `${formatCents(org.tpa_fee_cents)} / mo`}</RField>
         <RField label="Pay Mode">
@@ -677,7 +746,7 @@ function LinksRefsSection({ org, product, readOnly }: { org: OrgDetail; product:
         <RField label="Meeting Link">
           {e.editing ? <input className={inputCls} defaultValue={org.meeting_link} /> : <ExtLink href={org.meeting_link}>{org.meeting_link}</ExtLink>}
         </RField>
-        <RField label="Gmail Label ID">{e.editing ? <input className={inputCls} defaultValue={org.gmail_label_id} /> : <span className="font-mono text-xs">{org.gmail_label_id}</span>}</RField>
+        
         <RField label="Attio Deal">
           <ExtLink href={`https://app.attio.com/deals/${org.attio_deal_id}`}><span className="font-mono text-xs">{org.attio_deal_id}</span></ExtLink>
         </RField>
@@ -695,20 +764,63 @@ function LinksRefsSection({ org, product, readOnly }: { org: OrgDetail; product:
 
 function PlanDetailsSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
   const e = useSectionEdit();
-  const note = "Plan terms displayed on the enrollment microsite. Changes here update enrollee-facing content.";
-  const pd = org.plan_details as Record<string, unknown>;
-  // Detect tier-nested LTC structure
+  const note = product === "DI"
+    ? "Plan terms displayed on the enrollment microsite. Each block corresponds to one carrier product."
+    : "Plan terms displayed on the enrollment microsite. Changes here update enrollee-facing content.";
+  const pd = (org.plan_details ?? {}) as Record<string, unknown>;
   const isTierNested = product === "LTC" && LTC_TIERS.some((t) => t in pd) && typeof pd[LTC_TIERS[0]] === "object";
+  const isDIShape = product === "DI" && ("ltd" in pd || "std" in pd);
 
   return (
     <SectionCard title="Plan Details" note={note} editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
-      {isTierNested ? (
+      {product === "DI" ? (
+        isDIShape ? (
+          <DIPlanDetails
+            details={pd as { ltd?: Record<string, string>; std?: Record<string, string> }}
+            includeStd={org.type_of_rate === "STD+LTD"}
+            editing={e.editing}
+          />
+        ) : (
+          <div className="text-sm text-black/50 italic">
+            Plan details not yet configured. Click edit to add LTD plan terms.
+          </div>
+        )
+      ) : isTierNested ? (
         <LtcTierPanels details={pd as Record<string, Record<string, string>>} editing={e.editing} />
       ) : (
         <FlatPlanDetails details={pd as Record<string, string>} editing={e.editing} />
       )}
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
+  );
+}
+
+function DIPlanDetails({ details, includeStd, editing }: { details: { ltd?: Record<string, string>; std?: Record<string, string> }; includeStd: boolean; editing: boolean }) {
+  return (
+    <div className="space-y-5">
+      <DISubBlock header="Long-Term Disability (LTD)" labels={LTD_LABELS} values={details.ltd ?? {}} editing={editing} />
+      {includeStd && (
+        <DISubBlock header="Short-Term Disability (STD)" labels={STD_LABELS} values={details.std ?? {}} editing={editing} />
+      )}
+    </div>
+  );
+}
+
+function DISubBlock({ header, labels, values, editing }: { header: string; labels: Record<string, string>; values: Record<string, string>; editing: boolean }) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-2 pb-1 border-b border-black/10">{header}</div>
+      <div className="space-y-2">
+        {Object.entries(labels).map(([key, label]) => (
+          <div key={key} className="grid grid-cols-[220px_1fr] gap-3 items-start">
+            <div className="text-xs font-semibold text-black/70 pt-2">{label}</div>
+            {editing
+              ? <Textarea defaultValue={values[key] ?? ""} className="text-sm min-h-[44px]" />
+              : <div className="text-sm text-black/80 leading-relaxed pt-1">{values[key] || <Empty />}</div>}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -808,6 +920,7 @@ function SystemRefsSection({ org, product }: { org: OrgDetail; product: "DI" | "
         <Ref label="Attio Deal ID" value={org.attio_deal_id} />
         <Ref label="Attio Company ID" value={org.attio_company_id} />
         <Ref label="Rate Sheet ID (legacy)" value={org.rate_sheet_id} muted />
+        <Ref label="Gmail Label ID" value={org.gmail_label_id} muted />
         {product === "LTC" && (
           <>
             <Ref label="LTC Enrollment Phase" value={org.ltc_enrollment_phase} />
