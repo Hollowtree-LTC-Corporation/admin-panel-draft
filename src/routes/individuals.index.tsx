@@ -47,10 +47,23 @@ function ridersFor(orgId: string): string {
   if (br) return "BR";
   return "—";
 }
+
+function paymentBadge(status: string | null, retry: number) {
+  if (!status) return <span className="text-black/40">—</span>;
+  if (status === "Successful") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">Paid</span>;
+  if (status === "Pending") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Pending</span>;
+  if (status === "Failed") {
+    const escalated = retry >= 3;
+    const cls = escalated ? "bg-red-200 text-red-800 font-medium" : "bg-red-100 text-red-700";
+    const label = retry > 0 ? `Failed (${retry})` : "Failed";
+    return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${cls}`}>{label}</span>;
+  }
+  return <span className="text-black/40">—</span>;
+}
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 
-type IndSearch = { org?: string; coverage?: string; stage?: string; type?: string; di_type?: string };
+type IndSearch = { org?: string; coverage?: string; stage?: string; type?: string; di_type?: string; payment?: string };
 
 export const Route = createFileRoute("/individuals/")({
   component: IndividualsView,
@@ -60,10 +73,11 @@ export const Route = createFileRoute("/individuals/")({
     stage: typeof s.stage === "string" ? s.stage : undefined,
     type: typeof s.type === "string" ? s.type : undefined,
     di_type: typeof s.di_type === "string" ? s.di_type : undefined,
+    payment: typeof s.payment === "string" ? s.payment : undefined,
   }),
 });
 
-type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type" | "di_type";
+type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type" | "di_type" | "employee_face_amount_cents" | "last_payment_status";
 
 const COVERAGE_OPTIONS = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"];
 
@@ -82,6 +96,7 @@ function IndividualsView() {
   const [stageFilter, setStageFilter] = useState<string>(searchParams.stage ?? "all");
   const [typeFilter, setTypeFilter] = useState<string>(searchParams.type ?? "all");
   const [diTypeFilter, setDiTypeFilter] = useState<string>(searchParams.di_type ?? "all");
+  const [paymentFilter, setPaymentFilter] = useState<string>(searchParams.payment ?? "all");
   const sort = useSort<SortKey>("full_name", "asc");
 
   useEffect(() => {
@@ -90,7 +105,8 @@ function IndividualsView() {
     if (searchParams.stage !== undefined) setStageFilter(searchParams.stage);
     if (searchParams.type !== undefined) setTypeFilter(searchParams.type);
     if (searchParams.di_type !== undefined) setDiTypeFilter(searchParams.di_type);
-  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type]);
+    if (searchParams.payment !== undefined) setPaymentFilter(searchParams.payment);
+  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type, searchParams.payment]);
 
   const productRows = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
@@ -109,6 +125,7 @@ function IndividualsView() {
         if (typeFilter === "Employee" && isSpouse) return false;
       }
       if (!isLTC && diTypeFilter !== "all" && i.di_type !== diTypeFilter) return false;
+      if (paymentFilter !== "all" && i.last_payment_status !== paymentFilter) return false;
       return true;
     });
     return sort.applySort(rows, (r, k) => {
@@ -116,12 +133,12 @@ function IndividualsView() {
       if (k === "relationship_type") return r.relationship_type === "spouse" ? "Spouse" : "Employee";
       return (r as unknown as Record<string, string | number>)[k];
     });
-  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, sort, isLTC]);
+  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, paymentFilter, sort, isLTC]);
 
-  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || !sort.isDefault;
+  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || paymentFilter !== "all" || !sort.isDefault;
 
   const clearAll = () => {
-    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all");
+    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all"); setPaymentFilter("all");
     sort.reset();
     navigate({ to: "/individuals", search: {} });
   };
@@ -149,6 +166,7 @@ function IndividualsView() {
         {!isLTC && (
           <FilterSelect value={diTypeFilter} onChange={setDiTypeFilter} allLabel="All types" options={[{ value: "STD+LTD" }, { value: "LTD", label: "LTD Only" }]} />
         )}
+        <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "Successful", label: "Paid" }, { value: "Failed" }, { value: "Pending" }]} />
         <ClearFiltersLink show={filtersActive} onClick={clearAll} />
       </FilterRow>
 
@@ -165,6 +183,7 @@ function IndividualsView() {
             ...(isLTC ? [{ key: "employee_face_amount_cents" as SortKey, label: "Face Amount" }, { key: null, label: "Riders" }] : []),
             { key: "effective_date", label: "Effective Date" },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
+            { key: "last_payment_status", label: "Payment" },
           ]}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}
@@ -206,11 +225,12 @@ function IndividualsView() {
                 )}
                 <TCell className={i.coverage_status === "in_progress" ? "text-black/40" : ""}>{formatDate(i.effective_date)}</TCell>
                 <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>
+                <TCell>{unpurchased ? <span className="text-black/40">—</span> : paymentBadge(i.last_payment_status, i.retry_count)}</TCell>
               </TRow>
             );
           })}
           {filtered.length === 0 && (
-            <tr><td colSpan={10} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
+            <tr><td colSpan={11} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>

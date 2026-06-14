@@ -66,6 +66,25 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
   } else if (cov === "canceled") {
     effective_date = `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-15`;
   }
+  // Payment status by coverage_status
+  let last_payment_status: "Successful" | "Failed" | "Pending" | null = null;
+  let retry_count = 0;
+  if (cov === "active") {
+    const bucket = n % 10;
+    if (bucket < 7) last_payment_status = "Successful";
+    else if (bucket < 9) { last_payment_status = "Failed"; retry_count = (n % 5) + 1; }
+    else last_payment_status = "Pending";
+  } else if (cov === "suspended") {
+    last_payment_status = "Failed";
+    retry_count = (n % 3) + 2;
+  } else if (cov === "purchased") {
+    last_payment_status = n % 2 === 0 ? "Pending" : "Successful";
+  } else if (cov === "lapsed") {
+    last_payment_status = "Failed";
+    retry_count = 4 + (n % 3);
+  } else if (cov === "canceled") {
+    last_payment_status = n % 2 === 0 ? "Successful" : null;
+  }
   return {
     id: `ind_${n}`,
     full_name: `Test Person ${n}`,
@@ -100,6 +119,8 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     contribution_tier: ["100%", "75%", "50%", "0%"][n % 4],
     contribution_duration_months: [12, 24, 36][n % 3],
     contribution_active: n % 5 !== 0,
+    last_payment_status,
+    retry_count,
   };
 });
 
