@@ -138,7 +138,7 @@ function IndividualsView() {
   const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || paymentFilter !== "all" || !sort.isDefault;
 
   const clearAll = () => {
-    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all");
+    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all"); setPaymentFilter("all");
     sort.reset();
     navigate({ to: "/individuals", search: {} });
   };
@@ -166,6 +166,7 @@ function IndividualsView() {
         {!isLTC && (
           <FilterSelect value={diTypeFilter} onChange={setDiTypeFilter} allLabel="All types" options={[{ value: "STD+LTD" }, { value: "LTD", label: "LTD Only" }]} />
         )}
+        <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "Successful", label: "Paid" }, { value: "Failed" }, { value: "Pending" }]} />
         <ClearFiltersLink show={filtersActive} onClick={clearAll} />
       </FilterRow>
 
@@ -182,6 +183,7 @@ function IndividualsView() {
             ...(isLTC ? [{ key: "employee_face_amount_cents" as SortKey, label: "Face Amount" }, { key: null, label: "Riders" }] : []),
             { key: "effective_date", label: "Effective Date" },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
+            { key: "last_payment_status", label: "Payment" },
           ]}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}
