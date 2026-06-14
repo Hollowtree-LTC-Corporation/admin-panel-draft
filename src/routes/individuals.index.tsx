@@ -1,6 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
-import { PageHeader, TableShell, TRow, TCell, Pill, Btn, Drawer, useDrawer, Field, Input } from "@/components/wireframe/Bits";
+import { PageHeader, TableShell, TRow, TCell, Btn, Drawer, useDrawer, Field, Input } from "@/components/wireframe/Bits";
+
+const COVERAGE_BADGE: Record<string, { label: string; cls: string }> = {
+  not_started: { label: "Not Started", cls: "bg-gray-100 text-gray-700" },
+  in_progress: { label: "In Progress", cls: "bg-blue-100 text-blue-700" },
+  purchased: { label: "Purchased", cls: "bg-teal-100 text-teal-700" },
+  active: { label: "Active", cls: "bg-green-100 text-green-700" },
+  suspended: { label: "Suspended", cls: "bg-amber-100 text-amber-700" },
+  canceled: { label: "Canceled", cls: "bg-red-100 text-red-700" },
+  lapsed: { label: "Lapsed", cls: "border border-red-300 text-red-600 bg-transparent" },
+};
+
+const STAGE_BADGE: Record<string, { label: string; cls: string }> = {
+  invited: { label: "Invited", cls: "bg-purple-50 text-purple-600" },
+  education: { label: "Education", cls: "bg-purple-100 text-purple-700" },
+  selecting_plan: { label: "Selecting Plan", cls: "bg-purple-200 text-purple-800" },
+  medical_questions: { label: "Medical Qs", cls: "bg-violet-200 text-violet-800" },
+  checkout: { label: "Checkout", cls: "bg-violet-100 text-violet-700" },
+  completed: { label: "Completed", cls: "bg-indigo-100 text-indigo-700" },
+};
+
+function StatusBadge({ map, value }: { map: typeof COVERAGE_BADGE; value: string }) {
+  const m = map[value] ?? { label: value, cls: "bg-black/5 text-black/70" };
+  return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${m.cls}`}>{m.label}</span>;
+}
 import { INDIVIDUALS, ORGS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
@@ -107,7 +131,7 @@ function IndividualsView() {
             { key: "full_name", label: "Name" },
             ...(isLTC ? [{ key: "relationship_type" as SortKey, label: "Type" }] : []),
             { key: "org_name", label: "Org" },
-            { key: "coverage_status", label: "Coverage" },
+            { key: "coverage_status", label: "Coverage Status" },
             { key: "stage", label: "Stage" },
             { key: "plan", label: planLabel },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
@@ -134,8 +158,8 @@ function IndividualsView() {
                   </TCell>
                 )}
                 <TCell>{i.org_name}</TCell>
-                <TCell><Pill tone={i.coverage_status === "active" ? "ok" : "neutral"}>{i.coverage_status}</Pill></TCell>
-                <TCell><Pill>{i.stage}</Pill></TCell>
+                <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
+                <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
                 <TCell>{isLTC ? i.purchased_plan : i.coverage_plan}</TCell>
                 <TCell>{formatCents(i.monthly_premium_cents)}</TCell>
                 <TCell className="text-black/60">{i.billing_group_id}</TCell>
