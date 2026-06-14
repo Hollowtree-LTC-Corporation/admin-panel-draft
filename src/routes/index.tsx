@@ -9,7 +9,7 @@ function Dashboard() {
   const { product } = useStore();
   const inds = INDIVIDUALS.filter((i) => i.product === product);
   const stages = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"] as const;
-  const stageCounts = stages.map((s) => ({ s, n: inds.filter((i) => i.stage === s).length }));
+  const stageCounts = stages.map((s) => ({ s, n: inds.filter((i) => i.coverage_status === s).length }));
   const orgCounts = ORGS.filter((o) => o.product === product).map((o) => ({
     ...o,
     individuals_count: inds.filter((i) => i.org_id === o.id).length,
