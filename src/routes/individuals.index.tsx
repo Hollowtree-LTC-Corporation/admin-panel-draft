@@ -25,6 +25,14 @@ function StatusBadge({ map, value }: { map: typeof COVERAGE_BADGE; value: string
   const m = map[value] ?? { label: value, cls: "bg-black/5 text-black/70" };
   return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${m.cls}`}>{m.label}</span>;
 }
+
+const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function formatDate(d: string | null | undefined): string {
+  if (!d) return "—";
+  const [y, m, day] = d.split("-").map(Number);
+  if (!y || !m || !day) return "—";
+  return `${MONTH_ABBR[m - 1]} ${day}, ${y}`;
+}
 import { INDIVIDUALS, ORGS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
