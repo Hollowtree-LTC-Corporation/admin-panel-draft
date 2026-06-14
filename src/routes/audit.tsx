@@ -1,33 +1,87 @@
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader, TableShell, THead, TRow, TCell, Pill, Drawer, useDrawer, FilterBar } from "@/components/wireframe/Bits";
+import { PageHeader, TableShell, TRow, TCell, Pill, Drawer, useDrawer } from "@/components/wireframe/Bits";
 import { AUDIT_LOG } from "@/lib/wireframe/data";
 import { useStore } from "@/lib/wireframe/store";
+import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, FilterDate, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 
 export const Route = createFileRoute("/audit")({ component: View });
+
+type SortKey = "table" | "record_id" | "action" | "actor" | "ts";
 
 function View() {
   const { role } = useStore();
   const d = useDrawer<typeof AUDIT_LOG[number]>();
 
+  const [search, setSearch] = useState("");
+  const [table, setTable] = useState("all");
+  const [action, setAction] = useState("all");
+  const [actor, setActor] = useState("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const sort = useSort<SortKey>("ts", "desc");
+
   if (role !== "admin") {
     return (
       <div>
         <PageHeader title="Audit Log" />
-        <div className="bg-amber-50 border border-amber-200 rounded p-4 text-sm text-amber-900">
-          Audit logs are admin-only · SOC 2 surface.
-        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded p-4 text-sm text-amber-900">Audit logs are admin-only · SOC 2 surface.</div>
       </div>
     );
   }
 
+  const tableOptions = Array.from(new Set(AUDIT_LOG.map((l) => l.table))).map((v) => ({ value: v }));
+  const actorOptions = Array.from(new Set(AUDIT_LOG.map((l) => l.actor))).map((v) => ({ value: v, label: v }));
+
+  const rows = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    const filtered = AUDIT_LOG.filter((l) => {
+      if (s && !(l.table.toLowerCase().includes(s) || l.record_id.toLowerCase().includes(s))) return false;
+      if (table !== "all" && l.table !== table) return false;
+      if (action !== "all" && l.action !== action) return false;
+      if (actor !== "all" && l.actor !== actor) return false;
+      const day = l.ts.slice(0, 10);
+      if (from && day < from) return false;
+      if (to && day > to) return false;
+      return true;
+    });
+    return sort.applySort(filtered, (r, k) => (r as unknown as Record<string, string | number>)[k]);
+  }, [search, table, action, actor, from, to, sort]);
+
+  const active = search !== "" || table !== "all" || action !== "all" || actor !== "all" || from !== "" || to !== "" || !sort.isDefault;
+  const clearAll = () => { setSearch(""); setTable("all"); setAction("all"); setActor("all"); setFrom(""); setTo(""); sort.reset(); };
+
   return (
     <div>
-      <PageHeader title="Audit Log" subtitle="Global mutation log · before/after diff · SOC 2 surface" />
-      <FilterBar />
+      <PageHeader title="Audit Log" subtitle={`${rows.length} of ${AUDIT_LOG.length} entries · before/after diff`} />
+      <FilterRow>
+        <FilterSearch value={search} onChange={setSearch} placeholder="Search table or record id…" />
+        <FilterSelect value={table} onChange={setTable} allLabel="All tables" options={tableOptions} />
+        <FilterSelect value={action} onChange={setAction} allLabel="All actions" options={[
+          { value: "create" }, { value: "update" }, { value: "delete" }, { value: "soft_delete" },
+        ]} />
+        <FilterCombobox value={actor} onChange={setActor} placeholder="All users" options={actorOptions} />
+        <FilterDate value={from} onChange={setFrom} />
+        <span className="text-[11px] text-black/40">to</span>
+        <FilterDate value={to} onChange={setTo} />
+        <ClearFiltersLink show={active} onClick={clearAll} />
+      </FilterRow>
       <TableShell>
-        <THead cols={["Timestamp", "Table", "Record", "Action", "Actor", ""]} />
+        <SortableTHead<SortKey>
+          cols={[
+            { key: "ts", label: "Timestamp" },
+            { key: "table", label: "Table" },
+            { key: "record_id", label: "Record" },
+            { key: "action", label: "Action" },
+            { key: "actor", label: "Actor" },
+            { key: null, label: "" },
+          ]}
+          sortKey={sort.sortKey}
+          sortDir={sort.sortDir}
+          onToggle={sort.toggle}
+        />
         <tbody>
-          {AUDIT_LOG.map((l) => (
+          {rows.map((l) => (
             <TRow key={l.id} onClick={() => d.open(l)}>
               <TCell className="font-mono text-[11px]">{l.ts}</TCell>
               <TCell className="font-mono text-[11px]">{l.table}</TCell>
