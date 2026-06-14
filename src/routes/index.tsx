@@ -40,7 +40,7 @@ function Dashboard() {
         <Stat label="Outstanding balance" value={formatCents(outstanding)} hint="aggregate across enrollees" />
         <Stat
           label="Suspended / lapsed"
-          value={inds.filter((i) => ["suspended", "lapsed"].includes(i.stage)).length}
+          value={inds.filter((i) => ["suspended", "lapsed"].includes(i.coverage_status)).length}
           hint="needs ops review"
         />
       </div>
