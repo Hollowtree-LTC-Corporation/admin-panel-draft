@@ -80,6 +80,7 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     billing_group_id: `bg_${(n % 8) + 1}`,
     // DI fields
     coverage_plan: PLANS_DI[n % PLANS_DI.length],
+    di_type: org.type_of_rate as "STD+LTD" | "LTD" | null,
     monthly_benefit_cents: 300000 + (n % 5) * 50000,
     weekly_covered_benefit_cents: 80000 + (n % 4) * 10000,
     assigned_rep: ["Jamie Rep", "Casey Rep", "Morgan Rep"][n % 3],
