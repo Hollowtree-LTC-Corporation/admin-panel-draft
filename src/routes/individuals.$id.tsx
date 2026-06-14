@@ -167,7 +167,7 @@ function IndividualDetail() {
   const base = INDIVIDUALS.find((i) => i.id === id);
   if (!base) return <div className="p-4">Individual not found.</div>;
   const i: Detail = synthesize(base);
-  const isLTC = i.product === "LTC";
+  const isLTC = _product === "LTC";
   const linked = i.linked_individual_id ? INDIVIDUALS.find((x) => x.id === i.linked_individual_id) : null;
   const linkedDetail = linked ? synthesize(linked) : null;
   const readOnly = !can("individuals", "update");
