@@ -192,6 +192,14 @@ function IndividualDetail() {
             <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
               {i.full_name}
               <ProductBadge product={i.product} />
+              {!isLTC && i._org?.cca_group && (
+                <span
+                  className="border border-indigo-400 text-indigo-700 bg-indigo-50 rounded px-2 py-0.5 text-xs font-medium"
+                  title="CCA-affiliated organization. Uses CCA portal link and CCA-specific policy emails."
+                >
+                  CCA
+                </span>
+              )}
             </h1>
             <div className="text-xs text-black/50 mt-0.5">Individuals &rsaquo; {i.full_name} · <span className="text-black/40">{i.id}</span></div>
           </div>
