@@ -174,6 +174,13 @@ function IndividualsView() {
                   </TCell>
                 )}
                 <TCell>{i.org_name}</TCell>
+                {!isLTC && (
+                  <TCell>
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${i.di_type === "STD+LTD" ? "bg-slate-100 text-slate-700" : "bg-slate-50 text-slate-500"}`}>
+                      {i.di_type === "STD+LTD" ? "STD+LTD" : "LTD Only"}
+                    </span>
+                  </TCell>
+                )}
                 <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
                 <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
                 <TCell>{unpurchased ? "—" : (isLTC ? i.purchased_plan : i.coverage_plan)}</TCell>
