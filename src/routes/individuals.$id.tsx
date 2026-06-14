@@ -441,31 +441,47 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
 function ContributionSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
   const active = i.contribution_active;
+  const hasHistory = !active && !!i.contribution_start_date && !!i.contribution_duration_months;
+  const endDate = i.contribution_duration_months ? `${i.contribution_start_date} + ${i.contribution_duration_months}mo` : "Indefinite";
   return (
     <SectionCard title="Employer Contribution" defaultOpen={active} editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
-        <RField label="Contribution Tier" value={i.contribution_tier ?? "—"} editing={editing}>
+        <RField label="Contribution Tier" value={i.contribution_tier ?? "—"} editing={editing && active}>
           <select defaultValue={i.contribution_tier ?? ""} className={inputCls}>{TIERS.map((t) => <option key={t}>{t}</option>)}</select>
-        </RField>
-        <RField label="Duration (months)" value={i.contribution_duration_months ? String(i.contribution_duration_months) : "Indefinite"} editing={editing}>
-          <input defaultValue={i.contribution_duration_months?.toString() ?? ""} placeholder="Indefinite" className={inputCls} />
         </RField>
         <RField label="Active">
           {active ? <Badge map={COVERAGE_BADGE} value="active" /> : <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">Inactive</span>}
         </RField>
-        <div />
-        <RField label="Start Date" value={fmtDate(i.contribution_start_date)} editing={editing}>
-          <input type="date" defaultValue={i.contribution_start_date ?? ""} className={inputCls} />
-        </RField>
-        <RField label="End Date" value={i.contribution_duration_months ? `${i.contribution_start_date} + ${i.contribution_duration_months}mo` : "Indefinite"} />
+        {active && (
+          <RField label="Duration (months)" value={i.contribution_duration_months ? String(i.contribution_duration_months) : "Indefinite"} editing={editing}>
+            <input defaultValue={i.contribution_duration_months?.toString() ?? ""} placeholder="Indefinite" className={inputCls} />
+          </RField>
+        )}
+        {active && <div />}
+        {(active || hasHistory) && (
+          <>
+            <RField label="Start Date" value={fmtDate(i.contribution_start_date)} editing={editing && active}>
+              <input type="date" defaultValue={i.contribution_start_date ?? ""} className={inputCls} />
+            </RField>
+            <RField label="End Date" value={endDate} />
+          </>
+        )}
       </Grid>
-      {i.contribution_tier && (
+      {active && i.contribution_tier && (
         <div className="mt-4 bg-blue-50 border-l-4 border-blue-400 text-sm text-black/75 p-3 rounded-r leading-relaxed">
           The employer covers this enrollee's premium at the <b>{i.contribution_tier}</b> tier
           {i.contribution_duration_months ? <> for <b>{i.contribution_duration_months} months</b></> : <> <b>indefinitely</b></>}
           {i.contribution_start_date ? <> starting <b>{fmtDate(i.contribution_start_date)}</b></> : null}.
           The dollar amount is derived at billing time from the rate table based on age and smoker status.
         </div>
+      )}
+      {!active && hasHistory && (
+        <div className="mt-4 text-sm text-black/60 leading-relaxed">
+          Employer covered this enrollee's premium at the <b>{i.contribution_tier}</b> tier from <b>{fmtDate(i.contribution_start_date)}</b> to <b>{endDate}</b>. The enrollee now pays the full premium.
+        </div>
+      )}
+      {!active && !hasHistory && (
+        <div className="mt-4 text-sm text-black/50">Employer contribution is not currently active for this enrollee.</div>
       )}
       {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
     </SectionCard>
