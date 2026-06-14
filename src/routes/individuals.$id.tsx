@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Btn, ProductBadge } from "@/components/wireframe/Bits";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, ChevronDown, ChevronRight, Lock, Pencil, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronRight, Lock, Pencil, AlertTriangle, Copy, ExternalLink } from "lucide-react";
 import { INDIVIDUALS, ORGS, BILLING_GROUPS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 
@@ -133,6 +133,18 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     magic_link: `https://enroll.hollowtree.dev/m/${base.id}-resume-tok`,
     magic_link_portal: `https://portal.hollowtree.dev/m/${base.id}-portal-tok`,
     signature_url: `https://sign.hollowtree.dev/s/${base.id}.pdf`,
+    // DI-only fields
+    w2_or_1099: !isLTC ? (n % 2 === 0 ? "1099" : "W2") : null,
+    physician_type: !isLTC && n % 2 === 0 ? ["MD","DO","Resident"][n % 3] : null,
+    nurse_type: !isLTC && n % 2 === 1 ? ["RN","NP","CRNA"][n % 3] : null,
+    were_they_client: !isLTC ? n % 3 === 0 : null,
+    std_premium_cents: !isLTC && org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.4) : 0,
+    ltd_premium_cents: !isLTC ? (org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.6) : base.monthly_premium_cents) : 0,
+    cca_portal_link: !isLTC && org?.cca_group ? `https://cca.example.org/portal/${base.id}` : null,
+    // LTC-only extras
+    spouse_face_amount_cents: isLTC && relationship === "primary" && base.interested_spousal ? Math.round((base.employee_face_amount_cents ?? 0) * 0.6) : null,
+    employee_upgrade_option: isLTC && base.upgrade_applied_for ? ["Silver→Gold","Gold→Platinum","Platinum→Diamond"][n % 3] : null,
+    applied_for_upgrade: isLTC ? base.upgrade_applied_for : null,
     _org: org,
     _riders: org ? [org.extension_of_benefits_rider && "EOB", org.benefit_restoration_rider && "BR"].filter(Boolean).join(" + ") || "—" : "—",
   };
@@ -207,29 +219,30 @@ function IndividualDetail() {
       </div>
 
       <div className="space-y-4">
-        {/* Section 1: Coverage & Plan */}
-        <CoverageSection i={i} isLTC={isLTC} readOnly={readOnly} setConfirm={setConfirm} />
-
-        {/* Section 2: Payment & Billing */}
-        <PaymentSection i={i} bg={bg} readOnly={readOnly} />
-
-        {/* Section 3: Employer Contribution */}
-        <ContributionSection i={i} readOnly={readOnly} />
-
-        {/* Section 4: Identity */}
-        <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
-
-        {/* Section 5: Underwriting (LTC only) */}
-        {isLTC && <UnderwritingSection i={i} readOnly={readOnly} />}
-
-        {/* Section 6: Spouse & Linked Individual */}
-        <SpouseSection i={i} isLTC={isLTC} linked={linked ?? undefined} linkedDetail={linkedDetail} readOnly={readOnly} />
-
-        {/* Section 7: Enrollment Window & Affiliations */}
-        <EnrollmentSection i={i} />
-
-        {/* Section 8: System References */}
-        <SystemRefsSection i={i} />
+        {isLTC ? (
+          <>
+            <LTCCoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <PaymentSection i={i} bg={bg} readOnly={readOnly} />
+            <ContributionSection i={i} readOnly={readOnly} />
+            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <UnderwritingSection i={i} readOnly={readOnly} />
+            <SpouseSection i={i} linked={linked ?? undefined} linkedDetail={linkedDetail} readOnly={readOnly} />
+            <UpgradeSection i={i} readOnly={readOnly} />
+            <EnrollmentSection i={i} />
+            <SystemRefsSection i={i} />
+          </>
+        ) : (
+          <>
+            <DICoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <PaymentSection i={i} bg={bg} readOnly={readOnly} />
+            <ContributionSection i={i} readOnly={readOnly} />
+            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <ProfessionalClassificationSection i={i} readOnly={readOnly} />
+            <EnrollmentSection i={i} />
+            {i._org?.cca_group && i.cca_portal_link && <CCAPortalSection link={i.cca_portal_link} />}
+            <SystemRefsSection i={i} />
+          </>
+        )}
       </div>
 
       {/* Deactivate confirmation */}
@@ -260,7 +273,7 @@ function IndividualDetail() {
    SECTIONS
 ============================================================= */
 
-function CoverageSection({ i, isLTC, readOnly, setConfirm }: { i: Detail; isLTC: boolean; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void }) {
+function useCoverageEditing(i: Detail, setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void) {
   const [editing, setEditing] = useState(false);
   const [status, setStatus] = useState(i.coverage_status);
   const [error, setError] = useState<string | null>(null);
@@ -281,50 +294,110 @@ function CoverageSection({ i, isLTC, readOnly, setConfirm }: { i: Detail; isLTC:
     }
     setEditing(false);
   };
+  const onCancel = () => { setEditing(false); setStatus(i.coverage_status); setError(null); };
+  return { editing, setEditing, status, setStatus, error, allowed, onSave, onCancel };
+}
+
+function CoverageStatusField({ editing, status, setStatus, allowed, current }: { editing: boolean; status: string; setStatus: (s: any) => void; allowed: string[]; current: string }) {
   return (
-    <SectionCard title="Coverage & Plan" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+    <RField label="Coverage Status">
+      {editing ? (
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
+          {COVERAGE_STATUSES.map((s) => (
+            <option key={s} value={s} disabled={!allowed.includes(s)}>{s}{allowed.includes(s) ? "" : " (invalid)"}</option>
+          ))}
+        </select>
+      ) : <Badge map={COVERAGE_BADGE} value={current} />}
+    </RField>
+  );
+}
+
+function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void }) {
+  const { editing, setEditing, status, setStatus, error, allowed, onSave, onCancel } = useCoverageEditing(i, setConfirm);
+  const unfunded = i.coverage_status === "not_started" || i.coverage_status === "in_progress";
+  const premiumSum = i.std_premium_cents + i.ltd_premium_cents;
+  const mismatch = !unfunded && premiumSum !== i.monthly_premium_cents;
+  const DI_PLANS = ["Bronze DI", "Silver DI", "Gold DI"];
+  return (
+    <SectionCard title="Coverage & Plan · DI" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
-        <RField label="Coverage Status">
-          {editing ? (
-            <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className={inputCls}>
-              {COVERAGE_STATUSES.map((s) => (
-                <option key={s} value={s} disabled={!allowed.includes(s)}>
-                  {s}{allowed.includes(s) ? "" : " (invalid)"}
-                </option>
-              ))}
-            </select>
-          ) : <Badge map={COVERAGE_BADGE} value={i.coverage_status} />}
+        <CoverageStatusField editing={editing} status={status} setStatus={setStatus} allowed={allowed} current={i.coverage_status} />
+        <RField label="DI Type" value={i.di_type === "STD+LTD" ? "STD+LTD" : "LTD Only"} />
+        <RField label="Coverage Plan" value={unfunded ? "—" : i.coverage_plan} editing={editing}>
+          <select defaultValue={i.coverage_plan} className={inputCls}>{DI_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
         </RField>
-        <RField label="Current Stage"><Badge map={STAGE_BADGE} value={i.stage} /></RField>
+        <RField label="Active Date" value={fmtDate(i.active_date)} />
+
+        <RField label="Monthly Premium">
+          {unfunded ? <span className="text-gray-400">—</span> : (
+            <span className="inline-flex items-center gap-1">
+              {formatCents(i.monthly_premium_cents)}
+              {mismatch && <AlertTriangle className="h-3.5 w-3.5 text-amber-600" aria-label="STD+LTD sum mismatch" />}
+            </span>
+          )}
+        </RField>
+        {i.di_type === "STD+LTD" && (
+          <RField label="STD Premium" value={unfunded ? "—" : formatCents(i.std_premium_cents)} />
+        )}
+        <RField label="LTD Premium" value={unfunded ? "—" : formatCents(i.ltd_premium_cents)} />
+        <RField label="Weekly Covered Benefit" value={unfunded ? "—" : formatCents(i.weekly_covered_benefit_cents)} />
+
+        <RField label="Monthly Benefit" value={unfunded ? "—" : formatCents(i.monthly_benefit_cents)} />
         <RField label="Effective Date" value={fmtDate(i.effective_date)} editing={editing}>
           <input type="date" defaultValue={i.effective_date ?? ""} className={inputCls} />
         </RField>
-        <RField label="Application Status" value={i.application_status} editing={editing}>
-          <input defaultValue={i.application_status} className={inputCls} />
-        </RField>
+        <RField label="Canceled Date" value={fmtDate(i.canceled_date)} />
+        <RField label="Application Status" value={i.application_status} />
+      </Grid>
+      {error && <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
+      {mismatch && !editing && (
+        <div className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 inline-flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3" /> STD + LTD does not equal Monthly Premium ({formatCents(premiumSum)} vs {formatCents(i.monthly_premium_cents)})
+        </div>
+      )}
+      {editing && <SectionActions onCancel={onCancel} onSave={onSave} />}
+    </SectionCard>
+  );
+}
 
-        <RField label="Coverage Plan" value={isLTC ? i.purchased_plan : i.coverage_plan} />
-        {isLTC && <RField label="Benefit Class" value={i.benefit_class_name} editing={editing}>
+function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void }) {
+  const { editing, setEditing, status, setStatus, error, allowed, onSave, onCancel } = useCoverageEditing(i, setConfirm);
+  const unfunded = i.coverage_status === "not_started" || i.coverage_status === "in_progress";
+  const LTC_PLANS = ["Bronze LTC", "Silver LTC", "Gold LTC", "Platinum LTC", "Diamond LTC"];
+  return (
+    <SectionCard title="Coverage & Plan · LTC" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+      <Grid cols={4}>
+        <CoverageStatusField editing={editing} status={status} setStatus={setStatus} allowed={allowed} current={i.coverage_status} />
+        <RField label="Current Stage"><Badge map={STAGE_BADGE} value={i.stage} /></RField>
+        <RField label="Benefit Class" value={i.benefit_class_name} editing={editing}>
           <select defaultValue={i.benefit_class_name} className={inputCls}>{["All Employees","Management"].map((o) => <option key={o}>{o}</option>)}</select>
-        </RField>}
-        {isLTC && <RField label="Face Amount" value={formatCents(i.employee_face_amount_cents)} />}
-        {isLTC && <RField label="Riders" value={i._riders} />}
+        </RField>
+        <RField label="Riders" value={i._riders} />
 
-        {!isLTC && <RField label="DI Type" value={i.di_type === "STD+LTD" ? "STD+LTD" : "LTD Only"} />}
-        {!isLTC && <RField label="Employee Plan Selected" value={i.coverage_plan} />}
-        <RField label="Monthly Premium" value={formatCents(i.monthly_premium_cents)} />
-        {!isLTC && <div />}
+        <RField label="Purchased Plan" value={unfunded ? "—" : i.purchased_plan} editing={editing}>
+          <select defaultValue={i.purchased_plan} className={inputCls}>{LTC_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
+        </RField>
+        <RField label="Employee Plan Selected" value={i.employee_plan_selected || "—"} />
+        <RField label="Face Amount" value={unfunded ? "—" : formatCents(i.employee_face_amount_cents)} />
+        <RField label="Monthly Premium" value={unfunded ? "—" : formatCents(i.monthly_premium_cents)} />
 
-        <RField label="Enrollment Cycle" value={i.enrollment_cycle} />
-        <RField label="Persona" value={i.persona} />
+        <RField label="Tobacco Use">
+          {i.tobacco_use
+            ? <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Yes</span>
+            : <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">No</span>}
+        </RField>
+        <RField label="Effective Date" value={fmtDate(i.effective_date)} editing={editing}>
+          <input type="date" defaultValue={i.effective_date ?? ""} className={inputCls} />
+        </RField>
         <RField label="Active Date" value={fmtDate(i.active_date)} />
         <RField label="Canceled Date" value={fmtDate(i.canceled_date)} />
       </Grid>
       {error && <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
-      {editing && <SectionActions onCancel={() => { setEditing(false); setStatus(i.coverage_status); setError(null); }} onSave={onSave} />}
+      {editing && <SectionActions onCancel={onCancel} onSave={onSave} />}
     </SectionCard>
   );
 }
+
 
 function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof BILLING_GROUPS.find>; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
@@ -487,12 +560,44 @@ function UnderwritingSection({ i, readOnly }: { i: Detail; readOnly: boolean }) 
   );
 }
 
-function SpouseSection({ i, isLTC, linked, linkedDetail, readOnly }: { i: Detail; isLTC: boolean; linked: ReturnType<typeof INDIVIDUALS.find>; linkedDetail: Detail | null; readOnly: boolean }) {
+function ProfessionalClassificationSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <SectionCard title="Professional Classification" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+      <Grid cols={4}>
+        <RField label="Physician Type" value={i.physician_type ?? "—"} editing={editing}>
+          <select defaultValue={i.physician_type ?? ""} className={inputCls}>{["","MD","DO","Resident"].map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select>
+        </RField>
+        <RField label="Nurse Type" value={i.nurse_type ?? "—"} editing={editing}>
+          <select defaultValue={i.nurse_type ?? ""} className={inputCls}>{["","RN","NP","CRNA"].map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select>
+        </RField>
+        <div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">W2 / 1099</div>
+          <div>
+            {i.w2_or_1099 ? (
+              <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-[#0a3d3e] text-white">{i.w2_or_1099}</span>
+            ) : <span className="text-gray-400 text-sm">—</span>}
+          </div>
+        </div>
+        <RField label="Assigned Rep" value={i.assigned_rep ?? "—"} editing={editing}>
+          <input defaultValue={i.assigned_rep ?? ""} className={inputCls} />
+        </RField>
+        <RField label="Were They a Client">
+          {i.were_they_client
+            ? <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">Yes</span>
+            : <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">No</span>}
+        </RField>
+      </Grid>
+      {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
+    </SectionCard>
+  );
+}
+
+function SpouseSection({ i, linked, linkedDetail, readOnly }: { i: Detail; linked: ReturnType<typeof INDIVIDUALS.find>; linkedDetail: Detail | null; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
   let summary = "No spouse";
   if (linked && linkedDetail) summary = `Spouse: ${linked.full_name} (${linkedDetail.coverage_status}, ${linkedDetail.purchased_plan || linkedDetail.coverage_plan})`;
-  else if (isLTC && i.interested_spousal_text === "yes") summary = "Interested in spousal coverage";
-  const showUpgrade = isLTC && (i.upgrade_applied_for || i.interested_upgrading || i.pre_upgrade_premium_cents);
+  else if (i.interested_spousal_text === "yes") summary = "Interested in spousal coverage";
   return (
     <SectionCard title="Spouse & Linked Individual" summary={summary} editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={3}>
@@ -505,37 +610,71 @@ function SpouseSection({ i, isLTC, linked, linkedDetail, readOnly }: { i: Detail
           ) : <span className="text-sm text-black/50">—</span>}
         </RField>
         <div />
-        {isLTC && i.relationship_type === "primary" && (
+        {i.relationship_type === "primary" && (
           <>
             <RField label="Interested in Spousal Coverage" value={i.interested_spousal_text} editing={editing}>
               <select defaultValue={i.interested_spousal_text} className={inputCls}>{["yes","no",""].map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select>
             </RField>
-            <RField label="Spouse Authorization" value={i.spouse_authorization} />
-            <RField label="Clicked Spouse Link" value={i.clicked_spouse_link} />
-            <RField label="Sent Spouse Invite" value={i.sent_spouse_invite} />
+            <RField label="Sent Spouse Invite" value={i.sent_spouse_invite || "—"} />
+            <RField label="Spouse Face Amount" value={i.spouse_face_amount_cents != null ? formatCents(i.spouse_face_amount_cents) : "—"} />
+            <RField label="Spouse Authorization" value={i.spouse_authorization || "—"} />
+            <RField label="Clicked Spouse Link" value={i.clicked_spouse_link || "—"} />
             <RField label="Why No Spouse" value={i.why_no_spouse ?? "—"} editing={editing}>
               <input defaultValue={i.why_no_spouse ?? ""} className={inputCls} />
             </RField>
           </>
         )}
       </Grid>
-      {showUpgrade && (
-        <div className="mt-4 pt-4 border-t border-black/10">
-          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">LTC Upgrade</div>
-          <Grid cols={3}>
-            <RField label="Interested in Upgrading" value={i.interested_upgrading ? "yes" : "no"} />
-            <RField label="Upgrade Applied For" value={i.upgrade_applied_for ? "yes" : "no"} />
-            <RField label="Upgrade Carrier Decision" value={i.upgrade_carrier_decision ?? "—"} />
-            <RField label="Pre-Upgrade Premium" value={i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"} />
-            <RField label="Upgrade Submitted At" value={fmtDate(i.upgrade_submitted_at)} />
-            <RField label="Upgrade Carrier Decision At" value={fmtDate(i.upgrade_carrier_decision_at)} />
-          </Grid>
-        </div>
-      )}
       {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
     </SectionCard>
   );
 }
+
+function UpgradeSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
+  const hasActivity = i.interested_upgrading || i.applied_for_upgrade || i.upgrade_applied_for;
+  if (!hasActivity) return null;
+  const [editing, setEditing] = useState(false);
+  return (
+    <SectionCard title="Upgrade" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+      <Grid cols={3}>
+        <RField label="Interested in Upgrading" value={i.interested_upgrading ? "yes" : "no"} />
+        <RField label="Applied for Upgrade" value={i.upgrade_applied_for ? "yes" : "no"} />
+        <RField label="Employee Upgrade Option" value={i.employee_upgrade_option ?? "—"} />
+        <RField label="Pre-Upgrade Premium" value={i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"} />
+        <RField label="Upgrade Submitted At" value={fmtDate(i.upgrade_submitted_at)} />
+        <RField label="Upgrade Carrier Decision" value={i.upgrade_carrier_decision ?? "—"} />
+        <RField label="Upgrade Carrier Decision At" value={fmtDate(i.upgrade_carrier_decision_at)} />
+      </Grid>
+      {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
+    </SectionCard>
+  );
+}
+
+function CCAPortalSection({ link }: { link: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+    }
+  };
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">CCA Portal</div>
+          <a href={link} target="_blank" rel="noreferrer" className="text-sm text-[#0a3d3e] hover:underline inline-flex items-center gap-1 break-all">
+            {link} <ExternalLink className="h-3 w-3 shrink-0" />
+          </a>
+        </div>
+        <button onClick={copy} className="text-black/50 hover:text-[#0a3d3e] p-1 shrink-0" title="Copy link">
+          <Copy className="h-4 w-4" />
+        </button>
+      </div>
+      {copied && <div className="text-[11px] text-emerald-700 mt-1">Copied</div>}
+    </div>
+  );
+}
+
 
 function EnrollmentSection({ i }: { i: Detail }) {
   return (
@@ -570,6 +709,7 @@ function SystemRefsSection({ i }: { i: Detail }) {
         <Ref label="Magic Link" value={i.magic_link} />
         <Ref label="Magic Link Portal" value={i.magic_link_portal} />
         <Ref label="Signature URL" value={i.signature_url} />
+        {i.product === "DI" && i.cca_portal_link && <Ref label="CCA Portal Link" value={i.cca_portal_link} />}
       </div>
     </SectionCard>
   );
