@@ -101,7 +101,7 @@ function View() {
 
   const productOrgs = ORGS.filter((o) => o.product === product);
   const orgOptions = productOrgs.map((o) => ({ value: o.name, label: o.name }));
-  const carrierOptions = CARRIERS.map((c) => ({ value: c.name, label: c.name }));
+  const carrierOptions = CARRIERS.map((c) => ({ value: c.carrier_name, label: c.carrier_name }));
 
   const rows = useMemo(() => {
     const s = search.trim().toLowerCase();
