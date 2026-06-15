@@ -430,8 +430,10 @@ function View() {
                   ? <User className="h-3.5 w-3.5 text-black/50" />
                   : <Building2 className="h-3.5 w-3.5 text-black/50" />}
               </TCell>
-              <TCell title={`License #: ${p.license_number}`}>
-                <Pill tone={p.license_status === "Licensed" ? "ok" : "neutral"}>{p.license_status}</Pill>
+              <TCell>
+                <span title={`License #: ${p.license_number}`}>
+                  <Pill tone={p.license_status === "Licensed" ? "ok" : "neutral"}>{p.license_status}</Pill>
+                </span>
               </TCell>
               <TCell>
                 {p.agreement_status === "Signed" && p.agreement_date
