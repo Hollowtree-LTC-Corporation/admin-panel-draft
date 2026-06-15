@@ -13,7 +13,7 @@ import {
   COMMISSION_SPLIT_DEFAULTS, formatCents,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
-import { ChevronLeft, ChevronDown, ChevronRight, Pencil, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronRight, Pencil, ExternalLink, Mail, Phone, Star, Plus, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/organizations/$id")({ component: OrgDetail });
 
