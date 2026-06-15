@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Users, DollarSign, Percent } from "lucide-react";
 import { Card, Stat, PageHeader, Pill, TableShell, THead, TRow, TCell } from "@/components/wireframe/Bits";
 import { useStore } from "@/lib/wireframe/store";
 import { INDIVIDUALS, ORGS, STAGES, COVERAGE_STATUSES, formatCents } from "@/lib/wireframe/data";
