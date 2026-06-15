@@ -691,35 +691,151 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
   );
 }
 
-function DISettingsSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function DIProductPlanSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
   const e = useSectionEdit();
   const hasStd = org.type_of_rate === "STD+LTD";
+  const pd = (org.plan_details ?? {}) as { ltd?: Record<string, string>; std?: Record<string, string> };
   return (
-    <SectionCard title="DI Product" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
-      <Grid2>
-        <div>
-          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Product Mix</div>
-          <div className="text-sm text-gray-900 font-medium">
-            {e.editing
-              ? <select className={inputCls} defaultValue={org.type_of_rate ?? "LTD"}>{["LTD","STD+LTD"].map((o) => <option key={o} value={o}>{productMixLabel(o)}</option>)}</select>
-              : productMixLabel(org.type_of_rate)}
-          </div>
-          <div className="text-[11px] text-black/50 mt-1 italic">
-            Drives plan details, rate config, and which premium fields apply to individuals.
-          </div>
-        </div>
-        <RField label="LTD Benefit %">{e.editing ? <input className={inputCls} defaultValue={String(org.ltd_benefit_pct)} /> : `${org.ltd_benefit_pct}%`}</RField>
-        <RField label="DI Healthcare Type">
+    <SectionCard title="DI Product & Plan Terms" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+      <div className="mb-5">
+        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Product Mix</div>
+        <div className="text-sm text-gray-900 font-medium">
           {e.editing
-            ? <select className={inputCls} defaultValue={org.di_healthcare_type}>{DI_HC_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.di_healthcare_type}
+            ? <select className={inputCls} defaultValue={org.type_of_rate ?? "LTD"}>{["LTD","STD+LTD"].map((o) => <option key={o} value={o}>{productMixLabel(o)}</option>)}</select>
+            : productMixLabel(org.type_of_rate)}
+        </div>
+        <div className="text-[11px] text-black/50 mt-1 italic">
+          Drives plan terms below, rate config, and which premium fields apply to individuals.
+        </div>
+      </div>
+
+      <DIPlanBlock
+        header="Long-Term Disability (LTD)"
+        benefitPctLabel="Benefit %"
+        benefitPct={org.ltd_benefit_pct}
+        capLabel="Monthly Cap"
+        labels={LTD_LABELS}
+        values={pd.ltd ?? {}}
+        editing={e.editing}
+      />
+      {hasStd && (
+        <div className="mt-5">
+          <DIPlanBlock
+            header="Short-Term Disability (STD)"
+            benefitPctLabel="Benefit %"
+            benefitPct={org.std_benefit_pct}
+            capLabel="Weekly Cap"
+            labels={STD_LABELS}
+            values={pd.std ?? {}}
+            editing={e.editing}
+          />
+        </div>
+      )}
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function DIPlanBlock({
+  header, benefitPctLabel, benefitPct, capLabel, labels, values, editing,
+}: {
+  header: string;
+  benefitPctLabel: string;
+  benefitPct: number;
+  capLabel: string;
+  labels: Record<string, string>;
+  values: Record<string, string>;
+  editing: boolean;
+}) {
+  // Render Benefit % (structured) first, then the labeled text fields. Two-column grid.
+  const entries = Object.entries(labels);
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">{header}</div>
+      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+        <RField label={benefitPctLabel}>
+          {editing
+            ? <div className="flex items-center gap-1"><input className={inputCls} type="number" defaultValue={String(benefitPct)} /><span className="text-sm text-black/60">%</span></div>
+            : `${benefitPct}%`}
         </RField>
-        <RField label="STD Benefit %">
-          {hasStd
-            ? (e.editing ? <input className={inputCls} defaultValue={String(org.std_benefit_pct)} /> : `${org.std_benefit_pct}%`)
-            : <Empty />}
+        {entries.map(([key, label]) => {
+          // benefit_pct_text handled by structured field above; skip it
+          if (key === "benefit_pct_text") return null;
+          const isLong = key === "definition_of_disability" || key === "pre_existing_conditions" || key === "exclusions";
+          return (
+            <div key={key} className={isLong ? "col-span-2" : ""}>
+              <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label === "Monthly Cap" || label === "Weekly Cap" ? capLabel : label}</div>
+              <div className="text-sm text-gray-900">
+                {editing
+                  ? (isLong
+                      ? <Textarea defaultValue={values[key] ?? ""} className="text-sm min-h-[60px]" />
+                      : <input className={inputCls} defaultValue={values[key] ?? ""} />)
+                  : (values[key] || <Empty />)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MicrositeField({ url, product, editing }: { url: string; product: "DI" | "LTC"; editing: boolean }) {
+  const suffix = defaultMicrositeSuffix(product);
+  const parsed = parseMicrositeSubdomain(url, suffix);
+  if (!editing) {
+    return <ExtLink href={url}>{url}</ExtLink>;
+  }
+  if (!parsed.matches) {
+    return (
+      <div>
+        <input className={inputCls} defaultValue={url} />
+        <div className="text-[11px] text-amber-700 mt-1 italic">Non-standard domain — contact engineering.</div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-stretch border border-gray-300 rounded overflow-hidden bg-white focus-within:ring-1 focus-within:ring-blue-400">
+      <input className="flex-1 min-w-0 px-2 py-1 text-sm bg-white focus:outline-none" defaultValue={parsed.subdomain} placeholder="subdomain" />
+      <div className="px-2 py-1 text-sm text-black/60 bg-gray-50 border-l border-gray-300 select-none">{suffix}</div>
+    </div>
+  );
+}
+
+function CarrierProductSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard
+      title="Carrier & Product"
+      editing={e.editing}
+      canEdit={!readOnly}
+      onEdit={e.onEdit}
+      note="Carrier and product are set during initial onboarding. To change, contact engineering."
+    >
+      <Grid2>
+        <RField label="Carrier">{org.carrier_name}</RField>
+        <RField label="Effective Date">
+          {e.editing
+            ? <input className={inputCls} type="date" defaultValue={org.policy_effective_date} />
+            : fmtDate(org.policy_effective_date)}
         </RField>
-        <RField label="Inbound Type">{e.editing ? <input className={inputCls} defaultValue={org.inbound_type} /> : org.inbound_type}</RField>
+        <RField label="Product">{org.carrier_product_name}</RField>
+        {product === "LTC" ? (
+          <RField label="Carrier Commission Schedule">
+            <Link to="/carriers" className="text-sky-700 hover:underline inline-flex items-center gap-1">View schedule <ExternalLink className="h-3 w-3" /></Link>
+          </RField>
+        ) : (
+          <RField label="Carrier Commission Rates">
+            <span className="text-xs text-black/60 italic">Per-policy commission rates</span>
+          </RField>
+        )}
+        {product === "DI" && (
+          <RField label="Group Policy Number">
+            {e.editing
+              ? <input className={inputCls} defaultValue={org.group_policy_number ?? ""} />
+              : <span className="font-mono text-xs">{org.group_policy_number}</span>}
+          </RField>
+        )}
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
