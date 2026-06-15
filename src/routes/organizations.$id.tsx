@@ -476,6 +476,23 @@ function SummaryChip({ label, value, onClick, tone, hint, sub }: { label: string
   );
 }
 
+function AttioDealCard({ dealId }: { dealId: string }) {
+  const url = `https://app.attio.com/deals/${dealId}`;
+  return (
+    <div className="bg-white border border-black/10 rounded-md p-2 flex flex-col justify-between">
+      <div className="text-[9px] uppercase tracking-wider text-black/50">Attio Deal</div>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium border border-[#0a3d3e] text-[#0a3d3e] rounded hover:bg-[#0a3d3e] hover:text-white transition-colors"
+      >
+        Open in Attio <ExternalLink className="h-3 w-3" />
+      </a>
+      <div className="text-[10px] text-black/40 font-mono mt-1 truncate" title={dealId}>{dealId}</div>
+    </div>
+  );
+
 /* ---------- Drawer Select ---------- */
 
 function DSelect({ defaultValue, options }: { defaultValue?: string; options: string[] }) {
