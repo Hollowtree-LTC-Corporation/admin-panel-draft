@@ -10,7 +10,7 @@ import {
   INTERNAL_REPS, ORG_PRIMARY_CHANNEL_PARTNER, CARRIER_COMMISSION_SCHEDULES,
   POLICY_SPLITS_INITIAL,
   type Policy, type PolicySplit, type PolicyStatus, type PayeeType,
-  type PaymentMethodSetting,
+  type PaymentMethodSetting, type PolicyOwnerType,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import {
