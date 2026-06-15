@@ -1,13 +1,75 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, TableShell, TRow, TCell, Btn, Drawer, Field } from "@/components/wireframe/Bits";
 import { FilterRow, FilterSearch, FilterSelect, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import type { AffiliateOrganization, AffiliateType, AffiliationLevel, AffiliateIndustry, LegalEntityStatus } from "@/lib/wireframe/data";
+import { Shield, Building2, Handshake, Camera, ImageIcon } from "lucide-react";
 
 export const Route = createFileRoute("/affiliates")({ component: View });
 
 type SortKey = "name" | "affiliate_type" | "affiliation_level" | "industry" | "is_external" | "status";
+
+// Cycle of sample "uploaded" logos for the wireframe upload interaction.
+const SAMPLE_LOGOS = ["icon:shield", "icon:building", "icon:handshake", "icon:image"];
+let sampleLogoIdx = 0;
+function nextSampleLogo() {
+  const v = SAMPLE_LOGOS[sampleLogoIdx % SAMPLE_LOGOS.length];
+  sampleLogoIdx++;
+  return v;
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+export function AffiliateLogo({
+  affiliate,
+  size = 32,
+}: {
+  affiliate: Pick<AffiliateOrganization, "name" | "logo_url">;
+  size?: number;
+}) {
+  const px = `${size}px`;
+  const radius = size >= 48 ? "rounded-md" : "rounded";
+  const iconSize = Math.max(12, Math.round(size * 0.5));
+  const baseStyle = { width: px, height: px, minWidth: px } as const;
+
+  if (affiliate.logo_url) {
+    if (affiliate.logo_url.startsWith("icon:")) {
+      const which = affiliate.logo_url.slice(5);
+      const Icon = which === "shield" ? Shield : which === "handshake" ? Handshake : which === "building" ? Building2 : ImageIcon;
+      return (
+        <div
+          style={baseStyle}
+          className={`${radius} bg-white border border-black/10 flex items-center justify-center text-[#0a3d3e]`}
+        >
+          <Icon style={{ width: iconSize, height: iconSize }} strokeWidth={1.75} />
+        </div>
+      );
+    }
+    return (
+      <img
+        src={affiliate.logo_url}
+        alt={`${affiliate.name} logo`}
+        style={baseStyle}
+        className={`${radius} object-cover border border-black/10`}
+      />
+    );
+  }
+  const fontSize = Math.max(9, Math.round(size * 0.36));
+  return (
+    <div
+      style={baseStyle}
+      className={`${radius} bg-black/10 text-black/60 font-semibold flex items-center justify-center select-none`}
+    >
+      <span style={{ fontSize }}>{initials(affiliate.name)}</span>
+    </div>
+  );
+}
 
 const TYPE_OPTIONS: Array<{ value: AffiliateType; label: string }> = [
   { value: "cca", label: "CCA (Clinicians Care Association)" },
@@ -65,6 +127,7 @@ function emptyDraft(): AffiliateOrganization {
     legal_entity_status: null,
     notes: "",
     deleted_at: null,
+    logo_url: null,
   };
 }
 
