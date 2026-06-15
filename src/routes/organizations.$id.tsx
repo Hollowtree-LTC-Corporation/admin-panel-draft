@@ -746,6 +746,10 @@ function LifecycleTab({
         </TableShell>
       </div>
 
+      <OnboardingChecklist orgId={orgId} orgStatus={orgStatus} product={product} isAdmin={isAdmin} />
+
+
+
       <div>
         <h2 className="text-base font-semibold text-gray-900 mb-2">New Joiner Defaults</h2>
         <Card className="p-4 max-w-2xl">
