@@ -1,6 +1,7 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useStore } from "@/lib/wireframe/store";
 import type { Product, Role } from "@/lib/wireframe/data";
+import logoAsset from "@/assets/hollowtree-logo.png.asset.json";
 import {
   LayoutDashboard, Building2, Users, CalendarRange, Wallet, Receipt,
   Scale, Calculator, HandCoins, Briefcase, FileText, KeyRound, ShieldAlert,
@@ -62,9 +63,8 @@ export function Shell() {
   return (
     <div className="min-h-screen flex bg-[#f7f3eb] text-[#1a2424]">
       <aside className="w-56 shrink-0 bg-[#0a3d3e] text-white flex flex-col">
-        <div className="px-4 py-4 border-b border-white/10">
-          <div className="text-lg font-semibold tracking-tight">Hollowtree</div>
-          <div className="text-[10px] uppercase tracking-widest text-white/50">Admin · Wireframe</div>
+        <div className="px-3 py-3 border-b border-white/10">
+          <img src={logoAsset.url} alt="Hollowtree" className="h-8 w-auto" />
         </div>
         <nav className="flex-1 overflow-y-auto py-2">
           {visibleGroups.map((group, groupIdx) => (
