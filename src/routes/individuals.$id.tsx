@@ -671,7 +671,6 @@ function SpouseSection({ i, linked, linkedDetail, readOnly }: { i: Detail; linke
               <select defaultValue={i.interested_spousal_text} className={inputCls}>{["yes","no",""].map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select>
             </RField>
             <RField label="Sent Spouse Invite" value={i.sent_spouse_invite || "—"} />
-            <RField label="Spouse Face Amount" value={i.spouse_face_amount_cents != null ? formatCents(i.spouse_face_amount_cents) : "—"} />
             <RField label="Spouse Authorization" value={i.spouse_authorization || "—"} />
             <RField label="Clicked Spouse Link" value={i.clicked_spouse_link || "—"} />
             <RField label="Why No Spouse" value={i.why_no_spouse ?? "—"} editing={editing}>
