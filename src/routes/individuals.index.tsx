@@ -219,7 +219,7 @@ function IndividualsView() {
                 <TCell>{unpurchased ? "—" : (isLTC ? i.purchased_plan : i.coverage_plan)}</TCell>
                 {isLTC && (
                   <>
-                    <TCell className="text-right">{unpurchased ? "—" : formatFaceAmount(i.employee_face_amount_cents)}</TCell>
+                    <TCell className="text-right">{unpurchased ? "—" : formatFaceAmount(i.face_amount_cents)}</TCell>
                     <TCell className="text-slate-500 text-[11px]">{ridersFor(i.org_id)}</TCell>
                   </>
                 )}
