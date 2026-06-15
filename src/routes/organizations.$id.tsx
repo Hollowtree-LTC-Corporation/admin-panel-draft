@@ -816,7 +816,7 @@ function DIProductPlanSection({ org, readOnly }: { org: OrgDetail; readOnly: boo
   const hasStd = org.type_of_rate === "STD+LTD";
   const pd = (org.plan_details ?? {}) as { ltd?: Record<string, string>; std?: Record<string, string> };
   return (
-    <SectionCard title="DI Product & Plan Terms" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+    <SectionCard title="DI Product & Plan Terms" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} drives={["microsite", "premium calculation"]}>
       <div className="mb-5">
         <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Product Mix</div>
         <div className="text-sm text-gray-900 font-medium">
@@ -922,7 +922,7 @@ function MicrositeField({ url, product, editing }: { url: string; product: "DI" 
   );
 }
 
-function CarrierProductSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
+function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; variant?: "info" | "config" | "integration" }) {
   const e = useSectionEdit();
   return (
     <SectionCard
@@ -930,6 +930,7 @@ function CarrierProductSection({ org, product, readOnly }: { org: OrgDetail; pro
       editing={e.editing}
       canEdit={!readOnly}
       onEdit={e.onEdit}
+      variant={variant}
       note="Carrier and product are set during initial onboarding. To change, contact engineering."
     >
       <Grid2>
@@ -985,30 +986,89 @@ function LTCProductConfigSection({ org, readOnly }: { org: OrgDetail; readOnly: 
   );
 }
 
-function CoverageBillingSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function PricingFeesSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
   const e = useSectionEdit();
+  const cca = org.cca_group;
+  const tpa = org.tpa_fee_cents;
+  const retained = org.service_fee_retained_cents;
   return (
-    <SectionCard title="Coverage / Billing" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
-      <Grid2>
-        <RField label="Contribution Type">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
-            : titleCase(org.contribution_type === "buy_up" ? "Buy-Up" : org.contribution_type)}
-        </RField>
-        <RField label="TPA Fee">{e.editing ? <input className={inputCls} defaultValue={String(org.tpa_fee_cents / 100)} /> : `${formatCents(org.tpa_fee_cents)} / mo`}</RField>
-        <RField label="Pay Mode">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.pay_mode}>{PAY_MODES.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.pay_mode}
-        </RField>
-        <RField label="Service Fee Retained">
-          {org.service_fee_retained_cents === null
-            ? <span className="text-black/60 italic">Full retention</span>
-            : (e.editing ? <input className={inputCls} defaultValue={String(org.service_fee_retained_cents / 100)} /> : formatCents(org.service_fee_retained_cents))}
-        </RField>
-        <div />
-        <RField label="TPA Fee Name">{e.editing ? <input className={inputCls} defaultValue={org.tpa_fee_name} /> : org.tpa_fee_name}</RField>
-      </Grid2>
+    <SectionCard
+      title="Pricing & Fees"
+      defaultOpen
+      editing={e.editing}
+      canEdit={!readOnly}
+      onEdit={e.onEdit}
+      drives={["billing", "payment processing"]}
+    >
+      <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Billing Configuration</div>
+          <div className="space-y-4">
+            <RField label="Contribution Type">
+              {e.editing
+                ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
+                : titleCase(org.contribution_type === "buy_up" ? "Buy-Up" : org.contribution_type)}
+            </RField>
+            <RField label="Pay Mode">
+              {e.editing
+                ? <select className={inputCls} defaultValue={org.pay_mode}>{PAY_MODES.map((o) => <option key={o}>{o}</option>)}</select>
+                : org.pay_mode}
+            </RField>
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Fee Schedule</div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+            <RField label="TPA Fee">{e.editing ? <input className={inputCls} defaultValue={String(tpa / 100)} /> : `${formatCents(tpa)} / mo`}</RField>
+            <RField label="TPA Fee Name">{e.editing ? <input className={inputCls} defaultValue={org.tpa_fee_name} /> : org.tpa_fee_name}</RField>
+            <RField label="Service Fee Retained">
+              {retained === null
+                ? <span className="text-black/60 italic">Full retention</span>
+                : (e.editing ? <input className={inputCls} defaultValue={String(retained / 100)} /> : formatCents(retained))}
+            </RField>
+            <RField label="Card Percentage">{e.editing ? <input className={inputCls} defaultValue="3.7" /> : "3.7%"}</RField>
+            <RField label="ACH First Fee">{e.editing ? <input className={inputCls} defaultValue="1.00" /> : "$1.00"}</RField>
+            <RField label="ACH Subsequent Fee">{e.editing ? <input className={inputCls} defaultValue="0.50" /> : "$0.50"}</RField>
+            <RField label="Failed ACH Penalty">{e.editing ? <input className={inputCls} defaultValue="15.00" /> : "$15.00"}</RField>
+            <RField label="Failed Card Penalty Mode">
+              {e.editing
+                ? <select className={inputCls} defaultValue="flat">{["flat","percentage"].map((o) => <option key={o}>{o}</option>)}</select>
+                : "flat"}
+            </RField>
+            <RField label="Failed Card Penalty Value">{e.editing ? <input className={inputCls} defaultValue="10.00" /> : "$10.00"}</RField>
+            <RField label="Free Retry Count">{e.editing ? <input className={inputCls} type="number" defaultValue={2} /> : 2}</RField>
+            <RField label="Effective From">{e.editing ? <input className={inputCls} type="date" defaultValue="2025-01-01" /> : fmtDate("2025-01-01")}</RField>
+            <RField label="Effective To">{e.editing ? <input className={inputCls} type="date" defaultValue="" placeholder="(open-ended)" /> : <span className="text-black/50 italic">(open-ended)</span>}</RField>
+          </div>
+        </div>
+      </div>
+
+      {cca && (
+        <div className="grid grid-cols-2 gap-4 mt-5">
+          <div className="p-3 bg-[#fefaf2] border border-amber-200 rounded">
+            <div className="text-xs font-semibold text-amber-900 mb-2">How CCA fee splitting works</div>
+            <p className="text-xs text-black/70 leading-relaxed mb-2">
+              CCA orgs charge a <b>$20/month</b> membership fee (not the standard $8 TPA fee). Of the $20:
+            </p>
+            <ul className="text-xs text-black/70 list-disc pl-5 space-y-1 mb-2">
+              <li><b>$5.00</b> retained by Hollowtree (<code>service_fee_retained_cents = 500</code>)</li>
+              <li><b>$15.00</b> remitted to CCA</li>
+            </ul>
+            <p className="text-xs text-black/60 italic">
+              This split is for reporting only. The <code>tpa_fee_cents</code> value is what the enrollee is charged regardless.
+            </p>
+          </div>
+          <div className="p-3 bg-white border border-black/10 rounded">
+            <div className="text-xs font-semibold text-black/70 uppercase tracking-wider mb-2">Worked example for this org</div>
+            <div className="text-xs text-black/70 space-y-1">
+              <div>Enrollee charged: <b>{formatCents(tpa)}</b> / mo</div>
+              <div>Retained by Hollowtree: <b>{retained === null ? formatCents(tpa) + " (full)" : formatCents(retained)}</b></div>
+              <div>Remitted to CCA: <b>{retained === null ? formatCents(0) : formatCents(tpa - retained)}</b></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
   );
@@ -1064,7 +1124,7 @@ function BrokerSection({ org, product, readOnly }: { org: OrgDetail; product: "D
   }
 
   return (
-    <SectionCard title="Broker" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+    <SectionCard title="Distribution & Broker" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} drives={["commission splits"]}>
       <Grid2>
         <RField label="Primary Broker">
           {e.editing ? <BrokerSelect slot="primary" value={primary} /> : org.primary_broker}
@@ -1121,24 +1181,39 @@ function BrokerSection({ org, product, readOnly }: { org: OrgDetail; product: "D
   );
 }
 
-function SignatorySection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function PeopleSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
   const e = useSectionEdit();
   return (
-    <SectionCard title="Signatory" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
-      <Grid2>
-        <RField label="Name">{e.editing ? <input className={inputCls} defaultValue={org.signatory_name} /> : org.signatory_name}</RField>
-        <RField label="Email">{e.editing ? <input className={inputCls} defaultValue={org.signatory_email} /> : org.signatory_email}</RField>
-        <RField label="Title">{e.editing ? <input className={inputCls} defaultValue={org.signatory_title} /> : org.signatory_title}</RField>
-      </Grid2>
+    <SectionCard title="People" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} drives={["carrier handoff", "operational comms"]}>
+      <div className="mb-4">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Signatory</div>
+        <Grid2>
+          <RField label="Name">{e.editing ? <input className={inputCls} defaultValue={org.signatory_name} /> : org.signatory_name}</RField>
+          <RField label="Email">{e.editing ? <input className={inputCls} defaultValue={org.signatory_email} /> : org.signatory_email}</RField>
+          <RField label="Title">{e.editing ? <input className={inputCls} defaultValue={org.signatory_title} /> : org.signatory_title}</RField>
+        </Grid2>
+      </div>
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Operations</div>
+        <Grid2>
+          <RField label="Ops Contact">
+            {e.editing
+              ? <input className={inputCls} type="email" defaultValue={org.assigned_gmail_person} />
+              : (org.assigned_gmail_person
+                  ? <a href={`mailto:${org.assigned_gmail_person}`} className="text-sky-700 hover:underline">{org.assigned_gmail_person}</a>
+                  : <Empty />)}
+          </RField>
+        </Grid2>
+      </div>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
   );
 }
 
-function LinksRefsSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
+function LinksRefsSection({ org, product, readOnly, variant }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; variant?: "info" | "config" | "integration" }) {
   const e = useSectionEdit();
   return (
-    <SectionCard title="Links & References" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+    <SectionCard title="Links & External References" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} variant={variant}>
       <Grid2>
         <RField label="Google Drive Folder">
           {e.editing ? <input className={inputCls} defaultValue={org.google_drive_folder} /> : <ExtLink href={org.google_drive_folder}>Open folder</ExtLink>}
@@ -1320,9 +1395,9 @@ function EmployerBillingSection({ org, readOnly }: { org: OrgDetail; readOnly: b
   );
 }
 
-function SystemRefsSection({ org, product }: { org: OrgDetail; product: "DI" | "LTC" }) {
+function SystemRefsSection({ org, product, variant }: { org: OrgDetail; product: "DI" | "LTC"; variant?: "info" | "config" | "integration" }) {
   return (
-    <SectionCard title="System References">
+    <SectionCard title="System References" variant={variant}>
       <div className="grid grid-cols-2 gap-x-8 gap-y-2 font-mono text-[11px]">
         <Ref label="Created At" value={org.created_at} />
         <Ref label="Updated At" value={org.updated_at} />
