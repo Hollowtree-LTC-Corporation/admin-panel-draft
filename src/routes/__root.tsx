@@ -54,6 +54,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <StoreProvider>
         <Shell />
+        <Toaster />
       </StoreProvider>
     </QueryClientProvider>
   );
