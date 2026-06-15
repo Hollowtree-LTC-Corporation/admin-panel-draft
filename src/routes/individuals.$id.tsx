@@ -765,14 +765,36 @@ function EnrollmentSection({ i }: { i: Detail }) {
   );
 }
 
+type MagicToken = { id: string; type: "enrollment" | "portal"; status: "active" | "revoked" | "expired"; created: string; expires: string; url: string };
+
 function SystemRefsSection({ i }: { i: Detail }) {
+  const n = parseInt(i.id.replace("ind_", ""), 10) || 1;
+  const initialTokens = useMemo<MagicToken[]>(() => {
+    const expiresEnrollment = n % 7 === 0 ? "2025-06-25" : n % 5 === 0 ? "2025-07-10" : "2026-03-01";
+    return [
+      { id: "tok_enr", type: "enrollment", status: "active", created: "2025-01-15", expires: expiresEnrollment, url: `https://enroll.hollowtree.dev/m/${i.id}-resume-tok` },
+      { id: "tok_por", type: "portal", status: "active", created: "2025-02-10", expires: "2026-02-10", url: `https://portal.hollowtree.dev/m/${i.id}-portal-tok` },
+    ];
+  }, [i.id, n]);
+  const [tokens, setTokens] = useState<MagicToken[]>(initialTokens);
+  const [revokeTarget, setRevokeTarget] = useState<MagicToken | null>(null);
+  const [revokeReason, setRevokeReason] = useState("");
+
+  const today = new Date("2025-06-15");
+  const expiryTone = (iso: string) => {
+    const [y, m, d] = iso.split("-").map(Number);
+    const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+    const days = Math.floor((dt.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (days < 0) return "text-red-700 font-medium";
+    if (days <= 30) return "text-amber-700";
+    return "text-black/70";
+  };
+
   return (
     <SectionCard title="System References">
       <div className="grid grid-cols-2 gap-x-8 font-mono text-[11px]">
         <Ref label="Individual ID" value={i.id} />
         <Ref label="Klaviyo Main ID" value={i.klaviyo_main_id} />
-        <Ref label="Magic Link" value={i.magic_link} />
-        <Ref label="Magic Link Portal" value={i.magic_link_portal} />
         <Ref label="Signature URL" value={i.signature_url} />
         {i.active_date && (
           <div className="mb-2">
@@ -781,6 +803,89 @@ function SystemRefsSection({ i }: { i: Detail }) {
           </div>
         )}
       </div>
+
+      <div className="mt-5 pt-4 border-t border-black/10">
+        <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2 font-sans">Magic Tokens</div>
+        <table className="w-full text-[11px] font-sans">
+          <thead>
+            <tr className="text-left text-[9px] uppercase tracking-wider text-black/50 border-b border-black/10">
+              <th className="py-1.5 pr-2 font-medium">Token Type</th>
+              <th className="py-1.5 pr-2 font-medium">Status</th>
+              <th className="py-1.5 pr-2 font-medium">Created</th>
+              <th className="py-1.5 pr-2 font-medium">Expires</th>
+              <th className="py-1.5 pr-2 font-medium">Token URL</th>
+              <th className="py-1.5 font-medium" />
+            </tr>
+          </thead>
+          <tbody>
+            {tokens.map((t) => {
+              const typeCls = t.type === "enrollment" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700";
+              const statusCls = t.status === "active" ? "bg-green-100 text-green-700" : t.status === "revoked" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700";
+              return (
+                <tr key={t.id} className="border-b border-black/5 last:border-b-0">
+                  <td className="py-2 pr-2"><span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${typeCls}`}>{t.type}</span></td>
+                  <td className="py-2 pr-2"><span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${statusCls}`}>{t.status}</span></td>
+                  <td className="py-2 pr-2 text-black/70">{fmtDate(t.created)}</td>
+                  <td className={`py-2 pr-2 ${expiryTone(t.expires)}`}>{fmtDate(t.expires)}</td>
+                  <td className="py-2 pr-2">
+                    <span className="inline-flex items-center gap-1 max-w-[260px]">
+                      <span className="font-mono text-[10px] text-black/60 truncate">{t.url}</span>
+                      <button onClick={() => navigator.clipboard?.writeText(t.url)} title="Copy" className="text-black/40 hover:text-[#0a3d3e] shrink-0">
+                        <Copy className="h-3 w-3" />
+                      </button>
+                      <a href={t.url} target="_blank" rel="noreferrer" className="text-black/40 hover:text-[#0a3d3e] shrink-0">
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </span>
+                  </td>
+                  <td className="py-2 text-right">
+                    {t.status === "active" && (
+                      <button
+                        onClick={() => { setRevokeTarget(t); setRevokeReason(""); }}
+                        className="text-[10px] px-2 py-0.5 rounded border border-red-300 text-red-700 hover:bg-red-50"
+                      >
+                        Revoke
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {revokeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setRevokeTarget(null)} />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-5">
+            <h3 className="text-base font-semibold text-gray-900">Revoke this {revokeTarget.type} token?</h3>
+            <p className="text-sm text-gray-600 mt-1">This will invalidate the enrollee's link immediately.</p>
+            <div className="mt-4">
+              <label className="text-[10px] uppercase tracking-wider text-black/50">Reason <span className="text-red-600">*</span></label>
+              <input
+                value={revokeReason}
+                onChange={(e) => setRevokeReason(e.target.value)}
+                className={`${inputCls} mt-1`}
+                placeholder="e.g. enrollee requested a fresh link"
+              />
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <Btn onClick={() => setRevokeTarget(null)}>Cancel</Btn>
+              <Btn
+                variant="danger"
+                disabled={!revokeReason.trim()}
+                onClick={() => {
+                  setTokens((prev) => prev.map((p) => p.id === revokeTarget.id ? { ...p, status: "revoked" } : p));
+                  setRevokeTarget(null);
+                }}
+              >
+                Revoke
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </SectionCard>
   );
 }
