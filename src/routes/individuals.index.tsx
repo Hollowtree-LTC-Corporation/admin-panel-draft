@@ -109,11 +109,13 @@ function IndividualsView() {
     if (searchParams.type !== undefined) setTypeFilter(searchParams.type);
     if (searchParams.di_type !== undefined) setDiTypeFilter(searchParams.di_type);
     if (searchParams.payment !== undefined) setPaymentFilter(searchParams.payment);
-  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type, searchParams.payment]);
+    if (searchParams.rep !== undefined) setRepFilter(searchParams.rep);
+  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type, searchParams.payment, searchParams.rep]);
 
   const productRows = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
   const stageOptions = Array.from(new Set(productRows.map((r) => r.stage)));
+  const repOptions = Array.from(new Set(productRows.map((r) => r.assigned_rep).filter(Boolean))) as string[];
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
