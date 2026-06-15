@@ -492,6 +492,9 @@ function AttioDealCard({ dealId }: { dealId: string }) {
       <div className="text-[10px] text-black/40 font-mono mt-1 truncate" title={dealId}>{dealId}</div>
     </div>
   );
+}
+
+
 
 /* ---------- Drawer Select ---------- */
 
