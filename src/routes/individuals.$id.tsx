@@ -199,6 +199,8 @@ function IndividualDetail() {
   const balanceNeg = balanceCents > 0;
 
   const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [deactReason, setDeactReason] = useState("");
+  const [deactDate, setDeactDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [confirm, setConfirm] = useState<null | { title: string; message: string; onConfirm: () => void }>(null);
 
   return (
