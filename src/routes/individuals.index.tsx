@@ -99,6 +99,7 @@ function IndividualsView() {
   const [typeFilter, setTypeFilter] = useState<string>(searchParams.type ?? "all");
   const [diTypeFilter, setDiTypeFilter] = useState<string>(searchParams.di_type ?? "all");
   const [paymentFilter, setPaymentFilter] = useState<string>(searchParams.payment ?? "all");
+  const [repFilter, setRepFilter] = useState<string>(searchParams.rep ?? "all");
   const sort = useSort<SortKey>("full_name", "asc");
 
   useEffect(() => {
