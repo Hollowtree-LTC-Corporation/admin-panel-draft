@@ -635,7 +635,7 @@ export type LTCRateCell = {
 };
 const LTC_TIER_FACES: Record<string, number> = { bronze: 2500000, silver: 5000000, gold: 7500000, platinum: 10000000, diamond: 15000000 };
 const LTC_TIER_BASE: Record<string, number> = { bronze: 1800, silver: 3400, gold: 5100, platinum: 6800, diamond: 10200 };
-function ltcPremiumCents(tier: keyof typeof LTC_TIER_BASE, age: number, smoker: boolean): number {
+function ltcPremiumCents(tier: "bronze" | "silver" | "gold" | "platinum" | "diamond", age: number, smoker: boolean): number {
   const base = LTC_TIER_BASE[tier];
   const ageMult = 1 + (age - 25) * 0.045; // ~4.5% per year over 25
   const smokerMult = smoker ? 1.45 : 1.0;
@@ -644,7 +644,7 @@ function ltcPremiumCents(tier: keyof typeof LTC_TIER_BASE, age: number, smoker: 
 const _ltcCells: LTCRateCell[] = [];
 // bc_1: Standard Trustmark UL — ages 25..65 step 5, both smoker statuses, all 5 tiers
 const BC1_AGES = [25,30,35,40,45,50,55,60,65];
-const BC1_TIERS: Array<keyof typeof LTC_TIER_BASE> = ["bronze","silver","gold","platinum","diamond"];
+const BC1_TIERS: Array<"bronze" | "silver" | "gold" | "platinum" | "diamond"> = ["bronze","silver","gold","platinum","diamond"];
 for (const age of BC1_AGES) {
   for (const smoker of [false, true]) {
     for (const tier of BC1_TIERS) {
@@ -667,7 +667,7 @@ for (const age of BC1_AGES) {
 }
 // bc_2: Reduced Eligibility — narrower age range, 3 tiers
 const BC2_AGES = [30,40,50,55];
-const BC2_TIERS: Array<keyof typeof LTC_TIER_BASE> = ["bronze","silver","gold"];
+const BC2_TIERS: Array<"bronze" | "silver" | "gold" | "platinum" | "diamond"> = ["bronze","silver","gold"];
 for (const age of BC2_AGES) {
   for (const smoker of [false, true]) {
     for (const tier of BC2_TIERS) {
