@@ -549,6 +549,7 @@ function useSectionEdit() {
 
 function SectionCard({
   title, children, defaultOpen = false, summary, editing = false, canEdit = false, onEdit, note,
+  variant = "config", drives,
 }: {
   title: string;
   children: React.ReactNode;
@@ -558,29 +559,61 @@ function SectionCard({
   canEdit?: boolean;
   onEdit?: () => void;
   note?: React.ReactNode;
+  variant?: "info" | "config" | "integration";
+  drives?: string[];
 }) {
-  const [open, setOpen] = useState(defaultOpen || editing);
+  const initiallyOpen = variant === "integration" ? false : (defaultOpen || editing);
+  const [open, setOpen] = useState(initiallyOpen);
   const isOpen = open || editing;
+  const bgCls = variant === "config" ? "bg-white" : "bg-stone-50";
+  const padCls = variant === "info" ? "p-4" : "p-5";
+  const pencilCls = variant === "config"
+    ? "text-stone-700 hover:text-[#0a3d3e]"
+    : "text-stone-400 hover:text-stone-600";
+  const bodySize = variant === "integration" ? "text-sm" : "";
   return (
-    <div className={`bg-white border rounded-lg p-5 ${editing ? "border-blue-300 ring-1 ring-blue-100" : "border-gray-200"}`}>
+    <div className={`${bgCls} border rounded-lg ${padCls} ${editing ? "border-blue-300 ring-1 ring-blue-100" : "border-gray-200"}`}>
       <div className="flex items-center justify-between gap-2">
         <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 text-left flex-1 min-w-0">
           {isOpen ? <ChevronDown className="h-4 w-4 text-black/40 shrink-0" /> : <ChevronRight className="h-4 w-4 text-black/40 shrink-0" />}
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
           {!isOpen && summary && <span className="text-xs text-black/50 truncate">· {summary}</span>}
         </button>
-        {canEdit && !editing && isOpen && onEdit && (
-          <button onClick={onEdit} className="text-black/40 hover:text-[#0a3d3e] p-1" title="Edit section">
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-        )}
+        <div className="flex items-center gap-3 shrink-0">
+          {variant === "config" && isOpen && drives && drives.length > 0 && (
+            <div className="text-xs text-stone-500 lowercase">
+              <span className="font-medium">Drives:</span>{" "}
+              {drives.slice(0, 2).map((d, i) => (
+                <React.Fragment key={d}>
+                  {i > 0 && <span className="mx-1 text-stone-400">·</span>}
+                  <span>{d}</span>
+                </React.Fragment>
+              ))}
+              {drives.length > 2 && <span className="ml-1 text-stone-400">+{drives.length - 2} more</span>}
+            </div>
+          )}
+          {canEdit && !editing && isOpen && onEdit && (
+            <button onClick={onEdit} className={`${pencilCls} p-1`} title="Edit section">
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
       {isOpen && (
-        <div className="mt-4">
+        <div className={`mt-4 ${bodySize}`}>
           {note && <div className="text-xs text-black/50 mb-3 italic">{note}</div>}
           {children}
         </div>
       )}
+    </div>
+  );
+}
+
+function BucketHeader({ label, subtitle }: { label: string; subtitle: string }) {
+  return (
+    <div className="mt-6 mb-3 first:mt-2">
+      <div className="text-xs font-semibold uppercase tracking-wide text-stone-500">{label}</div>
+      <div className="text-sm text-stone-400 mt-0.5">{subtitle}</div>
     </div>
   );
 }
