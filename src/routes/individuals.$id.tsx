@@ -281,14 +281,48 @@ function IndividualDetail() {
 
       {/* Deactivate confirmation */}
       {deactivateOpen && (
-        <ConfirmModal
-          title="Deactivate this individual?"
-          message={`This will mark ${i.full_name} as canceled and stop future charges. Continue?`}
-          confirmLabel="Deactivate"
-          danger
-          onCancel={() => setDeactivateOpen(false)}
-          onConfirm={() => setDeactivateOpen(false)}
-        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDeactivateOpen(false)} />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-red-50 text-red-600">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-gray-900">Deactivate Enrollment</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  This will set the coverage status to <b>canceled</b> for {i.full_name}. This action can be reversed by an admin.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-black/50">Reason <span className="text-red-600">*</span></label>
+                <input
+                  value={deactReason}
+                  onChange={(e) => setDeactReason(e.target.value)}
+                  className={`${inputCls} mt-1`}
+                  placeholder="e.g. employee left the organization"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-black/50">Canceled Date</label>
+                <input
+                  type="date"
+                  value={deactDate}
+                  onChange={(e) => setDeactDate(e.target.value)}
+                  className={`${inputCls} mt-1`}
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <Btn onClick={() => setDeactivateOpen(false)}>Cancel</Btn>
+              <Btn variant="danger" disabled={!deactReason.trim()} onClick={() => { setDeactivateOpen(false); setDeactReason(""); }}>
+                Confirm Deactivation
+              </Btn>
+            </div>
+          </div>
+        </div>
       )}
       {confirm && (
         <ConfirmModal
