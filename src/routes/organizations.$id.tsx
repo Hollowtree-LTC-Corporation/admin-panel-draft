@@ -186,6 +186,15 @@ function daysUntil(d: string | null | undefined): number | null {
 }
 
 /* ---------- Synthesize per-org detail ---------- */
+type FeeSchedule = {
+  id: string;
+  effective_from: string;
+  effective_to: string | null;
+  tpa_fee_cents: number;
+  tpa_fee_name: string | null;
+  service_fee_retained_cents: number | null;
+  notes: string;
+};
 type OrgDetail = ReturnType<typeof synthesize>;
 function synthesize(org: typeof ORGS[number]) {
   const slug = org.name.toLowerCase().replace(/[^a-z]/g, "");
