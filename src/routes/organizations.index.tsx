@@ -52,7 +52,7 @@ function OrgsView() {
       <FilterRow>
         <FilterSearch value={search} onChange={setSearch} placeholder="Search name or domain…" />
         <FilterSelect value={status} onChange={setStatus} allLabel="All statuses" options={[
-          { value: "active" }, { value: "pending_review", label: "pending_review" }, { value: "pending", label: "pending" }, { value: "closed" }, { value: "suspended" },
+          { value: "not_started", label: "not_started" }, { value: "onboarding", label: "onboarding" }, { value: "active" }, { value: "closed" }, { value: "suspended" },
         ]} />
         <FilterCombobox value={situs} onChange={setSitus} placeholder="All states" options={US_STATE_OPTIONS()} />
         <FilterSelect value={owner} onChange={setOwner} allLabel="All owner types" options={[
