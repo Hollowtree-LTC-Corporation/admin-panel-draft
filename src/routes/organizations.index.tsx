@@ -66,7 +66,7 @@ function OrgsView() {
             { key: "name", label: "Name" },
             { key: "product", label: "Product" },
             { key: "situs_state", label: "Situs" },
-            { key: "enrollment_status", label: "Status" },
+            { key: "status", label: "Status" },
             { key: "individuals_count", label: "# Individuals" },
             { key: "policy_owner_type", label: "Owner Type" },
             { key: null, label: "" },
