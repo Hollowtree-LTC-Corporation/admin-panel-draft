@@ -20,7 +20,7 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 export const Route = createFileRoute("/carriers")({ component: View });
 
 type SortKey = "carrier_name" | "carrier_type" | "am_best_rating" | "carrier_products_count";
-type ProdSortKey = "product_name" | "product_type" | "carrier_name" | "schedules_count" | "default_schedule" | "constraints_count" | "riders_count" | "active";
+type ProdSortKey = "product_name" | "product_type" | "cca_product" | "carrier_name" | "schedules_count" | "default_schedule" | "constraints_count" | "riders_count" | "active";
 
 const FIELD_INPUT = "w-full px-2 py-1 text-sm border border-black/15 rounded";
 
