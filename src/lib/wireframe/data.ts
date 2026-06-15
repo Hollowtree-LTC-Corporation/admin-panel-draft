@@ -247,11 +247,34 @@ export const COMMISSION_RATE_TIERS = [
   { id: "crt_7", schedule_id: "ccs_3", year_from: 2, year_to: 5, pct: 5 },
 ];
 
-export const AFFILIATE_ORGANIZATIONS = [
-  { id: "aff_1", name: "CCU Member Foundation" },
-  { id: "aff_2", name: "Foxtail Alumni Assoc" },
-  { id: "aff_3", name: "CCA" },
-  { id: "aff_4", name: "TeamHealth Affiliate Trust" },
+export type AffiliateType = "cca" | "union" | "industry_association" | "employer_trust" | "other";
+export type AffiliationLevel = "individual" | "employer";
+export type AffiliateIndustry =
+  | "education" | "healthcare" | "government" | "manufacturing"
+  | "professional_services" | "transportation" | "hospitality" | "other";
+export type LegalEntityStatus = "formed_no_tax_id" | "formed_with_tax_id" | "operational";
+
+export type AffiliateOrganization = {
+  id: string;
+  name: string;
+  affiliate_type: AffiliateType;
+  affiliation_level: AffiliationLevel;
+  industry: AffiliateIndustry | null;
+  is_external: boolean;
+  legal_entity_status: LegalEntityStatus | null;
+  notes: string;
+  deleted_at: string | null;
+};
+
+export const AFFILIATE_ORGANIZATIONS: AffiliateOrganization[] = [
+  { id: "aff_1", name: "CCU Member Foundation", affiliate_type: "industry_association", affiliation_level: "individual", industry: null, is_external: true, legal_entity_status: "operational", notes: "From enrollment windows dummy data.", deleted_at: null },
+  { id: "aff_2", name: "Foxtail Alumni Assoc", affiliate_type: "industry_association", affiliation_level: "individual", industry: null, is_external: true, legal_entity_status: "operational", notes: "From enrollment windows dummy data.", deleted_at: null },
+  { id: "aff_3", name: "Clinicians Care Association", affiliate_type: "cca", affiliation_level: "individual", industry: "healthcare", is_external: true, legal_entity_status: "operational", notes: "DI primary. The CCA.", deleted_at: null },
+  { id: "aff_4", name: "TeamHealth Affiliate Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "healthcare", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null },
+  { id: "aff_5", name: "Healthcare Workers United", affiliate_type: "union", affiliation_level: "individual", industry: "healthcare", is_external: true, legal_entity_status: "operational", notes: "Example union.", deleted_at: null },
+  { id: "aff_6", name: "Pacific Educators Alliance", affiliate_type: "industry_association", affiliation_level: "individual", industry: "education", is_external: true, legal_entity_status: "operational", notes: "Example association.", deleted_at: null },
+  { id: "aff_7", name: "National Education Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "education", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null },
+  { id: "aff_8", name: "Public Sector Benefits Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "government", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null },
 ];
 
 export type EnrollmentWindow = {

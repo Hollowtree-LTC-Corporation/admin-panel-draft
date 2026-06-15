@@ -5,9 +5,10 @@ import {
   ENROLLMENT_WINDOWS,
   ORGS,
   CARRIERS,
-  AFFILIATE_ORGANIZATIONS,
   CHANNEL_PARTNERS,
   type EnrollmentWindow,
+  type AffiliateOrganization,
+  type AffiliateType,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
@@ -75,7 +76,14 @@ function toDraft(w: EnrollmentWindow): Draft {
 
 function View() {
   const can = usePermission();
-  const { product } = useStore();
+  const { product, affiliates, setAffiliates } = useStore();
+  const activeAffiliates = useMemo(() => affiliates.filter((a) => !a.deleted_at), [affiliates]);
+  const addAffiliate = (a: AffiliateOrganization): string => {
+    const id = `aff_${Date.now()}`;
+    const rec: AffiliateOrganization = { ...a, id };
+    setAffiliates((prev) => [...prev, rec]);
+    return id;
+  };
   const [search, setSearch] = useState("");
   const [org, setOrg] = useState("all");
   const [wtype, setWtype] = useState("all");
@@ -116,7 +124,7 @@ function View() {
 
   const saveDraft = () => {
     const orgRec = draft.org_id ? ORGS.find((o) => o.id === draft.org_id) ?? null : null;
-    const affRec = draft.affiliate_org_id ? AFFILIATE_ORGANIZATIONS.find((a) => a.id === draft.affiliate_org_id) ?? null : null;
+    const affRec = draft.affiliate_org_id ? affiliates.find((a) => a.id === draft.affiliate_org_id) ?? null : null;
     const isNewJoiner = draft.window_type === "new_joiner";
     const next: EnrollmentWindow = {
       id: draft.id ?? `ew_${Date.now()}`,
@@ -213,6 +221,8 @@ function View() {
           setDraft={setDraft}
           onCancel={() => setDrawerOpen(false)}
           onSave={saveDraft}
+          affiliates={activeAffiliates}
+          addAffiliate={addAffiliate}
         />
       </Drawer>
     </div>
@@ -224,13 +234,20 @@ function WindowForm({
   setDraft,
   onCancel,
   onSave,
+  affiliates,
+  addAffiliate,
 }: {
   draft: Draft;
   setDraft: (d: Draft) => void;
   onCancel: () => void;
   onSave: () => void;
+  affiliates: AffiliateOrganization[];
+  addAffiliate: (a: AffiliateOrganization) => string;
 }) {
   const [partnersOpen, setPartnersOpen] = useState(draft.channel_partners.length > 0);
+  const [inlineOpen, setInlineOpen] = useState(false);
+  const [inlineName, setInlineName] = useState("");
+  const [inlineType, setInlineType] = useState<AffiliateType>("industry_association");
   const update = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft({ ...draft, [k]: v });
 
   const SPONSOR_OPTIONS: Array<{ value: SponsorShape; label: string }> = [
@@ -288,13 +305,80 @@ function WindowForm({
             {showAffiliate && (
               <Field label="Affiliate">
                 <select
-                  value={draft.affiliate_org_id ?? ""}
-                  onChange={(e) => update("affiliate_org_id", e.target.value || null)}
+                  value={draft.affiliate_org_id ?? "__NULL__"}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "__NEW__") { setInlineOpen(true); return; }
+                    update("affiliate_org_id", v === "__NULL__" ? null : v);
+                  }}
                   className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
                 >
-                  <option value="">Select affiliate…</option>
-                  {AFFILIATE_ORGANIZATIONS.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  <option value="__NULL__">Select affiliate…</option>
+                  {affiliates.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  <option disabled>──────────</option>
+                  <option value="__NEW__">+ New Affiliate…</option>
                 </select>
+                {inlineOpen && (
+                  <div className="mt-2 rounded-md border border-black/15 bg-[#f7f3eb] p-2.5 space-y-2">
+                    <div className="text-[10px] uppercase tracking-wider text-black/50">Create Affiliate</div>
+                    <input
+                      autoFocus
+                      value={inlineName}
+                      onChange={(e) => setInlineName(e.target.value)}
+                      placeholder="Affiliate name"
+                      className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
+                    />
+                    <select
+                      value={inlineType}
+                      onChange={(e) => setInlineType(e.target.value as AffiliateType)}
+                      className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
+                    >
+                      <option value="cca">CCA (Clinicians Care Association)</option>
+                      <option value="union">Union</option>
+                      <option value="industry_association">Association</option>
+                      <option value="employer_trust">Employer Trust</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <div className="flex items-center justify-between gap-2">
+                      <a
+                        href="/affiliates"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] text-[#0a3d3e] hover:underline"
+                      >
+                        More options…
+                      </a>
+                      <div className="flex gap-1.5">
+                        <Btn variant="ghost" onClick={() => { setInlineOpen(false); setInlineName(""); }}>Cancel</Btn>
+                        <Btn
+                          variant="primary"
+                          disabled={!inlineName.trim()}
+                          onClick={() => {
+                            const isTrust = inlineType === "employer_trust";
+                            const level = isTrust ? "employer" : (inlineType === "other" ? "individual" : "individual");
+                            const id = addAffiliate({
+                              id: "",
+                              name: inlineName.trim(),
+                              affiliate_type: inlineType,
+                              affiliation_level: level,
+                              industry: null,
+                              is_external: !isTrust,
+                              legal_entity_status: null,
+                              notes: "",
+                              deleted_at: null,
+                            });
+                            update("affiliate_org_id", id);
+                            setInlineOpen(false);
+                            setInlineName("");
+                            setInlineType("industry_association");
+                          }}
+                        >
+                          Save
+                        </Btn>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </Field>
             )}
           </div>

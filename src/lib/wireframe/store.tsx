@@ -1,11 +1,14 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Product, Role } from "./data";
+import { AFFILIATE_ORGANIZATIONS, type AffiliateOrganization } from "./data";
 
 type Ctx = {
   product: Product;
   setProduct: (p: Product) => void;
   role: Role;
   setRole: (r: Role) => void;
+  affiliates: AffiliateOrganization[];
+  setAffiliates: (a: AffiliateOrganization[] | ((prev: AffiliateOrganization[]) => AffiliateOrganization[])) => void;
 };
 
 const StoreCtx = createContext<Ctx | null>(null);
@@ -13,8 +16,12 @@ const StoreCtx = createContext<Ctx | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [product, setProduct] = useState<Product>("DI");
   const [role, setRole] = useState<Role>("admin");
+  const [affiliates, setAffiliatesState] = useState<AffiliateOrganization[]>(() => AFFILIATE_ORGANIZATIONS.map((a) => ({ ...a })));
+  const setAffiliates: Ctx["setAffiliates"] = (a) => {
+    setAffiliatesState((prev) => (typeof a === "function" ? (a as (p: AffiliateOrganization[]) => AffiliateOrganization[])(prev) : a));
+  };
   return (
-    <StoreCtx.Provider value={{ product, setProduct, role, setRole }}>
+    <StoreCtx.Provider value={{ product, setProduct, role, setRole, affiliates, setAffiliates }}>
       {children}
     </StoreCtx.Provider>
   );
