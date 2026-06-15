@@ -568,47 +568,56 @@ function View() {
       <FilterRow>
         <FilterCombobox value={sPartner} onChange={setSPartner} placeholder="All channel partners"
           options={[{ value: "house", label: "Hollowtree (House)" }, ...partners.map((p) => ({ value: p.id, label: p.name }))]} />
+        <FilterCombobox value={sPolicy} onChange={setSPolicy} placeholder="All policies"
+          options={policyOptions} />
         <FilterSelect value={sStatus} onChange={setSStatus} allLabel="All statuses"
           options={[{value:"draft"},{value:"approved"},{value:"paid"}]} />
         <FilterSelect value={sPeriod} onChange={setSPeriod} allLabel="All periods"
           options={[{value:"30",label:"Last 30 days"},{value:"qtr",label:"Last quarter"},{value:"ytd",label:"YTD"}]} />
         <FilterSelect value={sPayable} onChange={setSPayable} allLabel="All"
           options={[{value:"yes",label:"Payable"},{value:"no",label:"Carrier direct (not payable)"}]} />
-        <ClearFiltersLink show={sPartner !== "all" || sStatus !== "all" || sPeriod !== "all" || sPayable !== "all"}
-          onClick={() => { setSPartner("all"); setSStatus("all"); setSPeriod("all"); setSPayable("all"); }} />
+        <ClearFiltersLink show={sPartner !== "all" || sPolicy !== "all" || sStatus !== "all" || sPeriod !== "all" || sPayable !== "all"}
+          onClick={() => { setSPartner("all"); setSPolicy("all"); setSStatus("all"); setSPeriod("all"); setSPayable("all"); }} />
         <ExportCsvButton filteredCount={filteredStatements.length} totalCount={statements.length} resourceLabel="commission statements" />
       </FilterRow>
       <TableShell>
         <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
-          <tr>{["Period","Payee","Payee Type","Premium Base","Rate %","Commission Owed","Status","Payable","PDF","Actions"].map((c) => (
+          <tr>{["Period","Policy","Payee","Payee Type","Premium Base","Rate %","Commission Owed","Status","Payable","PDF","Actions"].map((c) => (
             <th key={c} className="text-left font-medium px-3 py-2">{c}</th>))}
           </tr>
         </thead>
         <tbody>
-          {filteredStatements.map((s) => (
-            <TRow key={s.id} onClick={() => setStmtDrawer({ open: true, id: s.id })}>
-              <TCell>{fmtPeriod(s.period_start, s.period_end)}</TCell>
-              <TCell className="font-medium">{s.payee_name}</TCell>
-              <TCell><PayeeTypeBadge t={s.payee_type} /></TCell>
-              <TCell>{formatCents(s.total_premium_cents)}</TCell>
-              <TCell>{s.commission_pct.toFixed(2)}%</TCell>
-              <TCell className="font-semibold">{formatCents(s.commission_owed_cents)}</TCell>
-              <TCell><StatusBadge s={s.status} /></TCell>
-              <TCell>{s.payable ? <span className="text-emerald-700">✓</span> : <Pill tone="warn">Carrier Direct</Pill>}</TCell>
-              <TCell onClick={(e) => e.stopPropagation()}>
-                <a href={s.pdf_url} className="text-[#0a3d3e]" onClick={(e) => { e.preventDefault(); toast("PDF download is a stub in the wireframe."); }}>
-                  <Download className="h-3.5 w-3.5 inline" />
-                </a>
-              </TCell>
-              <TCell onClick={(e) => e.stopPropagation()}>
-                {s.status === "draft" && <Btn onClick={() => approveStatement(s.id)}>Approve</Btn>}
-                {s.status === "approved" && <Btn onClick={() => markPaid(s.id)}>Mark Paid</Btn>}
-                {s.status === "paid" && <Btn onClick={() => setStmtDrawer({ open: true, id: s.id })}>View</Btn>}
-              </TCell>
-            </TRow>
-          ))}
+          {filteredStatements.map((s) => {
+            const pol = POLICIES.find((p) => p.id === s.policy_id);
+            return (
+              <TRow key={s.id} onClick={() => setStmtDrawer({ open: true, id: s.id })}>
+                <TCell>{fmtPeriod(s.period_start, s.period_end)}</TCell>
+                <TCell>
+                  <Link to="/policies" className="text-[#0a3d3e] underline">{s.policy_id}</Link>
+                  <span className="text-black/50"> ({pol?.org_name ?? "—"})</span>
+                </TCell>
+                <TCell className="font-medium">{s.payee_name}</TCell>
+                <TCell><PayeeTypeBadge t={s.payee_type} /></TCell>
+                <TCell>{formatCents(s.total_premium_cents)}</TCell>
+                <TCell>{s.commission_pct.toFixed(2)}%</TCell>
+                <TCell className="font-semibold">{formatCents(s.commission_owed_cents)}</TCell>
+                <TCell><StatusBadge s={s.status} /></TCell>
+                <TCell>{s.payable ? <span className="text-emerald-700">✓</span> : <Pill tone="warn">Carrier Direct</Pill>}</TCell>
+                <TCell onClick={(e) => e.stopPropagation()}>
+                  <a href={s.pdf_url} className="text-[#0a3d3e]" onClick={(e) => { e.preventDefault(); toast("PDF download is a stub in the wireframe."); }}>
+                    <Download className="h-3.5 w-3.5 inline" />
+                  </a>
+                </TCell>
+                <TCell onClick={(e) => e.stopPropagation()}>
+                  {s.status === "draft" && <Btn onClick={() => approveStatement(s.id)}>Approve</Btn>}
+                  {s.status === "approved" && <Btn onClick={() => markPaid(s.id)}>Mark Paid</Btn>}
+                  {s.status === "paid" && <Btn onClick={() => setStmtDrawer({ open: true, id: s.id })}>View</Btn>}
+                </TCell>
+              </TRow>
+            );
+          })}
           {filteredStatements.length === 0 && (
-            <tr><td colSpan={10} className="px-3 py-6 text-center text-black/40">No statements match the current filters.</td></tr>
+            <tr><td colSpan={11} className="px-3 py-6 text-center text-black/40">No statements match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
@@ -617,9 +626,8 @@ function View() {
       <PartnerDrawerView
         open={partnerDrawer.open}
         partner={selectedPartner}
-        mode={partnerDrawer.mode}
         defaults={defaults.filter((d) => d.channel_partner_id === partnerDrawer.id)}
-        onClose={() => setPartnerDrawer({ open: false, id: null, mode: "view" })}
+        onClose={() => setPartnerDrawer({ open: false, id: null })}
         onInvite={(p) => {
           setPartners((r) => r.map(x => x.id === p.id ? { ...x, portal_status: "invited", portal_invited_at: new Date().toISOString().slice(0,10) } : x));
           toast.success(`Invite sent to ${p.primary_contact_email}.`);
@@ -684,8 +692,8 @@ function MultiPill<T extends string>({ label, all, selected, onToggle }: { label
 // ---------------------------------------------------------------------------
 // Channel Partner detail drawer
 // ---------------------------------------------------------------------------
-function PartnerDrawerView({ open, partner, mode, defaults, onClose, onInvite, onRevoke, onImpersonate }: {
-  open: boolean; partner: Partner | null; mode: "view" | "create";
+function PartnerDrawerView({ open, partner, defaults, onClose, onInvite, onRevoke, onImpersonate }: {
+  open: boolean; partner: Partner | null;
   defaults: DefaultRow[];
   onClose: () => void;
   onInvite: (p: Partner) => void;
@@ -695,15 +703,12 @@ function PartnerDrawerView({ open, partner, mode, defaults, onClose, onInvite, o
   const [confirmInvite, setConfirmInvite] = useState(false);
   const [confirmImp, setConfirmImp] = useState(false);
   if (!open) return null;
-  const title = mode === "create" ? "New Channel Partner" : partner?.name ?? "Channel Partner";
+  const title = partner?.name ?? "Channel Partner";
   const total = defaults.reduce((s, d) => s + d.default_split_pct, 0);
   const totalOk = total === 100;
 
   return (
     <Drawer open={open} onClose={onClose} title={title}>
-      {!partner && mode === "create" && (
-        <div className="text-xs text-black/50 mb-4">Form fields are dummy in the wireframe. Save is stubbed.</div>
-      )}
       {partner && (
         <>
           {/* A — Identity */}
@@ -1005,6 +1010,7 @@ function GenerateDrawer({ open, partners, onClose, onGenerate }: {
       const partner = partners.find((p) => p.name === payee);
       rows.push({
         id: `stm_gen_${Date.now()}_${idx++}`,
+        policy_id: first.policy_id,
         channel_partner_id: first.payee_type === "house" ? null : partner?.id ?? null,
         payee_type: first.payee_type,
         payee_ref_id: first.payee_type === "house" ? null : partner?.id ?? null,
