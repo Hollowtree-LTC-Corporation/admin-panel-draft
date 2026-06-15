@@ -132,12 +132,23 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
 const PM_TYPES = ["ach", "card-payment", "ach", "apple-pay", "ach", "card-payment", null, "ach"] as const;
 const PM_INSTITUTIONS = ["Chase", null, "Wells Fargo", null, "Bank of America", null, null, "Citibank"];
 const PM_LAST4 = [null, "4242", null, null, null, "1881", null, null];
+const PM_DISPLAY_LABELS: (string | null)[] = [
+  "Chase ACH ··7890",
+  "Visa ending 4242",
+  "Wells Fargo ACH ··3344",
+  null,
+  "Bank of America ACH ··2211",
+  "Mastercard ending 1881",
+  null,
+  "Citibank ACH ··5566",
+];
 export const BILLING_GROUPS = Array.from({ length: 8 }, (_, i) => ({
   id: `bg_${i + 1}`,
   name: `Billing Group ${i + 1}`,
   individuals_count: INDIVIDUALS.filter((x) => x.billing_group_id === `bg_${i + 1}`).length,
   payment_method: ["ACH", "Card", "ACH", "Card"][i % 4],
   payment_method_type: PM_TYPES[i] as "ach" | "card-payment" | "apple-pay" | null,
+  payment_method_display_label: PM_DISPLAY_LABELS[i],
   plaid_institution: PM_INSTITUTIONS[i],
   card_last4: PM_LAST4[i],
   moov_account_id: `moov_${1000 + i}`,
@@ -173,10 +184,10 @@ export const PAYMENT_LEDGER = Array.from({ length: 60 }, (_, i) => {
 });
 
 export const ACCOUNT_ADJUSTMENTS = [
-  { id: "aa_1", individual_id: "ind_3", individual_name: "Test Person 3", adjustment_type: "premium_correction", amount_cents: -1500, reason: "Mid-cycle plan downgrade", effective_date: "2025-03-15", approved_by: "Guy (admin)", approved_at: "2025-03-15T14:22Z" },
-  { id: "aa_2", individual_id: "ind_11", individual_name: "Test Person 11", adjustment_type: "penalty_waiver", amount_cents: -2500, reason: "Bank holiday processing delay", effective_date: "2025-04-02", approved_by: "Guy (admin)", approved_at: "2025-04-02T09:10Z" },
-  { id: "aa_3", individual_id: "ind_22", individual_name: "Test Person 22", adjustment_type: "refund", amount_cents: -8500, reason: "Coverage canceled in cooling-off window", effective_date: "2025-05-19", approved_by: "Guy (admin)", approved_at: "2025-05-19T11:45Z" },
-  { id: "aa_4", individual_id: "ind_7", individual_name: "Test Person 7", adjustment_type: "write_off", amount_cents: -4200, reason: "Uncollectible after 90 days", effective_date: "2025-06-01", approved_by: "Guy (admin)", approved_at: "2025-06-01T16:30Z" },
+  { id: "aa_1", individual_id: "ind_3", individual_name: "Test Person 3", adjustment_type: "premium_correction", amount_cents: -1500, reason: "Mid-cycle plan downgrade", notes: "Confirmed via support ticket #4821.", effective_date: "2025-03-15", applied_to_next_charge: true, approved_by: "Guy (admin)", approved_at: "2025-03-15T14:22Z" },
+  { id: "aa_2", individual_id: "ind_11", individual_name: "Test Person 11", adjustment_type: "penalty_waiver", amount_cents: -2500, reason: "Bank holiday processing delay", notes: "", effective_date: "2025-04-02", applied_to_next_charge: true, approved_by: "Guy (admin)", approved_at: "2025-04-02T09:10Z" },
+  { id: "aa_3", individual_id: "ind_22", individual_name: "Test Person 22", adjustment_type: "refund", amount_cents: -8500, reason: "Coverage canceled in cooling-off window", notes: "Refund issued via Moov reversal.", effective_date: "2025-05-19", applied_to_next_charge: false, approved_by: "Guy (admin)", approved_at: "2025-05-19T11:45Z" },
+  { id: "aa_4", individual_id: "ind_7", individual_name: "Test Person 7", adjustment_type: "write_off", amount_cents: -4200, reason: "Uncollectible after 90 days", notes: "", effective_date: "2025-06-01", applied_to_next_charge: false, approved_by: "Guy (admin)", approved_at: "2025-06-01T16:30Z" },
 ];
 
 // Carriers — schema-aligned (DI v13 / LTC v3.13 `carriers` table).

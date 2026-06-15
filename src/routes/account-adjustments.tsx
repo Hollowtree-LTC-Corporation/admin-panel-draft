@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader, TableShell, TRow, TCell, Btn, Drawer, useDrawer, Field, Input } from "@/components/wireframe/Bits";
+import { PageHeader, TableShell, TRow, TCell, Btn, Drawer, useDrawer, Field, Input, Pill } from "@/components/wireframe/Bits";
 import { ACCOUNT_ADJUSTMENTS, INDIVIDUALS, BILLING_GROUPS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
@@ -8,7 +8,9 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/account-adjustments")({ component: View });
 
-type SortKey = "individual_name" | "billing_group_id" | "adjustment_type" | "amount_cents" | "reason" | "effective_date" | "approved_by";
+type SortKey = "individual_name" | "billing_group_id" | "adjustment_type" | "amount_cents" | "reason" | "effective_date" | "applied_to_next_charge" | "approved_by";
+
+const ADJ_TYPES = ["premium_correction", "write_off", "refund", "penalty_waiver", "billing_error", "other"] as const;
 
 function View() {
   const can = usePermission();
@@ -74,6 +76,7 @@ function View() {
             { key: "amount_cents", label: "Amount" },
             { key: "reason", label: "Reason" },
             { key: "effective_date", label: "Effective" },
+            { key: "applied_to_next_charge", label: "Applied" },
             { key: "approved_by", label: "Approved By" },
           ]}
           sortKey={sort.sortKey}
@@ -89,11 +92,16 @@ function View() {
               <TCell className={a.amount_cents < 0 ? "text-rose-700" : ""}>{formatCents(a.amount_cents)}</TCell>
               <TCell className="text-black/70">{a.reason}</TCell>
               <TCell className="font-mono text-[11px]">{a.effective_date}</TCell>
+              <TCell>
+                {a.applied_to_next_charge
+                  ? <Pill tone="ok">Applied</Pill>
+                  : <Pill tone="warn">Pending</Pill>}
+              </TCell>
               <TCell>{a.approved_by}</TCell>
             </TRow>
           ))}
           {rows.length === 0 && (
-            <tr><td colSpan={7} className="px-3 py-8 text-center text-black/40 text-xs">No adjustments match the current filters.</td></tr>
+            <tr><td colSpan={8} className="px-3 py-8 text-center text-black/40 text-xs">No adjustments match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
@@ -101,10 +109,22 @@ function View() {
       <Drawer open={d.state.open} onClose={d.close} title="New Account Adjustment">
         <Field label="Individual"><Input placeholder="Select individual…" /></Field>
         <Field label="Billing Group"><Input defaultValue={BILLING_GROUPS[0]?.id ?? ""} /></Field>
-        <Field label="Adjustment Type"><Input defaultValue="premium_correction" /></Field>
+        <Field label="Adjustment Type">
+          <select defaultValue="premium_correction" className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
+            {ADJ_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
         <Field label="Amount (cents)"><Input placeholder="-1500" /></Field>
         <Field label="Reason"><Input placeholder="Short justification" /></Field>
+        <Field label="Notes">
+          <textarea placeholder="Internal notes (optional)..." className="w-full px-2 py-1 text-sm border border-black/15 rounded min-h-[60px]" />
+        </Field>
         <Field label="Effective Date"><Input defaultValue="2025-06-12" /></Field>
+        <label className="flex items-center gap-2 mb-3 text-xs">
+          <input type="checkbox" defaultChecked />
+          <span className="text-[10px] uppercase tracking-wider text-black/60">Apply to Next Charge</span>
+          <span className="text-black/40 text-[11px]">— applies on the next billing cycle</span>
+        </label>
         <div className="text-[11px] text-black/50 mt-2 mb-3">Once created, this row is immutable.</div>
         <div className="flex gap-2">
           <Btn variant="primary" disabled={!can("account_adjustments", "approve")}>Create &amp; Approve</Btn>
