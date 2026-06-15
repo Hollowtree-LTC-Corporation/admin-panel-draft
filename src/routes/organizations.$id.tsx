@@ -152,6 +152,10 @@ function synthesize(org: typeof ORGS[number]) {
   const slug = org.name.toLowerCase().replace(/[^a-z]/g, "");
   const idx = parseInt(org.id.replace("org_", ""), 10) || 1;
   const cca = org.cca_group;
+  const product = org.product as "DI" | "LTC";
+  const suffix = defaultMicrositeSuffix(product);
+  // Sprinkle one non-standard microsite to exercise fallback path
+  const micrositeUrl = idx === 4 ? `https://enroll.example.com/${org.id}` : `https://${slug}${suffix}`;
   return {
     ...org,
     domain: `${slug}.example.com`,
@@ -161,13 +165,20 @@ function synthesize(org: typeof ORGS[number]) {
     eligible_lives: org.individuals_count * 3,
     // DI
     gi_offer_cents: 15000000,
-    microsite_url: `https://enroll.hollowtree.app/${org.id}`,
+    microsite_url: micrositeUrl,
     di_healthcare_type: "Healthcare Practice",
     inbound_type: "Broker Referral",
     ltd_benefit_pct: 60,
     std_benefit_pct: 66.7,
     next_sun_life_report_date: "2026-07-15",
     contact_email: idx % 4 === 0 ? null : `hr@${slug}.example.com`,
+    // Carrier & Product (dummy)
+    carrier_name: carrierForProduct(product),
+    carrier_product_name: carrierProductLabel(product, org.type_of_rate),
+    group_policy_number: product === "DI" ? `GP-${10000000 + idx * 137}` : null,
+    policy_effective_date: "2025-01-01",
+    // Klaviyo
+    klaviyo_list_id: ["TfRk9b","X4mP2q","Lz8Yhn","aQ3Wpv","R7nB2k","dE9Lto","Vc5Mxs","Jh1Knu"][idx % 8],
     // Coverage / Billing
     contribution_type: cca ? "voluntary" : "employer_paid",
     pay_mode: "Monthly",
