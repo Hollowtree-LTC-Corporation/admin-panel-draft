@@ -27,8 +27,38 @@ const WINDOW_TYPES = ["initial","annual","new_joiner","special"];
 const SPONSOR_TYPES = ["employer","affiliate"];
 const WINDOW_STATUSES = ["upcoming","open","closed"];
 const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
-const BROKERS = ["Westfield Brokers","Hollowtree House","Override Group LLC","Jamie Rep"];
-const BROKER_TYPES = ["Broker","IMO","Internal"];
+const BROKER_TYPES = ["Broker","IMO","Internal"] as const;
+type BrokerType = typeof BROKER_TYPES[number];
+type BrokerRecord = {
+  id: string;
+  broker_name: string;
+  broker_type: BrokerType;
+  default_commission_pct: number;
+  contact_email: string | null;
+};
+// Shared (admin-panel-wide) channel_partners store. In-memory only; survives
+// route navigation within a session because it lives at module scope.
+const _BROKER_STORE: BrokerRecord[] = [
+  { id: "cpn_1", broker_name: "Westfield Brokers", broker_type: "Broker",   default_commission_pct: 60, contact_email: "ops@westfield.example" },
+  { id: "cpn_2", broker_name: "Hollowtree House",  broker_type: "Internal", default_commission_pct: 20, contact_email: null },
+  { id: "cpn_3", broker_name: "Override Group LLC",broker_type: "IMO",      default_commission_pct: 5,  contact_email: null },
+  { id: "cpn_4", broker_name: "Jamie Rep",         broker_type: "Internal", default_commission_pct: 15, contact_email: null },
+];
+const _BROKER_LISTENERS = new Set<() => void>();
+function addBrokerToStore(b: Omit<BrokerRecord, "id">): BrokerRecord {
+  const rec: BrokerRecord = { ...b, id: `cpn_${Date.now()}_${Math.floor(Math.random()*1000)}` };
+  _BROKER_STORE.push(rec);
+  _BROKER_LISTENERS.forEach((l) => l());
+  return rec;
+}
+function useBrokers(): BrokerRecord[] {
+  const [, force] = useReducer((x: number) => x + 1, 0);
+  useEffect(() => {
+    _BROKER_LISTENERS.add(force);
+    return () => { _BROKER_LISTENERS.delete(force); };
+  }, []);
+  return _BROKER_STORE;
+}
 const INBOUND_TYPES = ["Broker Referral","Direct","Partner Referral","Inbound"];
 const PRODUCT_TEMPLATE_VARIANTS = ["base","eob_only","restoration_only","eob_and_restoration"];
 const CONTRIBUTION_TYPES = ["voluntary","buy_up","employer_paid"];
