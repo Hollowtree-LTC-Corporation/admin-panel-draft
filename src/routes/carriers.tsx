@@ -20,7 +20,7 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 export const Route = createFileRoute("/carriers")({ component: View });
 
 type SortKey = "carrier_name" | "carrier_type" | "am_best_rating" | "carrier_products_count";
-type ProdSortKey = "product_name" | "product_type" | "carrier_name" | "schedules_count" | "default_schedule" | "constraints_count" | "riders_count" | "active";
+type ProdSortKey = "product_name" | "product_type" | "cca_product" | "carrier_name" | "schedules_count" | "default_schedule" | "constraints_count" | "riders_count" | "active";
 
 const FIELD_INPUT = "w-full px-2 py-1 text-sm border border-black/15 rounded";
 
@@ -266,7 +266,7 @@ function View() {
                   <span className="inline-flex items-center gap-1">
                     {selected ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3 text-black/30" />}
                     {c.carrier_name}
-                    {c.cca_carrier ? <span className="ml-1 inline-flex items-center gap-1 text-[10px] text-emerald-700"><Check className="h-3 w-3" />CCA</span> : null}
+                    {c.cca_carrier ? <span className="ml-1 inline-flex items-center gap-1 text-[10px] text-emerald-700"><Check className="h-3 w-3" />CCA Eligible</span> : null}
                   </span>
                 </TCell>
                 <TCell className="text-black/70 text-xs">{c.carrier_type}</TCell>
@@ -342,6 +342,7 @@ function View() {
           cols={[
             { key: "product_name", label: "Product Name" },
             { key: "product_type", label: "Product Type" },
+            { key: "cca_product" as ProdSortKey, label: "CCA" },
             ...(selectedCarrier ? [] : [{ key: "carrier_name" as ProdSortKey, label: "Carrier" }]),
             { key: "active" as ProdSortKey, label: "Active" },
             ...(product === "LTC"
@@ -367,6 +368,7 @@ function View() {
                 </span>
               </TCell>
               <TCell className="text-black/70 text-xs">{p.product_type}</TCell>
+              <TCell>{p.cca_product ? <Pill tone="ok">CCA</Pill> : <span className="text-black/40">—</span>}</TCell>
               {!selectedCarrier ? <TCell>{p.carrier_name}</TCell> : null}
               <TCell>{p.active ? <Pill tone="ok">Active</Pill> : <Pill tone="neutral">Inactive</Pill>}</TCell>
               {product === "LTC" ? (
