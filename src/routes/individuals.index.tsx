@@ -175,6 +175,7 @@ function IndividualsView() {
         {!isLTC && (
           <FilterSelect value={diTypeFilter} onChange={setDiTypeFilter} allLabel="All types" options={[{ value: "STD+LTD" }, { value: "LTD", label: "LTD Only" }]} />
         )}
+        <FilterSelect value={repFilter} onChange={setRepFilter} allLabel="All reps" options={[...repOptions.map((v) => ({ value: v })), { value: "__unassigned__", label: "Unassigned" }]} />
         <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "Successful", label: "Paid" }, { value: "Failed" }, { value: "Pending" }]} />
         <ClearFiltersLink show={filtersActive} onClick={clearAll} />
         <ExportCsvButton filteredCount={filtered.length} totalCount={productRows.length} resourceLabel="individuals" />
