@@ -556,10 +556,11 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
   };
   return (
     <SectionCard title="Identity" summary={summary} editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
-      <Grid cols={3}>
+      <Grid cols={4}>
         <RField label="First Name" value={i.first_name} editing={editing}><input defaultValue={i.first_name} className={inputCls} /></RField>
         <RField label="Last Name" value={i.last_name} editing={editing}><input defaultValue={i.last_name} className={inputCls} /></RField>
         <RField label="Email" value={i.email} editing={editing}><input type="email" defaultValue={i.email} className={inputCls} /></RField>
+        <div />
         <RField label="Phone" value={i.phone} editing={editing}><input defaultValue={i.phone} className={inputCls} /></RField>
         <RField label="Secondary Phone" value={i.secondary_phone ?? "—"} editing={editing}><input defaultValue={i.secondary_phone ?? ""} className={inputCls} /></RField>
         <RField label="Language" editing={editing}>
@@ -574,6 +575,7 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
             )
             : languageLabel(i.preferred_language)}
         </RField>
+        <RField label="Personal Email" value={i.personal_email ?? "—"} editing={editing}><input type="email" defaultValue={i.personal_email ?? ""} className={inputCls} /></RField>
         <RField label="Date of Birth" value={fmtDate(i.date_of_birth)} editing={editing}><input type="date" defaultValue={i.date_of_birth} className={inputCls} /></RField>
         <RField label="Organization">
           {editing ? (
@@ -588,6 +590,7 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
         <RField label="Employment Relationship" value={i.employment_relationship} editing={editing}>
           <select defaultValue={i.employment_relationship} className={inputCls}>{EMPLOYMENT_REL.map((o) => <option key={o}>{o}</option>)}</select>
         </RField>
+        <RField label="Title" value={i.title ?? "—"} editing={editing}><input defaultValue={i.title ?? ""} className={inputCls} /></RField>
         <RField label="Hire Date" value={fmtDate(i.hire_date)} editing={editing}><input type="date" defaultValue={i.hire_date} className={inputCls} /></RField>
         <RField label="Gender" value={i.gender} editing={editing}>
           <select defaultValue={i.gender} className={inputCls}>{GENDERS.map((o) => <option key={o}>{o}</option>)}</select>
