@@ -5,9 +5,10 @@ import {
   ENROLLMENT_WINDOWS,
   ORGS,
   CARRIERS,
-  AFFILIATE_ORGANIZATIONS,
   CHANNEL_PARTNERS,
   type EnrollmentWindow,
+  type AffiliateOrganization,
+  type AffiliateType,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
