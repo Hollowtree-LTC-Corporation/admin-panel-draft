@@ -362,29 +362,25 @@ function OrgDetail() {
         <AttioDealCard dealId={org.attio_deal_id} />
       </div>
 
-      <Tabs defaultValue="config" className="w-full">
+      <Tabs defaultValue="setup" className="w-full">
         <TabsList>
-          <TabsTrigger value="config">Config</TabsTrigger>
-          <TabsTrigger value="fees">Fees</TabsTrigger>
-          <TabsTrigger value="windows">Enrollment Windows</TabsTrigger>
+          <TabsTrigger value="setup">Setup</TabsTrigger>
+          <TabsTrigger value="lifecycle">Enrollment Lifecycle</TabsTrigger>
           {product === "LTC" ? <TabsTrigger value="bc">Benefit Classes</TabsTrigger> : null}
-          <TabsTrigger value="newjoiner">New Joiner Config</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="config">
-          <ConfigTab org={org} product={product} readOnly={readOnly} isAdmin={role === "admin"} />
+        <TabsContent value="setup">
+          <SetupTab org={org} product={product} readOnly={readOnly} isAdmin={role === "admin"} />
         </TabsContent>
-        <TabsContent value="fees">
-          <FeesTab org={orgBase} readOnly={readOnly} />
-        </TabsContent>
-        <TabsContent value="windows">
-          <WindowsTab
+        <TabsContent value="lifecycle">
+          <LifecycleTab
             windows={windows}
             orgName={org.name}
             onNew={() => windowDrawer.open(undefined, "create")}
             onEdit={(w) => windowDrawer.open(w, "edit")}
             canEdit={can("enrollment_windows", "update")}
             canCreate={can("enrollment_windows", "create")}
+            readOnly={readOnly}
           />
         </TabsContent>
         {product === "LTC" ? (
@@ -398,9 +394,6 @@ function OrgDetail() {
             />
           </TabsContent>
         ) : null}
-        <TabsContent value="newjoiner">
-          <NewJoinerTab readOnly={readOnly} />
-        </TabsContent>
       </Tabs>
 
       {/* Edit drawer (top-of-page shortcut) */}
