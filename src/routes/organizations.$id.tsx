@@ -26,7 +26,7 @@ const DI_HC_TYPES = ["MSO","Healthcare Practice","Medical Group","Dental","Other
 const WINDOW_TYPES = ["initial","annual","new_joiner","special"];
 const SPONSOR_TYPES = ["employer","affiliate"];
 const WINDOW_STATUSES = ["upcoming","open","closed"];
-const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
+const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.carrier_name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
 const BROKER_TYPES = ["Broker","IMO","Internal"] as const;
 type BrokerType = typeof BROKER_TYPES[number];
 type BrokerRecord = {
