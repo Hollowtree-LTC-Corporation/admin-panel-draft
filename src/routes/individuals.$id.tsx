@@ -685,14 +685,14 @@ function SpouseSection({ i, linked, linkedDetail, readOnly }: { i: Detail; linke
 }
 
 function UpgradeSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
-  const hasActivity = i.interested_upgrading || i.applied_for_upgrade || i.upgrade_applied_for;
+  const hasActivity = i.interested_upgrading || i.applied_for_upgrade;
   if (!hasActivity) return null;
   const [editing, setEditing] = useState(false);
   return (
     <SectionCard title="Upgrade" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={3}>
         <RField label="Interested in Upgrading" value={i.interested_upgrading ? "yes" : "no"} />
-        <RField label="Applied for Upgrade" value={i.upgrade_applied_for ? "yes" : "no"} />
+        <RField label="Applied for Upgrade" value={i.applied_for_upgrade ? "yes" : "no"} />
         <RField label="Employee Upgrade Option" value={i.employee_upgrade_option ?? "—"} />
         <RField label="Pre-Upgrade Premium" value={i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"} />
         <RField label="Upgrade Submitted At" value={fmtDate(i.upgrade_submitted_at)} />
