@@ -10,6 +10,7 @@ import { type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { StoreProvider } from "@/lib/wireframe/store";
 import { Shell } from "@/components/wireframe/Shell";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -53,6 +54,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <StoreProvider>
         <Shell />
+        <Toaster />
       </StoreProvider>
     </QueryClientProvider>
   );
