@@ -146,6 +146,7 @@ for (const r of ACTIVE_SPLITS) if (OVERRIDE_DEMO_IDS.has(r.id)) r.source = "over
 type StmtStatus = "draft" | "approved" | "paid";
 type Statement = {
   id: string;
+  policy_id: string;
   channel_partner_id: string | null; // null for house
   payee_type: PayeeType;
   payee_ref_id: string | null;
@@ -168,22 +169,22 @@ type Statement = {
 
 const STMT_SEED: Statement[] = [
   // July 2025
-  { id: "stm_1", channel_partner_id: null, payee_type: "house", payee_ref_id: null, payee_name: "Hollowtree", period_start: "2025-07-01", period_end: "2025-07-31", total_premium_cents: 1800000, commission_pct: 12.0, commission_owed_cents: 97200, status: "paid", generated_at: "2025-08-02T09:15:00Z", generated_by: "Guy Livingstone", approved_at: "2025-08-03T10:00:00Z", paid_at: "2025-08-08T14:00:00Z", pdf_url: "#", commission_split_id: "ps_1_1", carrier_commission_schedule_id: null, payable: true },
-  { id: "stm_2", channel_partner_id: "cpn_1", payee_type: "channel_partner", payee_ref_id: "cpn_1", payee_name: "WTC Benefits", period_start: "2025-07-01", period_end: "2025-07-31", total_premium_cents: 1800000, commission_pct: 12.0, commission_owed_cents: 86400, status: "paid", generated_at: "2025-08-02T09:15:00Z", generated_by: "Guy Livingstone", approved_at: "2025-08-03T10:00:00Z", paid_at: "2025-08-08T14:00:00Z", pdf_url: "#", commission_split_id: "ps_1_3", carrier_commission_schedule_id: null, payable: true },
-  { id: "stm_3", channel_partner_id: "cpn_7", payee_type: "internal_rep", payee_ref_id: "cpn_7", payee_name: "Guy Livingstone", period_start: "2025-07-01", period_end: "2025-07-31", total_premium_cents: 1800000, commission_pct: 12.0, commission_owed_cents: 21600, status: "paid", generated_at: "2025-08-02T09:15:00Z", generated_by: "Guy Livingstone", approved_at: "2025-08-03T10:00:00Z", paid_at: "2025-08-08T14:00:00Z", pdf_url: "#", commission_split_id: "ps_1_2", carrier_commission_schedule_id: null, payable: true },
-  { id: "stm_4", channel_partner_id: "cpn_5", payee_type: "override", payee_ref_id: "cpn_5", payee_name: "Gallagher", period_start: "2025-07-01", period_end: "2025-07-31", total_premium_cents: 1800000, commission_pct: 12.0, commission_owed_cents: 10800, status: "paid", generated_at: "2025-08-02T09:15:00Z", generated_by: "Guy Livingstone", approved_at: "2025-08-03T10:00:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_1_4", carrier_commission_schedule_id: null, payable: false },
+  { id: "stm_1", policy_id: "pol_1", channel_partner_id: null, payee_type: "house", payee_ref_id: null, payee_name: "Hollowtree", period_start: "2025-07-01", period_end: "2025-07-31", total_premium_cents: 1800000, commission_pct: 12.0, commission_owed_cents: 97200, status: "paid", generated_at: "2025-08-02T09:15:00Z", generated_by: "Guy Livingstone", approved_at: "2025-08-03T10:00:00Z", paid_at: "2025-08-08T14:00:00Z", pdf_url: "#", commission_split_id: "ps_1_1", carrier_commission_schedule_id: null, payable: true },
+  { id: "stm_2", policy_id: "pol_1", channel_partner_id: "cpn_1", payee_type: "channel_partner", payee_ref_id: "cpn_1", payee_name: "WTC Benefits", period_start: "2025-07-01", period_end: "2025-07-31", total_premium_cents: 1800000, commission_pct: 12.0, commission_owed_cents: 86400, status: "paid", generated_at: "2025-08-02T09:15:00Z", generated_by: "Guy Livingstone", approved_at: "2025-08-03T10:00:00Z", paid_at: "2025-08-08T14:00:00Z", pdf_url: "#", commission_split_id: "ps_1_3", carrier_commission_schedule_id: null, payable: true },
+  { id: "stm_3", policy_id: "pol_1", channel_partner_id: "cpn_7", payee_type: "internal_rep", payee_ref_id: "cpn_7", payee_name: "Guy Livingstone", period_start: "2025-07-01", period_end: "2025-07-31", total_premium_cents: 1800000, commission_pct: 12.0, commission_owed_cents: 21600, status: "paid", generated_at: "2025-08-02T09:15:00Z", generated_by: "Guy Livingstone", approved_at: "2025-08-03T10:00:00Z", paid_at: "2025-08-08T14:00:00Z", pdf_url: "#", commission_split_id: "ps_1_2", carrier_commission_schedule_id: null, payable: true },
+  { id: "stm_4", policy_id: "pol_1", channel_partner_id: "cpn_5", payee_type: "override", payee_ref_id: "cpn_5", payee_name: "Gallagher", period_start: "2025-07-01", period_end: "2025-07-31", total_premium_cents: 1800000, commission_pct: 12.0, commission_owed_cents: 10800, status: "paid", generated_at: "2025-08-02T09:15:00Z", generated_by: "Guy Livingstone", approved_at: "2025-08-03T10:00:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_1_4", carrier_commission_schedule_id: null, payable: false },
   // August 2025
-  { id: "stm_5", channel_partner_id: null, payee_type: "house", payee_ref_id: null, payee_name: "Hollowtree", period_start: "2025-08-01", period_end: "2025-08-31", total_premium_cents: 2100000, commission_pct: 12.0, commission_owed_cents: 113400, status: "approved", generated_at: "2025-09-02T09:00:00Z", generated_by: "Guy Livingstone", approved_at: "2025-09-04T11:30:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_1_1", carrier_commission_schedule_id: null, payable: true },
-  { id: "stm_6", channel_partner_id: "cpn_1", payee_type: "channel_partner", payee_ref_id: "cpn_1", payee_name: "WTC Benefits", period_start: "2025-08-01", period_end: "2025-08-31", total_premium_cents: 2100000, commission_pct: 12.0, commission_owed_cents: 100800, status: "approved", generated_at: "2025-09-02T09:00:00Z", generated_by: "Guy Livingstone", approved_at: "2025-09-04T11:30:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_1_3", carrier_commission_schedule_id: null, payable: true },
-  { id: "stm_7", channel_partner_id: "cpn_2", payee_type: "channel_partner", payee_ref_id: "cpn_2", payee_name: "Westfield Brokers", period_start: "2025-08-01", period_end: "2025-08-31", total_premium_cents: 950000, commission_pct: 10.0, commission_owed_cents: 47500, status: "approved", generated_at: "2025-09-02T09:00:00Z", generated_by: "Guy Livingstone", approved_at: "2025-09-04T11:30:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_2_2", carrier_commission_schedule_id: null, payable: true },
-  { id: "stm_8", channel_partner_id: "cpn_7", payee_type: "internal_rep", payee_ref_id: "cpn_7", payee_name: "Guy Livingstone", period_start: "2025-08-01", period_end: "2025-08-31", total_premium_cents: 2100000, commission_pct: 12.0, commission_owed_cents: 25200, status: "approved", generated_at: "2025-09-02T09:00:00Z", generated_by: "Guy Livingstone", approved_at: "2025-09-04T11:30:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_1_2", carrier_commission_schedule_id: null, payable: true },
-  { id: "stm_9", channel_partner_id: "cpn_5", payee_type: "override", payee_ref_id: "cpn_5", payee_name: "Gallagher", period_start: "2025-08-01", period_end: "2025-08-31", total_premium_cents: 2100000, commission_pct: 12.0, commission_owed_cents: 12600, status: "approved", generated_at: "2025-09-02T09:00:00Z", generated_by: "Guy Livingstone", approved_at: "2025-09-04T11:30:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_1_4", carrier_commission_schedule_id: null, payable: false },
+  { id: "stm_5", policy_id: "pol_1", channel_partner_id: null, payee_type: "house", payee_ref_id: null, payee_name: "Hollowtree", period_start: "2025-08-01", period_end: "2025-08-31", total_premium_cents: 2100000, commission_pct: 12.0, commission_owed_cents: 113400, status: "approved", generated_at: "2025-09-02T09:00:00Z", generated_by: "Guy Livingstone", approved_at: "2025-09-04T11:30:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_1_1", carrier_commission_schedule_id: null, payable: true },
+  { id: "stm_6", policy_id: "pol_1", channel_partner_id: "cpn_1", payee_type: "channel_partner", payee_ref_id: "cpn_1", payee_name: "WTC Benefits", period_start: "2025-08-01", period_end: "2025-08-31", total_premium_cents: 2100000, commission_pct: 12.0, commission_owed_cents: 100800, status: "approved", generated_at: "2025-09-02T09:00:00Z", generated_by: "Guy Livingstone", approved_at: "2025-09-04T11:30:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_1_3", carrier_commission_schedule_id: null, payable: true },
+  { id: "stm_7", policy_id: "pol_2", channel_partner_id: "cpn_2", payee_type: "channel_partner", payee_ref_id: "cpn_2", payee_name: "Westfield Brokers", period_start: "2025-08-01", period_end: "2025-08-31", total_premium_cents: 950000, commission_pct: 10.0, commission_owed_cents: 47500, status: "approved", generated_at: "2025-09-02T09:00:00Z", generated_by: "Guy Livingstone", approved_at: "2025-09-04T11:30:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_2_2", carrier_commission_schedule_id: null, payable: true },
+  { id: "stm_8", policy_id: "pol_1", channel_partner_id: "cpn_7", payee_type: "internal_rep", payee_ref_id: "cpn_7", payee_name: "Guy Livingstone", period_start: "2025-08-01", period_end: "2025-08-31", total_premium_cents: 2100000, commission_pct: 12.0, commission_owed_cents: 25200, status: "approved", generated_at: "2025-09-02T09:00:00Z", generated_by: "Guy Livingstone", approved_at: "2025-09-04T11:30:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_1_2", carrier_commission_schedule_id: null, payable: true },
+  { id: "stm_9", policy_id: "pol_1", channel_partner_id: "cpn_5", payee_type: "override", payee_ref_id: "cpn_5", payee_name: "Gallagher", period_start: "2025-08-01", period_end: "2025-08-31", total_premium_cents: 2100000, commission_pct: 12.0, commission_owed_cents: 12600, status: "approved", generated_at: "2025-09-02T09:00:00Z", generated_by: "Guy Livingstone", approved_at: "2025-09-04T11:30:00Z", paid_at: null, pdf_url: "#", commission_split_id: "ps_1_4", carrier_commission_schedule_id: null, payable: false },
   // September 2025 — drafts
-  { id: "stm_10", channel_partner_id: null, payee_type: "house", payee_ref_id: null, payee_name: "Hollowtree", period_start: "2025-09-01", period_end: "2025-09-30", total_premium_cents: 2240000, commission_pct: 12.0, commission_owed_cents: 120960, status: "draft", generated_at: "2025-10-02T08:45:00Z", generated_by: "Guy Livingstone", approved_at: null, paid_at: null, pdf_url: "#", commission_split_id: "ps_1_1", carrier_commission_schedule_id: null, payable: true },
-  { id: "stm_11", channel_partner_id: "cpn_1", payee_type: "channel_partner", payee_ref_id: "cpn_1", payee_name: "WTC Benefits", period_start: "2025-09-01", period_end: "2025-09-30", total_premium_cents: 2240000, commission_pct: 12.0, commission_owed_cents: 107520, status: "draft", generated_at: "2025-10-02T08:45:00Z", generated_by: "Guy Livingstone", approved_at: null, paid_at: null, pdf_url: "#", commission_split_id: "ps_1_3", carrier_commission_schedule_id: null, payable: true },
-  { id: "stm_12", channel_partner_id: "cpn_2", payee_type: "channel_partner", payee_ref_id: "cpn_2", payee_name: "Westfield Brokers", period_start: "2025-09-01", period_end: "2025-09-30", total_premium_cents: 1020000, commission_pct: 10.0, commission_owed_cents: 51000, status: "draft", generated_at: "2025-10-02T08:45:00Z", generated_by: "Guy Livingstone", approved_at: null, paid_at: null, pdf_url: "#", commission_split_id: "ps_2_2", carrier_commission_schedule_id: null, payable: true },
-  { id: "stm_13", channel_partner_id: "cpn_8", payee_type: "internal_rep", payee_ref_id: "cpn_8", payee_name: "Casey Rep", period_start: "2025-09-01", period_end: "2025-09-30", total_premium_cents: 640000, commission_pct: 12.0, commission_owed_cents: 7680, status: "draft", generated_at: "2025-10-02T08:45:00Z", generated_by: "Guy Livingstone", approved_at: null, paid_at: null, pdf_url: "#", commission_split_id: "ps_4_2", carrier_commission_schedule_id: "ccs_10", payable: true },
-  { id: "stm_14", channel_partner_id: "cpn_5", payee_type: "override", payee_ref_id: "cpn_5", payee_name: "Gallagher", period_start: "2025-09-01", period_end: "2025-09-30", total_premium_cents: 2240000, commission_pct: 12.0, commission_owed_cents: 13440, status: "draft", generated_at: "2025-10-02T08:45:00Z", generated_by: "Guy Livingstone", approved_at: null, paid_at: null, pdf_url: "#", commission_split_id: "ps_5_4", carrier_commission_schedule_id: null, payable: false },
+  { id: "stm_10", policy_id: "pol_1", channel_partner_id: null, payee_type: "house", payee_ref_id: null, payee_name: "Hollowtree", period_start: "2025-09-01", period_end: "2025-09-30", total_premium_cents: 2240000, commission_pct: 12.0, commission_owed_cents: 120960, status: "draft", generated_at: "2025-10-02T08:45:00Z", generated_by: "Guy Livingstone", approved_at: null, paid_at: null, pdf_url: "#", commission_split_id: "ps_1_1", carrier_commission_schedule_id: null, payable: true },
+  { id: "stm_11", policy_id: "pol_1", channel_partner_id: "cpn_1", payee_type: "channel_partner", payee_ref_id: "cpn_1", payee_name: "WTC Benefits", period_start: "2025-09-01", period_end: "2025-09-30", total_premium_cents: 2240000, commission_pct: 12.0, commission_owed_cents: 107520, status: "draft", generated_at: "2025-10-02T08:45:00Z", generated_by: "Guy Livingstone", approved_at: null, paid_at: null, pdf_url: "#", commission_split_id: "ps_1_3", carrier_commission_schedule_id: null, payable: true },
+  { id: "stm_12", policy_id: "pol_2", channel_partner_id: "cpn_2", payee_type: "channel_partner", payee_ref_id: "cpn_2", payee_name: "Westfield Brokers", period_start: "2025-09-01", period_end: "2025-09-30", total_premium_cents: 1020000, commission_pct: 10.0, commission_owed_cents: 51000, status: "draft", generated_at: "2025-10-02T08:45:00Z", generated_by: "Guy Livingstone", approved_at: null, paid_at: null, pdf_url: "#", commission_split_id: "ps_2_2", carrier_commission_schedule_id: null, payable: true },
+  { id: "stm_13", policy_id: "pol_4", channel_partner_id: "cpn_8", payee_type: "internal_rep", payee_ref_id: "cpn_8", payee_name: "Casey Rep", period_start: "2025-09-01", period_end: "2025-09-30", total_premium_cents: 640000, commission_pct: 12.0, commission_owed_cents: 7680, status: "draft", generated_at: "2025-10-02T08:45:00Z", generated_by: "Guy Livingstone", approved_at: null, paid_at: null, pdf_url: "#", commission_split_id: "ps_4_2", carrier_commission_schedule_id: "ccs_10", payable: true },
+  { id: "stm_14", policy_id: "pol_5", channel_partner_id: "cpn_5", payee_type: "override", payee_ref_id: "cpn_5", payee_name: "Gallagher", period_start: "2025-09-01", period_end: "2025-09-30", total_premium_cents: 2240000, commission_pct: 12.0, commission_owed_cents: 13440, status: "draft", generated_at: "2025-10-02T08:45:00Z", generated_by: "Guy Livingstone", approved_at: null, paid_at: null, pdf_url: "#", commission_split_id: "ps_5_4", carrier_commission_schedule_id: null, payable: false },
 ];
 
 // ---------------------------------------------------------------------------
@@ -260,7 +261,7 @@ function View() {
   const [statements, setStatements] = useState<Statement[]>(STMT_SEED);
 
   // Drawers
-  const [partnerDrawer, setPartnerDrawer] = useState<{ open: boolean; id: string | null; mode: "view" | "create" }>({ open: false, id: null, mode: "view" });
+  const [partnerDrawer, setPartnerDrawer] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [stmtDrawer, setStmtDrawer] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [genDrawer, setGenDrawer] = useState(false);
 
@@ -322,14 +323,19 @@ function View() {
 
   // -------------- Section 4 filters --------------
   const [sPartner, setSPartner] = useState("all");
+  const [sPolicy, setSPolicy] = useState("all");
   const [sStatus, setSStatus] = useState<StmtStatus | "all">("all");
   const [sPeriod, setSPeriod] = useState<"all" | "30" | "qtr" | "ytd">("all");
   const [sPayable, setSPayable] = useState<"all" | "yes" | "no">("all");
+  const policyOptions = useMemo(() => {
+    return POLICIES.map((p) => ({ value: p.id, label: `${p.id} (${p.org_name})` }));
+  }, []);
   const filteredStatements = useMemo(() => {
     return statements.filter((s) => {
       if (sPartner !== "all") {
         if (sPartner === "house" ? s.payee_type !== "house" : s.channel_partner_id !== sPartner) return false;
       }
+      if (sPolicy !== "all" && s.policy_id !== sPolicy) return false;
       if (sStatus !== "all" && s.status !== sStatus) return false;
       if (sPayable !== "all" && (sPayable === "yes") !== s.payable) return false;
       if (sPeriod !== "all") {
@@ -347,7 +353,7 @@ function View() {
       }
       return true;
     });
-  }, [statements, sPartner, sStatus, sPeriod, sPayable]);
+  }, [statements, sPartner, sPolicy, sStatus, sPeriod, sPayable]);
 
   // -------------- Actions --------------
   const approveStatement = (id: string) => {
@@ -392,13 +398,9 @@ function View() {
       <div className="text-xs text-black/50 mb-2">
         Broker firms, individual brokers, and Hollowtree internal reps. All payees other than the house are channel_partners rows.
       </div>
-      <div className="flex justify-end mb-2">
-        <Btn variant="primary" onClick={() => setPartnerDrawer({ open: true, id: null, mode: "create" })} disabled={!can("channel_partners", "create")}>
-          + New Channel Partner
-        </Btn>
-      </div>
       <FilterRow>
         <FilterSearch value={pSearch} onChange={setPSearch} placeholder="Search partner name…" />
+        <span className="text-xs text-black/40">Synced from Attio. Edit partners in CRM.</span>
         <MultiPill label="Type" all={PARTNER_TYPE_VALUES} selected={pTypes} onToggle={togglePType} />
         <div className="inline-flex rounded border border-black/15 overflow-hidden text-xs">
           {(["all", "individual", "company"] as const).map((v) => (
@@ -424,7 +426,7 @@ function View() {
         </thead>
         <tbody>
           {filteredPartners.map((p) => (
-            <TRow key={p.id} onClick={() => setPartnerDrawer({ open: true, id: p.id, mode: "view" })}>
+            <TRow key={p.id} onClick={() => setPartnerDrawer({ open: true, id: p.id })}>
               <TCell className="font-medium">{p.name}</TCell>
               <TCell><PartnerTypeBadge t={p.partner_type_v2} /></TCell>
               <TCell>
@@ -447,7 +449,7 @@ function View() {
               <TCell onClick={(e) => e.stopPropagation()}>
                 {p.portal_status === "none"
                   ? <Btn onClick={() => { setPartners((r) => r.map(x => x.id === p.id ? { ...x, portal_status: "invited", portal_invited_at: new Date().toISOString().slice(0,10) } : x)); toast.success(`Invite sent to ${p.primary_contact_email}.`); }}>Invite to Portal</Btn>
-                  : <Btn onClick={() => setPartnerDrawer({ open: true, id: p.id, mode: "view" })}>View access</Btn>}
+                  : <Btn onClick={() => setPartnerDrawer({ open: true, id: p.id })}>View access</Btn>}
               </TCell>
             </TRow>
           ))}
@@ -490,7 +492,7 @@ function View() {
               return (
                 <tr key={d.id} className={`border-t ${sep ? "border-black/15" : "border-black/5"}`}>
                   <td className="px-3 py-2">
-                    <button className="text-[#0a3d3e] underline" onClick={() => setPartnerDrawer({ open: true, id: d.channel_partner_id, mode: "view" })}>
+                    <button className="text-[#0a3d3e] underline" onClick={() => setPartnerDrawer({ open: true, id: d.channel_partner_id })}>
                       {d.channel_partner_name}
                     </button>
                   </td>
@@ -566,47 +568,56 @@ function View() {
       <FilterRow>
         <FilterCombobox value={sPartner} onChange={setSPartner} placeholder="All channel partners"
           options={[{ value: "house", label: "Hollowtree (House)" }, ...partners.map((p) => ({ value: p.id, label: p.name }))]} />
+        <FilterCombobox value={sPolicy} onChange={setSPolicy} placeholder="All policies"
+          options={policyOptions} />
         <FilterSelect value={sStatus} onChange={setSStatus} allLabel="All statuses"
           options={[{value:"draft"},{value:"approved"},{value:"paid"}]} />
         <FilterSelect value={sPeriod} onChange={setSPeriod} allLabel="All periods"
           options={[{value:"30",label:"Last 30 days"},{value:"qtr",label:"Last quarter"},{value:"ytd",label:"YTD"}]} />
         <FilterSelect value={sPayable} onChange={setSPayable} allLabel="All"
           options={[{value:"yes",label:"Payable"},{value:"no",label:"Carrier direct (not payable)"}]} />
-        <ClearFiltersLink show={sPartner !== "all" || sStatus !== "all" || sPeriod !== "all" || sPayable !== "all"}
-          onClick={() => { setSPartner("all"); setSStatus("all"); setSPeriod("all"); setSPayable("all"); }} />
+        <ClearFiltersLink show={sPartner !== "all" || sPolicy !== "all" || sStatus !== "all" || sPeriod !== "all" || sPayable !== "all"}
+          onClick={() => { setSPartner("all"); setSPolicy("all"); setSStatus("all"); setSPeriod("all"); setSPayable("all"); }} />
         <ExportCsvButton filteredCount={filteredStatements.length} totalCount={statements.length} resourceLabel="commission statements" />
       </FilterRow>
       <TableShell>
         <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
-          <tr>{["Period","Payee","Payee Type","Premium Base","Rate %","Commission Owed","Status","Payable","PDF","Actions"].map((c) => (
+          <tr>{["Period","Policy","Payee","Payee Type","Premium Base","Rate %","Commission Owed","Status","Payable","PDF","Actions"].map((c) => (
             <th key={c} className="text-left font-medium px-3 py-2">{c}</th>))}
           </tr>
         </thead>
         <tbody>
-          {filteredStatements.map((s) => (
-            <TRow key={s.id} onClick={() => setStmtDrawer({ open: true, id: s.id })}>
-              <TCell>{fmtPeriod(s.period_start, s.period_end)}</TCell>
-              <TCell className="font-medium">{s.payee_name}</TCell>
-              <TCell><PayeeTypeBadge t={s.payee_type} /></TCell>
-              <TCell>{formatCents(s.total_premium_cents)}</TCell>
-              <TCell>{s.commission_pct.toFixed(2)}%</TCell>
-              <TCell className="font-semibold">{formatCents(s.commission_owed_cents)}</TCell>
-              <TCell><StatusBadge s={s.status} /></TCell>
-              <TCell>{s.payable ? <span className="text-emerald-700">✓</span> : <Pill tone="warn">Carrier Direct</Pill>}</TCell>
-              <TCell onClick={(e) => e.stopPropagation()}>
-                <a href={s.pdf_url} className="text-[#0a3d3e]" onClick={(e) => { e.preventDefault(); toast("PDF download is a stub in the wireframe."); }}>
-                  <Download className="h-3.5 w-3.5 inline" />
-                </a>
-              </TCell>
-              <TCell onClick={(e) => e.stopPropagation()}>
-                {s.status === "draft" && <Btn onClick={() => approveStatement(s.id)}>Approve</Btn>}
-                {s.status === "approved" && <Btn onClick={() => markPaid(s.id)}>Mark Paid</Btn>}
-                {s.status === "paid" && <Btn onClick={() => setStmtDrawer({ open: true, id: s.id })}>View</Btn>}
-              </TCell>
-            </TRow>
-          ))}
+          {filteredStatements.map((s) => {
+            const pol = POLICIES.find((p) => p.id === s.policy_id);
+            return (
+              <TRow key={s.id} onClick={() => setStmtDrawer({ open: true, id: s.id })}>
+                <TCell>{fmtPeriod(s.period_start, s.period_end)}</TCell>
+                <TCell>
+                  <Link to="/policies" className="text-[#0a3d3e] underline">{s.policy_id}</Link>
+                  <span className="text-black/50"> ({pol?.org_name ?? "—"})</span>
+                </TCell>
+                <TCell className="font-medium">{s.payee_name}</TCell>
+                <TCell><PayeeTypeBadge t={s.payee_type} /></TCell>
+                <TCell>{formatCents(s.total_premium_cents)}</TCell>
+                <TCell>{s.commission_pct.toFixed(2)}%</TCell>
+                <TCell className="font-semibold">{formatCents(s.commission_owed_cents)}</TCell>
+                <TCell><StatusBadge s={s.status} /></TCell>
+                <TCell>{s.payable ? <span className="text-emerald-700">✓</span> : <Pill tone="warn">Carrier Direct</Pill>}</TCell>
+                <TCell onClick={(e) => e.stopPropagation()}>
+                  <a href={s.pdf_url} className="text-[#0a3d3e]" onClick={(e) => { e.preventDefault(); toast("PDF download is a stub in the wireframe."); }}>
+                    <Download className="h-3.5 w-3.5 inline" />
+                  </a>
+                </TCell>
+                <TCell onClick={(e) => e.stopPropagation()}>
+                  {s.status === "draft" && <Btn onClick={() => approveStatement(s.id)}>Approve</Btn>}
+                  {s.status === "approved" && <Btn onClick={() => markPaid(s.id)}>Mark Paid</Btn>}
+                  {s.status === "paid" && <Btn onClick={() => setStmtDrawer({ open: true, id: s.id })}>View</Btn>}
+                </TCell>
+              </TRow>
+            );
+          })}
           {filteredStatements.length === 0 && (
-            <tr><td colSpan={10} className="px-3 py-6 text-center text-black/40">No statements match the current filters.</td></tr>
+            <tr><td colSpan={11} className="px-3 py-6 text-center text-black/40">No statements match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
@@ -615,9 +626,8 @@ function View() {
       <PartnerDrawerView
         open={partnerDrawer.open}
         partner={selectedPartner}
-        mode={partnerDrawer.mode}
         defaults={defaults.filter((d) => d.channel_partner_id === partnerDrawer.id)}
-        onClose={() => setPartnerDrawer({ open: false, id: null, mode: "view" })}
+        onClose={() => setPartnerDrawer({ open: false, id: null })}
         onInvite={(p) => {
           setPartners((r) => r.map(x => x.id === p.id ? { ...x, portal_status: "invited", portal_invited_at: new Date().toISOString().slice(0,10) } : x));
           toast.success(`Invite sent to ${p.primary_contact_email}.`);
@@ -682,8 +692,8 @@ function MultiPill<T extends string>({ label, all, selected, onToggle }: { label
 // ---------------------------------------------------------------------------
 // Channel Partner detail drawer
 // ---------------------------------------------------------------------------
-function PartnerDrawerView({ open, partner, mode, defaults, onClose, onInvite, onRevoke, onImpersonate }: {
-  open: boolean; partner: Partner | null; mode: "view" | "create";
+function PartnerDrawerView({ open, partner, defaults, onClose, onInvite, onRevoke, onImpersonate }: {
+  open: boolean; partner: Partner | null;
   defaults: DefaultRow[];
   onClose: () => void;
   onInvite: (p: Partner) => void;
@@ -693,15 +703,12 @@ function PartnerDrawerView({ open, partner, mode, defaults, onClose, onInvite, o
   const [confirmInvite, setConfirmInvite] = useState(false);
   const [confirmImp, setConfirmImp] = useState(false);
   if (!open) return null;
-  const title = mode === "create" ? "New Channel Partner" : partner?.name ?? "Channel Partner";
+  const title = partner?.name ?? "Channel Partner";
   const total = defaults.reduce((s, d) => s + d.default_split_pct, 0);
   const totalOk = total === 100;
 
   return (
     <Drawer open={open} onClose={onClose} title={title}>
-      {!partner && mode === "create" && (
-        <div className="text-xs text-black/50 mb-4">Form fields are dummy in the wireframe. Save is stubbed.</div>
-      )}
       {partner && (
         <>
           {/* A — Identity */}
@@ -1003,6 +1010,7 @@ function GenerateDrawer({ open, partners, onClose, onGenerate }: {
       const partner = partners.find((p) => p.name === payee);
       rows.push({
         id: `stm_gen_${Date.now()}_${idx++}`,
+        policy_id: first.policy_id,
         channel_partner_id: first.payee_type === "house" ? null : partner?.id ?? null,
         payee_type: first.payee_type,
         payee_ref_id: first.payee_type === "house" ? null : partner?.id ?? null,
