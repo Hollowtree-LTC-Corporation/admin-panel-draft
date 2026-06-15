@@ -249,8 +249,9 @@ function WindowForm({
   const showAffiliate = draft.sponsor_type !== "employer";
 
   return (
-    <div className="flex flex-col h-full -m-4">
-      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+    <div className="-m-4 flex flex-col min-h-full">
+      <div className="flex-1 p-4 space-y-5">
+
         {/* Section 1: Sponsor Shape */}
         <section>
           <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">Sponsor Shape</div>
