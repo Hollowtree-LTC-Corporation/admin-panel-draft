@@ -429,3 +429,65 @@ export function AffiliateForm({
     </div>
   );
 }
+
+function LogoUpload({
+  affiliate,
+  onPick,
+  onClear,
+}: {
+  affiliate: Pick<AffiliateOrganization, "name" | "logo_url">;
+  onPick: () => void;
+  onClear?: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1.5">Logo</div>
+      <div className="flex items-center gap-3">
+        <div className="relative group">
+          <AffiliateLogo affiliate={affiliate} size={64} />
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-[#0a3d3e] text-white flex items-center justify-center shadow border border-white hover:bg-[#0a3d3e]/90"
+            aria-label="Upload logo"
+            title="Upload logo"
+          >
+            <Camera className="h-3 w-3" />
+          </button>
+        </div>
+        <div className="flex flex-col gap-1">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="text-xs text-[#0a3d3e] hover:underline text-left"
+          >
+            {affiliate.logo_url ? "Replace logo" : "Upload logo"}
+          </button>
+          {onClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-xs text-black/50 hover:text-rose-600 text-left"
+            >
+              Remove
+            </button>
+          )}
+          <div className="text-[11px] text-black/40">PNG or SVG, square preferred.</div>
+        </div>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          // Wireframe: ignore the actual file, swap to a sample logo.
+          if (e.target.files && e.target.files.length > 0) onPick();
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
