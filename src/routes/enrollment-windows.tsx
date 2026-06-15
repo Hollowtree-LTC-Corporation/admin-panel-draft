@@ -304,20 +304,12 @@ function WindowForm({
             )}
             {showAffiliate && (
               <Field label="Affiliate">
-                <select
-                  value={draft.affiliate_org_id ?? "__NULL__"}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === "__NEW__") { setInlineOpen(true); return; }
-                    update("affiliate_org_id", v === "__NULL__" ? null : v);
-                  }}
-                  className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
-                >
-                  <option value="__NULL__">Select affiliate…</option>
-                  {affiliates.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  <option disabled>──────────</option>
-                  <option value="__NEW__">+ New Affiliate…</option>
-                </select>
+                <AffiliateDropdown
+                  value={draft.affiliate_org_id}
+                  affiliates={affiliates}
+                  onChange={(id) => update("affiliate_org_id", id)}
+                  onNew={() => setInlineOpen(true)}
+                />
                 {inlineOpen && (
                   <div className="mt-2 rounded-md border border-black/15 bg-[#f7f3eb] p-2.5 space-y-2">
                     <div className="text-[10px] uppercase tracking-wider text-black/50">Create Affiliate</div>
