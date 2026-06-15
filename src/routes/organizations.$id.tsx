@@ -85,6 +85,30 @@ function carrierProductLabel(product: "DI" | "LTC", typeOfRate: string | null | 
   if (product === "LTC") return "Universal Life with LTC Rider";
   return typeOfRate === "STD+LTD" ? "Group Disability (STD + LTD)" : "Group Disability (LTD)";
 }
+// Map carrier_product_id → "{carrier} - {product}" label using dummy carrier/product tables.
+function carrierProductOptions(product: "DI" | "LTC"): Array<{ id: string; carrier: string; product: string; label: string }> {
+  return CARRIER_PRODUCTS
+    .map((cp) => {
+      const carrier = CARRIERS.find((c) => c.id === cp.carrier_id);
+      if (!carrier || carrier.product !== product) return null;
+      return { id: cp.id, carrier: carrier.name, product: cp.name, label: `${carrier.name} - ${cp.name}` };
+    })
+    .filter((x): x is { id: string; carrier: string; product: string; label: string } => x !== null);
+}
+function pickCarrierProductId(product: "DI" | "LTC", idx: number): string | null {
+  const opts = carrierProductOptions(product);
+  if (opts.length === 0) return null;
+  return opts[idx % opts.length].id;
+}
+
+const LANGUAGE_OPTIONS: Array<{ code: string; label: string }> = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Spanish" },
+  { code: "zh", label: "Chinese" },
+];
+function languageLabel(code: string): string {
+  return LANGUAGE_OPTIONS.find((l) => l.code === code)?.label ?? code;
+}
 
 // Dummy enrollment windows scoped per org for this iteration
 const DUMMY_WINDOWS = [
