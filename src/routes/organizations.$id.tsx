@@ -1035,6 +1035,9 @@ function MicrositeField({ url, product, editing }: { url: string; product: "DI" 
 
 function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; variant?: "info" | "config" | "integration" }) {
   const e = useSectionEdit();
+  const note = product === "LTC"
+    ? "Carrier and product are set during initial onboarding. Commission schedule changes flow to all enrollments after the effective date."
+    : "Carrier and product are set during initial onboarding. To change, contact engineering.";
   return (
     <SectionCard
       title="Carrier & Product"
@@ -1042,7 +1045,7 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
       canEdit={!readOnly}
       onEdit={e.onEdit}
       variant={variant}
-      note="Carrier and product are set during initial onboarding. To change, contact engineering."
+      note={note}
     >
       <Grid2>
         <RField label="Carrier">{org.carrier_name}</RField>
@@ -1074,24 +1077,73 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
   );
 }
 
-function LTCProductConfigSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function LTCProductPlanSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
   const e = useSectionEdit();
+  const pd = (org.plan_details ?? {}) as Record<string, Record<string, string> | undefined>;
+  const [active, setActive] = useState<typeof LTC_TIERS[number]>("bronze");
+  const tierData = pd[active];
   return (
-    <SectionCard title="LTC Product Config" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
-      <Grid2>
-        <RField label="Product Template Variant">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.product_template_variant}>{PRODUCT_TEMPLATE_VARIANTS.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.product_template_variant}
-        </RField>
-        <RField label="Extension of Benefits Rider">{e.editing ? <Switch defaultChecked={org.extension_of_benefits_rider} /> : <YesNo b={org.extension_of_benefits_rider} />}</RField>
-        <RField label="Healthcare Company">{e.editing ? <input className={inputCls} defaultValue={org.healthcare_company} /> : org.healthcare_company}</RField>
-        <RField label="Benefit Restoration Rider">{e.editing ? <Switch defaultChecked={org.benefit_restoration_rider} /> : <YesNo b={org.benefit_restoration_rider} />}</RField>
-        <RField label="Benefit Duration">{e.editing ? <input className={inputCls} type="number" defaultValue={org.benefit_duration} /> : org.benefit_duration}</RField>
-        <RField label="Duration">{e.editing ? <input className={inputCls} defaultValue={org.duration} /> : org.duration}</RField>
-        <RField label="Min Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.min_age} /> : org.min_age}</RField>
-        <RField label="Max Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.max_age} /> : org.max_age}</RField>
-      </Grid2>
+    <SectionCard
+      title="LTC Product & Plan Terms"
+      defaultOpen
+      editing={e.editing}
+      canEdit={!readOnly}
+      onEdit={e.onEdit}
+      drives={["microsite", "premium calculation", "rate cells"]}
+    >
+      <div className="mb-5">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Product Configuration</div>
+        <Grid2>
+          <RField label="Product Template Variant">
+            {e.editing
+              ? <select className={inputCls} defaultValue={org.product_template_variant}>{PRODUCT_TEMPLATE_VARIANTS.map((o) => <option key={o} value={o}>{productTemplateVariantLabel(o)}</option>)}</select>
+              : productTemplateVariantLabel(org.product_template_variant)}
+          </RField>
+          <RField label="Extension of Benefits Rider">{e.editing ? <Switch defaultChecked={org.extension_of_benefits_rider} /> : <YesNo b={org.extension_of_benefits_rider} />}</RField>
+          <RField label="Healthcare Company">{e.editing ? <input className={inputCls} defaultValue={org.healthcare_company} /> : titleCase(org.healthcare_company)}</RField>
+          <RField label="Benefit Restoration Rider">{e.editing ? <Switch defaultChecked={org.benefit_restoration_rider} /> : <YesNo b={org.benefit_restoration_rider} />}</RField>
+        </Grid2>
+        <div className="grid grid-cols-4 gap-x-6 gap-y-4 mt-4">
+          <RField label="Benefit Duration">{e.editing ? <input className={inputCls} defaultValue={String(org.benefit_duration)} /> : org.benefit_duration}</RField>
+          <RField label="Duration">{e.editing ? <input className={inputCls} defaultValue={org.duration} /> : org.duration}</RField>
+          <RField label="Min Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.min_age} /> : org.min_age}</RField>
+          <RField label="Max Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.max_age} /> : org.max_age}</RField>
+        </div>
+      </div>
+
+      <hr className="border-black/10 my-5" />
+
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-2 pb-1 border-b border-black/10">Plan Terms by Tier</div>
+        {!e.editing && (
+          <div className="text-xs text-black/50 italic mb-3">Plan terms displayed on the enrollment microsite. Each tab corresponds to one coverage tier.</div>
+        )}
+        <div className="flex gap-1 border-b border-black/10 mb-3">
+          {LTC_TIERS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setActive(t)}
+              className={`px-3 py-1.5 text-xs capitalize border-b-2 -mb-px ${active === t ? "border-[#0a3d3e] text-[#0a3d3e] font-medium" : "border-transparent text-black/50 hover:text-black/80"}`}
+            >{t}</button>
+          ))}
+        </div>
+        <div className="text-xs font-semibold text-black/70 mb-2 capitalize">{active} Tier</div>
+        {tierData && Object.keys(tierData).length > 0 ? (
+          <div className="space-y-2">
+            {Object.entries(tierData).map(([k, v]) => (
+              <div key={k} className="grid grid-cols-[220px_1fr] gap-3 items-start">
+                <div className="text-xs font-semibold text-black/70 pt-2 capitalize">{k.replace(/_/g, " ")}</div>
+                {e.editing
+                  ? <Textarea defaultValue={v} className="text-sm min-h-[44px]" />
+                  : <div className="text-sm text-black/80 leading-relaxed pt-1">{v}</div>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-sm text-black/50 italic">No plan terms configured for {titleCase(active)}. Click edit to add.</div>
+        )}
+      </div>
+
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
   );
