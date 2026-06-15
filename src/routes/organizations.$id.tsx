@@ -14,7 +14,7 @@ import {
   DI_RATE_CONFIG, LTC_RATE_CELLS, type DIRateRow, type LTCRateCell,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
-import { ChevronLeft, ChevronDown, ChevronRight, Pencil, ExternalLink, Mail, Phone, Star, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronRight, Pencil, ExternalLink, Mail, Phone, Star, Plus, Trash2, Check, X as XIcon, SkipForward, Circle } from "lucide-react";
 
 export const Route = createFileRoute("/organizations/$id")({ component: OrgDetail });
 
