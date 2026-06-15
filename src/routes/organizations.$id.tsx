@@ -1328,9 +1328,9 @@ function TpaFeeScheduleSubBlock({ org, readOnly }: { org: OrgDetail; readOnly: b
       id: `fs_new_${Date.now()}`,
       effective_from: newFrom,
       effective_to: newTo,
-      tpa_fee_cents: Math.round(Number(nfFee) * 100),
+      tpa_fee_cents: Math.round(Number(nfFee)),
       tpa_fee_name: nfName.trim() || null,
-      service_fee_retained_cents: cca && nfRetained ? Math.round(Number(nfRetained) * 100) : null,
+      service_fee_retained_cents: cca && nfRetained ? Math.round(Number(nfRetained)) : null,
       notes: nfNotes.trim(),
     };
     setSchedules((prev) => {
@@ -1354,9 +1354,9 @@ function TpaFeeScheduleSubBlock({ org, readOnly }: { org: OrgDetail; readOnly: b
     if (editing && current) {
       setEfFrom(current.effective_from);
       setEfTo(current.effective_to ?? "");
-      setEfFee(String(current.tpa_fee_cents / 100));
+      setEfFee(String(current.tpa_fee_cents));
       setEfName(current.tpa_fee_name ?? "");
-      setEfRetained(current.service_fee_retained_cents == null ? "" : String(current.service_fee_retained_cents / 100));
+      setEfRetained(current.service_fee_retained_cents == null ? "" : String(current.service_fee_retained_cents));
       setEfNotes(current.notes);
     }
   }, [editing, current]);
@@ -1366,9 +1366,9 @@ function TpaFeeScheduleSubBlock({ org, readOnly }: { org: OrgDetail; readOnly: b
       ...s,
       effective_from: efFrom,
       effective_to: efTo || null,
-      tpa_fee_cents: Math.round(Number(efFee) * 100),
+      tpa_fee_cents: Math.round(Number(efFee)),
       tpa_fee_name: efName.trim() || null,
-      service_fee_retained_cents: cca && efRetained ? Math.round(Number(efRetained) * 100) : null,
+      service_fee_retained_cents: cca && efRetained ? Math.round(Number(efRetained)) : null,
       notes: efNotes.trim(),
     } : s));
     setEditing(false);
@@ -1390,9 +1390,21 @@ function TpaFeeScheduleSubBlock({ org, readOnly }: { org: OrgDetail; readOnly: b
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             <RField label="Effective From"><input className={inputCls} type="date" value={efFrom} onChange={(e) => setEfFrom(e.target.value)} /></RField>
             <RField label="Effective To"><input className={inputCls} type="date" value={efTo} onChange={(e) => setEfTo(e.target.value)} placeholder="(open-ended)" /></RField>
-            <RField label="TPA Fee"><input className={inputCls} value={efFee} onChange={(e) => setEfFee(e.target.value)} /></RField>
+            <RField label="TPA Fee (cents)">
+              <div className="flex items-center gap-2">
+                <input className={inputCls} value={efFee} onChange={(e) => setEfFee(e.target.value)} />
+                <span className="text-[10px] text-black/40">(cents)</span>
+              </div>
+            </RField>
             <RField label="TPA Fee Name"><input className={inputCls} value={efName} onChange={(e) => setEfName(e.target.value)} /></RField>
-            {cca && <RField label="Service Fee Retained"><input className={inputCls} value={efRetained} onChange={(e) => setEfRetained(e.target.value)} /></RField>}
+            {cca && (
+              <RField label="Service Fee Retained (cents)">
+                <div className="flex items-center gap-2">
+                  <input className={inputCls} value={efRetained} onChange={(e) => setEfRetained(e.target.value)} />
+                  <span className="text-[10px] text-black/40">(cents)</span>
+                </div>
+              </RField>
+            )}
             <div className="col-span-2">
               <RField label="Notes"><Textarea className="w-full" rows={2} value={efNotes} onChange={(e) => setEfNotes(e.target.value)} /></RField>
             </div>
@@ -1478,9 +1490,21 @@ function TpaFeeScheduleSubBlock({ org, readOnly }: { org: OrgDetail; readOnly: b
           <div className="grid grid-cols-2 gap-x-6 gap-y-3">
             <RField label="Effective From (required, future)"><input className={inputCls} type="date" value={nfFrom} onChange={(e) => setNfFrom(e.target.value)} /></RField>
             <RField label="Effective To (optional)"><input className={inputCls} type="date" value={nfTo} onChange={(e) => setNfTo(e.target.value)} /></RField>
-            <RField label="TPA Fee ($/mo)"><input className={inputCls} value={nfFee} onChange={(e) => setNfFee(e.target.value)} placeholder="e.g. 22.00" /></RField>
+            <RField label="TPA Fee (cents)">
+              <div className="flex items-center gap-2">
+                <input className={inputCls} value={nfFee} onChange={(e) => setNfFee(e.target.value)} placeholder="e.g. 2000" />
+                <span className="text-[10px] text-black/40">(cents)</span>
+              </div>
+            </RField>
             <RField label="TPA Fee Name (optional)"><input className={inputCls} value={nfName} onChange={(e) => setNfName(e.target.value)} /></RField>
-            {cca && <RField label="Service Fee Retained ($)"><input className={inputCls} value={nfRetained} onChange={(e) => setNfRetained(e.target.value)} placeholder="e.g. 5.00" /></RField>}
+            {cca && (
+              <RField label="Service Fee Retained (cents)">
+                <div className="flex items-center gap-2">
+                  <input className={inputCls} value={nfRetained} onChange={(e) => setNfRetained(e.target.value)} placeholder="e.g. 500" />
+                  <span className="text-[10px] text-black/40">(cents)</span>
+                </div>
+              </RField>
+            )}
             <div className="col-span-2">
               <RField label="Notes (required)">
                 <Textarea className="w-full" rows={2} value={nfNotes} onChange={(e) => setNfNotes(e.target.value)}
