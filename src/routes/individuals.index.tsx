@@ -75,10 +75,11 @@ export const Route = createFileRoute("/individuals/")({
     type: typeof s.type === "string" ? s.type : undefined,
     di_type: typeof s.di_type === "string" ? s.di_type : undefined,
     payment: typeof s.payment === "string" ? s.payment : undefined,
+    rep: typeof s.rep === "string" ? s.rep : undefined,
   }),
 });
 
-type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type" | "di_type" | "face_amount_cents" | "last_payment_status";
+type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type" | "di_type" | "face_amount_cents" | "last_payment_status" | "assigned_rep";
 
 const COVERAGE_OPTIONS = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"];
 
