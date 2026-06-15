@@ -7,7 +7,7 @@ import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink
 
 export const Route = createFileRoute("/organizations/")({ component: OrgsView });
 
-type SortKey = "name" | "product" | "situs_state" | "enrollment_status" | "individuals_count" | "policy_owner_type";
+type SortKey = "name" | "product" | "situs_state" | "status" | "individuals_count" | "policy_owner_type";
 
 function OrgsView() {
   const { product } = useStore();
