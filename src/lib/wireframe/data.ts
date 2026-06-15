@@ -144,6 +144,18 @@ export const BILLING_GROUPS = Array.from({ length: 8 }, (_, i) => ({
 
 export const PAYMENT_LEDGER = Array.from({ length: 60 }, (_, i) => {
   const ind = INDIVIDUALS[i % INDIVIDUALS.length];
+  const org = ORGS.find((o) => o.id === ind.org_id);
+  // contribution_source: voluntary by default; employer_paid for some rows when the
+  // individual has an active employer contribution; employee_buyup for LTC SI rows
+  // (above the GI base) on a subset of rows.
+  let contribution_source: "voluntary" | "employer_paid" | "employee_buyup" = "voluntary";
+  const employerEligible = ind.contribution_active && ind.contribution_tier !== "0%";
+  if (employerEligible && i % 3 === 0) contribution_source = "employer_paid";
+  else if (ind.product === "LTC" && ind.issue_type === "SI" && i % 4 === 1) contribution_source = "employee_buyup";
+  // coverage_type: DI only. Most rows STDLTD; orgs with type_of_rate = "LTD" → LTD.
+  const coverage_type = ind.product === "DI"
+    ? (org?.type_of_rate === "LTD" ? "LTD" : "STDLTD")
+    : null;
   return {
     id: `pl_${i + 1}`,
     date: `2025-${String((i % 12) + 1).padStart(2, "0")}-${String((i % 27) + 1).padStart(2, "0")}`,
@@ -154,6 +166,8 @@ export const PAYMENT_LEDGER = Array.from({ length: 60 }, (_, i) => {
     amount_cents: ind.monthly_premium_cents,
     status: ["successful", "successful", "successful", "failed", "pending"][i % 5],
     funding_source: i % 3 === 0 ? "employer" : "employee",
+    contribution_source,
+    coverage_type,
   };
 });
 
