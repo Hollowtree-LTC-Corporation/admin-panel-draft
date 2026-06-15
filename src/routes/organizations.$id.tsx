@@ -269,19 +269,23 @@ function OrgDetail() {
   // Summary metrics
   const orgIndividuals = INDIVIDUALS.filter((i) => i.org_id === id);
   const activeEnrollees = orgIndividuals.filter((i) => i.coverage_status === "active").length;
-  const totalEnrollees = orgIndividuals.length;
-  const policies = POLICIES.filter((p) => p.org_id === id).length;
-  const orgIndIds = new Set(orgIndividuals.map((i) => i.id));
-  const currentCycle = "2025-06";
-  const collectedCents = PAYMENT_LEDGER
-    .filter((p) => orgIndIds.has(p.individual_id) && p.status === "successful" && p.date.startsWith(currentCycle))
-    .reduce((s, p) => s + p.amount_cents, 0);
-  const outstandingCents = Math.round(orgIndividuals.reduce((s, i) => s + i.monthly_premium_cents, 0) * 0.1);
+  const enrolledLives = orgIndividuals.filter((i) =>
+    i.coverage_status === "active" || i.coverage_status === "purchased" || i.coverage_status === "suspended"
+  ).length;
+  const totalMonthlyPremiumCents = orgIndividuals
+    .filter((i) => i.coverage_status === "active")
+    .reduce((s, i) => s + i.monthly_premium_cents, 0);
+  // Plausible placeholder: ~12% carrier commission with ~50% house split
+  const netHtCommissionCents = Math.round(totalMonthlyPremiumCents * 0.12 * 0.5);
+  // Next enrollment window
   const openWindowsList = windows.filter((w) => w.status === "open");
-  const openWindows = openWindowsList.length;
-  // earliest dated open window with an end date
+  const upcomingList = windows.filter((w) => w.status === "upcoming");
   const nextOpenEnd = openWindowsList
     .map((w) => w.end)
+    .filter((d): d is string => !!d)
+    .sort()[0] ?? null;
+  const nextUpcomingStart = upcomingList
+    .map((w) => w.start)
     .filter((d): d is string => !!d)
     .sort()[0] ?? null;
   const daysToClose = daysUntil(nextOpenEnd);
