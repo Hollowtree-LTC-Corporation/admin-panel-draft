@@ -12,6 +12,7 @@ import {
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { AffiliateLogo } from "@/routes/affiliates";
 

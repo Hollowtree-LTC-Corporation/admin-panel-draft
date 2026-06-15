@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, TableShell, TRow, TCell, Btn, Drawer, Field } from "@/components/wireframe/Bits";
 import { FilterRow, FilterSearch, FilterSelect, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import type { AffiliateOrganization, AffiliateType, AffiliationLevel, AffiliateIndustry, LegalEntityStatus } from "@/lib/wireframe/data";
 import { Shield, Building2, Handshake, Camera, ImageIcon } from "lucide-react";
