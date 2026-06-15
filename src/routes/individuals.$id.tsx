@@ -371,8 +371,13 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
         <RField label="Purchased Plan" value={unfunded ? "—" : i.purchased_plan} editing={editing}>
           <select defaultValue={i.purchased_plan} className={inputCls}>{LTC_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
         </RField>
+        <RField label="Issue Type" editing={editing}>
+          {editing
+            ? <select defaultValue={i.issue_type ?? "GI"} className={inputCls}>{["GI","SI"].map((o) => <option key={o}>{o}</option>)}</select>
+            : <IssueTypeBadge value={i.issue_type} />}
+        </RField>
         <RField label="Employee Plan Selected" value={i.employee_plan_selected || "—"} />
-        <RField label="Face Amount" value={unfunded ? "—" : formatCents(i.employee_face_amount_cents)} />
+        <RField label="Face Amount" value={unfunded ? "—" : formatCents(i.face_amount_cents)} />
         <RField label="Monthly Premium" value={unfunded ? "—" : formatCents(i.monthly_premium_cents)} />
 
         <RField label="Tobacco Use">
