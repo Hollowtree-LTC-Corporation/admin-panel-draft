@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect, useReducer } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   PageHeader, Card, Field, Btn, Pill, TableShell, THead, TRow, TCell, ProductBadge,
@@ -27,8 +27,38 @@ const WINDOW_TYPES = ["initial","annual","new_joiner","special"];
 const SPONSOR_TYPES = ["employer","affiliate"];
 const WINDOW_STATUSES = ["upcoming","open","closed"];
 const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
-const BROKERS = ["Westfield Brokers","Hollowtree House","Override Group LLC","Jamie Rep"];
-const BROKER_TYPES = ["Broker","IMO","Internal"];
+const BROKER_TYPES = ["Broker","IMO","Internal"] as const;
+type BrokerType = typeof BROKER_TYPES[number];
+type BrokerRecord = {
+  id: string;
+  broker_name: string;
+  broker_type: BrokerType;
+  default_commission_pct: number;
+  contact_email: string | null;
+};
+// Shared (admin-panel-wide) channel_partners store. In-memory only; survives
+// route navigation within a session because it lives at module scope.
+const _BROKER_STORE: BrokerRecord[] = [
+  { id: "cpn_1", broker_name: "Westfield Brokers", broker_type: "Broker",   default_commission_pct: 60, contact_email: "ops@westfield.example" },
+  { id: "cpn_2", broker_name: "Hollowtree House",  broker_type: "Internal", default_commission_pct: 20, contact_email: null },
+  { id: "cpn_3", broker_name: "Override Group LLC",broker_type: "IMO",      default_commission_pct: 5,  contact_email: null },
+  { id: "cpn_4", broker_name: "Jamie Rep",         broker_type: "Internal", default_commission_pct: 15, contact_email: null },
+];
+const _BROKER_LISTENERS = new Set<() => void>();
+function addBrokerToStore(b: Omit<BrokerRecord, "id">): BrokerRecord {
+  const rec: BrokerRecord = { ...b, id: `cpn_${Date.now()}_${Math.floor(Math.random()*1000)}` };
+  _BROKER_STORE.push(rec);
+  _BROKER_LISTENERS.forEach((l) => l());
+  return rec;
+}
+function useBrokers(): BrokerRecord[] {
+  const [, force] = useReducer((x: number) => x + 1, 0);
+  useEffect(() => {
+    _BROKER_LISTENERS.add(force);
+    return () => { _BROKER_LISTENERS.delete(force); };
+  }, []);
+  return _BROKER_STORE;
+}
 const INBOUND_TYPES = ["Broker Referral","Direct","Partner Referral","Inbound"];
 const PRODUCT_TEMPLATE_VARIANTS = ["base","eob_only","restoration_only","eob_and_restoration"];
 const CONTRIBUTION_TYPES = ["voluntary","buy_up","employer_paid"];
@@ -1076,37 +1106,75 @@ function PricingFeesSection({ org, readOnly }: { org: OrgDetail; readOnly: boole
 
 function BrokerSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
   const e = useSectionEdit();
-  const [brokers, setBrokers] = useState<string[]>(BROKERS);
+  const brokers = useBrokers();
   const [primary, setPrimary] = useState<string>(org.primary_broker);
   const [secondary, setSecondary] = useState<string>(org.secondary_broker ?? "");
   const [creatingFor, setCreatingFor] = useState<"primary" | "secondary" | null>(null);
+  const [prevSelection, setPrevSelection] = useState<string>("");
   const [newName, setNewName] = useState("");
-  const [newType, setNewType] = useState(BROKER_TYPES[0]);
+  const [newType, setNewType] = useState<BrokerType>(BROKER_TYPES[0]);
   const [newPct, setNewPct] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Reset local selection state when leaving edit mode without committing
+  // (section-level Cancel). The shared broker store is intentionally NOT
+  // reverted -- newly created brokers remain available for other orgs.
+  useEffect(() => {
+    if (!e.editing) {
+      setPrimary(org.primary_broker);
+      setSecondary(org.secondary_broker ?? "");
+      setCreatingFor(null);
+      resetNewForm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [e.editing]);
+
+  function resetNewForm() {
+    setNewName(""); setNewType(BROKER_TYPES[0]); setNewPct(""); setNewEmail(""); setFormError(null);
+  }
 
   function renderOverride(value: number | null, brokerName: string | null) {
     if (value !== null) return `${value}%`;
-    const def = brokerDefaultPct(brokerName);
+    const def = brokerDefaultPct(brokerName)
+      ?? brokers.find((b) => b.broker_name === brokerName)?.default_commission_pct
+      ?? null;
     if (def !== null) return <span>{def}% <span className="text-[11px] text-black/40">(default)</span></span>;
     return <Empty />;
   }
 
   function handleSelectChange(slot: "primary" | "secondary", value: string) {
     if (value === "__create__") {
+      setPrevSelection(slot === "primary" ? primary : secondary);
       setCreatingFor(slot);
       return;
     }
     if (slot === "primary") setPrimary(value); else setSecondary(value);
   }
 
-  function saveNewBroker() {
-    if (!newName.trim()) return;
-    const name = newName.trim();
-    setBrokers((prev) => prev.includes(name) ? prev : [...prev, name]);
-    if (creatingFor === "primary") setPrimary(name); else setSecondary(name);
+  function cancelCreate() {
+    if (creatingFor === "primary") setPrimary(prevSelection);
+    else if (creatingFor === "secondary") setSecondary(prevSelection);
     setCreatingFor(null);
-    setNewName(""); setNewType(BROKER_TYPES[0]); setNewPct(""); setNewEmail("");
+    resetNewForm();
+  }
+
+  function saveNewBroker() {
+    const name = newName.trim();
+    const pctNum = parseFloat(newPct);
+    if (!name) { setFormError("Broker Name is required."); return; }
+    if (!newPct.trim() || Number.isNaN(pctNum)) { setFormError("Default Commission % is required."); return; }
+    if (pctNum < 0 || pctNum > 100) { setFormError("Default Commission % must be between 0 and 100."); return; }
+    const rec = addBrokerToStore({
+      broker_name: name,
+      broker_type: newType,
+      default_commission_pct: pctNum,
+      contact_email: newEmail.trim() || null,
+    });
+    if (creatingFor === "primary") setPrimary(rec.broker_name);
+    else if (creatingFor === "secondary") setSecondary(rec.broker_name);
+    setCreatingFor(null);
+    resetNewForm();
   }
 
   function BrokerSelect({ slot, value }: { slot: "primary" | "secondary"; value: string }) {
@@ -1117,8 +1185,9 @@ function BrokerSection({ org, product, readOnly }: { org: OrgDetail; product: "D
         onChange={(ev) => handleSelectChange(slot, ev.target.value)}
       >
         {slot === "secondary" && <option value="">— None —</option>}
-        {brokers.map((o) => <option key={o} value={o}>{o}</option>)}
-        <option value="__create__">+ Create new broker…</option>
+        {brokers.map((b) => <option key={b.id} value={b.broker_name}>{b.broker_name}</option>)}
+        <option disabled>──────────────</option>
+        <option value="__create__" className="text-stone-600">+ Create new broker…</option>
       </select>
     );
   }
@@ -1149,29 +1218,45 @@ function BrokerSection({ org, product, readOnly }: { org: OrgDetail; product: "D
       </Grid2>
 
       {e.editing && creatingFor && (
-        <div className="mt-4 p-3 border border-blue-300 bg-blue-50/40 rounded">
-          <div className="text-xs font-semibold text-[#0a3d3e] mb-2 uppercase tracking-wider">
-            New broker ({creatingFor})
+        <div className="mt-4 p-4 border border-stone-300 bg-stone-50 rounded">
+          <div className="mb-3">
+            <div className="text-sm font-semibold text-[#0a3d3e]">New Broker</div>
+            <div className="text-[11px] text-black/60 mt-0.5">
+              Will be set as {creatingFor === "primary" ? "Primary" : "Secondary"} Broker for this org.
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-3">
             <RField label="Broker Name *">
               <input className={inputCls} value={newName} onChange={(ev) => setNewName(ev.target.value)} placeholder="e.g. Pinnacle Benefits" />
             </RField>
-            <RField label="Broker Type">
-              <select className={inputCls} value={newType} onChange={(ev) => setNewType(ev.target.value)}>
-                {BROKER_TYPES.map((t) => <option key={t}>{t}</option>)}
+            <RField label="Broker Type *">
+              <select className={inputCls} value={newType} onChange={(ev) => setNewType(ev.target.value as BrokerType)}>
+                {BROKER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </RField>
-            <RField label="Default Commission %">
-              <input className={inputCls} type="number" value={newPct} onChange={(ev) => setNewPct(ev.target.value)} placeholder="e.g. 15" />
+            <RField label="Default Commission % *">
+              <div className="relative">
+                <input
+                  className={inputCls + " pr-7"}
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.01"
+                  value={newPct}
+                  onChange={(ev) => setNewPct(ev.target.value)}
+                  placeholder="e.g. 15"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-black/50 pointer-events-none">%</span>
+              </div>
             </RField>
             <RField label="Contact Email">
               <input className={inputCls} type="email" value={newEmail} onChange={(ev) => setNewEmail(ev.target.value)} placeholder="optional" />
             </RField>
           </div>
+          {formError && <div className="mt-2 text-xs text-red-600">{formError}</div>}
           <div className="mt-3 flex gap-2 justify-end">
-            <Btn onClick={() => setCreatingFor(null)}>Cancel</Btn>
-            <Btn variant="primary" onClick={saveNewBroker}>Save broker</Btn>
+            <Btn onClick={cancelCreate}>Cancel</Btn>
+            <Btn variant="primary" onClick={saveNewBroker}>Save Broker</Btn>
           </div>
         </div>
       )}
