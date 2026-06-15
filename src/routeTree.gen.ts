@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TokensRouteImport } from './routes/tokens'
-import { Route as AffiliatesRouteImport } from './routes/affiliates'
 import { Route as RateConfigRouteImport } from './routes/rate-config'
 import { Route as RateCellsRouteImport } from './routes/rate-cells'
 import { Route as PoliciesRouteImport } from './routes/policies'
@@ -34,11 +33,6 @@ import { Route as IndividualsIdRouteImport } from './routes/individuals.$id'
 const TokensRoute = TokensRouteImport.update({
   id: '/tokens',
   path: '/tokens',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AffiliatesRoute = AffiliatesRouteImport.update({
-  id: '/affiliates',
-  path: '/affiliates',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RateConfigRoute = RateConfigRouteImport.update({
