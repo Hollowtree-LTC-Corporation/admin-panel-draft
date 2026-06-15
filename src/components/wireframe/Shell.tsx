@@ -25,7 +25,7 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "FINANCIAL",
+    label: "BILLING",
     items: [
       { to: "/payment-ledger", label: "Payment Ledger", icon: Receipt },
       { to: "/account-adjustments", label: "Account Adjustments", icon: Scale },
