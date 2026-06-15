@@ -542,6 +542,18 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
         <RField label="Email" value={i.email} editing={editing}><input type="email" defaultValue={i.email} className={inputCls} /></RField>
         <RField label="Phone" value={i.phone} editing={editing}><input defaultValue={i.phone} className={inputCls} /></RField>
         <RField label="Secondary Phone" value={i.secondary_phone ?? "—"} editing={editing}><input defaultValue={i.secondary_phone ?? ""} className={inputCls} /></RField>
+        <RField label="Language" editing={editing}>
+          {editing
+            ? (
+              <div>
+                <select defaultValue={i.preferred_language ?? "en"} className={inputCls}>
+                  {LANGUAGE_OPTIONS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+                </select>
+                <div className="text-[11px] text-stone-500 mt-1">Overrides org default for this individual's communications.</div>
+              </div>
+            )
+            : languageLabel(i.preferred_language)}
+        </RField>
         <RField label="Date of Birth" value={fmtDate(i.date_of_birth)} editing={editing}><input type="date" defaultValue={i.date_of_birth} className={inputCls} /></RField>
         <RField label="Organization">
           {editing ? (
