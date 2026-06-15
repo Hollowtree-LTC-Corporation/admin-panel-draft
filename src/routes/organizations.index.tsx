@@ -81,7 +81,7 @@ function OrgsView() {
               <TCell className="font-medium">{o.name}</TCell>
               <TCell><ProductBadge product={o.product} /></TCell>
               <TCell>{o.situs_state}</TCell>
-              <TCell><Pill tone={o.enrollment_status === "active" ? "ok" : o.enrollment_status === "closed" ? "bad" : "info"}>{o.enrollment_status}</Pill></TCell>
+              <TCell><Pill tone={o.status === "active" ? "ok" : o.status === "closed" || o.status === "suspended" ? "bad" : "info"}>{o.status}</Pill></TCell>
               <TCell>{o.individuals_count}</TCell>
               <TCell className="capitalize">{o.policy_owner_type}</TCell>
               <TCell onClick={(e) => e.stopPropagation()}>
