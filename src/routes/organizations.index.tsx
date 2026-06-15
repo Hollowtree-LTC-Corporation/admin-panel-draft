@@ -171,10 +171,48 @@ function OrgsView() {
       </TableShell>
 
       <Drawer open={d.state.open} onClose={d.close} title="New Organization">
+        <div className="mb-3 text-[10px] uppercase tracking-wider text-black/50">
+          Product: <span className="text-black/80 font-semibold">{product}</span>
+        </div>
         <Field label="Name"><Input placeholder="Organization name" /></Field>
-        <Field label="Product"><Input defaultValue={product} /></Field>
         <Field label="Situs State"><Input placeholder="TX" /></Field>
-        <Field label="Policy Owner Type"><Input placeholder="employer_group" /></Field>
+        <Field label="Situs City"><Input placeholder="Austin" /></Field>
+        <Field label="Policy Owner Type">
+          <select className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white" defaultValue="employer_group">
+            <option value="employer_group">Employer Group</option>
+            <option value="cca">CCA</option>
+            <option value="individual">Individual</option>
+          </select>
+        </Field>
+        <Field label="Domain"><Input placeholder="acme.com" /></Field>
+        <Field label="Eligible Lives">
+          <input type="number" min={0} placeholder="50" className="w-full px-2 py-1 text-sm border border-black/15 rounded" />
+        </Field>
+        <Field label="Contribution Type">
+          <select className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white" defaultValue="voluntary">
+            <option value="voluntary">Voluntary</option>
+            <option value="buy_up">Buy-Up</option>
+            <option value="employer_paid">Employer Paid</option>
+          </select>
+        </Field>
+        {product === "DI" && (
+          <Field label="DI Healthcare Type">
+            <select className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white" defaultValue="general">
+              <option value="mso">MSO</option>
+              <option value="healthcare_practice">Healthcare Practice</option>
+              <option value="medical_group">Medical Group</option>
+              <option value="dental">Dental</option>
+              <option value="other">Other</option>
+              <option value="general">General</option>
+            </select>
+          </Field>
+        )}
+        <Field label="Pay Mode">
+          <select className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white" defaultValue="monthly">
+            <option value="monthly">Monthly</option>
+            <option value="10_pay">10-Pay</option>
+          </select>
+        </Field>
         <div className="flex gap-2 mt-4">
           <Btn variant="primary" disabled={!can("organizations", "create")}>Save</Btn>
           <Btn onClick={d.close}>Cancel</Btn>
