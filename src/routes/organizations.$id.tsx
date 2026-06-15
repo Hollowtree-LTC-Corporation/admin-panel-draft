@@ -656,6 +656,13 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
         ) : (
           <RField label="Company Years in Existence">{e.editing ? <input className={inputCls} type="number" defaultValue={org.company_years_in_existence} /> : org.company_years_in_existence}</RField>
         )}
+        {product === "DI" ? (
+          <RField label="DI Healthcare Type">
+            {e.editing
+              ? <select className={inputCls} defaultValue={org.di_healthcare_type}>{DI_HC_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
+              : org.di_healthcare_type}
+          </RField>
+        ) : <div />}
         <RField label="Status">
           {e.editing
             ? <select className={inputCls} defaultValue={statusValue} disabled={!isAdmin}>{ORG_STATUSES.map((o) => <option key={o}>{o}</option>)}</select>
