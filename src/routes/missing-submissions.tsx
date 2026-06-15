@@ -4,6 +4,7 @@ import { PageHeader, TableShell, TRow, TCell, Pill } from "@/components/wirefram
 import { MISSING_SUBMISSIONS, ORGS } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/missing-submissions")({ component: View });
 
@@ -51,6 +52,7 @@ function View() {
         <FilterCombobox value={org} onChange={setOrg} placeholder="All orgs" options={orgOptions} />
         <FilterSelect value={status} onChange={setStatus} allLabel="All statuses" options={statuses} />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={rows.length} totalCount={MISSING_SUBMISSIONS.length} resourceLabel="submissions" />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>

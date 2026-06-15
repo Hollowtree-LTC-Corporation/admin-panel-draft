@@ -4,6 +4,7 @@ import { PageHeader, TableShell, TRow, TCell, Btn, Drawer, useDrawer, Field, Inp
 import { ACCOUNT_ADJUSTMENTS, INDIVIDUALS, BILLING_GROUPS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/account-adjustments")({ component: View });
 
@@ -62,6 +63,7 @@ function View() {
         ]} />
         <FilterCombobox value={approver} onChange={setApprover} placeholder="All approvers" options={approvers} />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={rows.length} totalCount={ACCOUNT_ADJUSTMENTS.length} resourceLabel="adjustments" />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>

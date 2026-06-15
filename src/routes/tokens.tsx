@@ -4,6 +4,7 @@ import { PageHeader, TableShell, TRow, TCell, Pill, Btn } from "@/components/wir
 import { MAGIC_TOKENS, TOKEN_AUDIT_LOG } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/tokens")({ component: View });
 
@@ -55,6 +56,7 @@ function View() {
           { value: "active" }, { value: "expired" }, { value: "revoked" },
         ]} />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={rows.length} totalCount={MAGIC_TOKENS.length} resourceLabel="magic tokens" adminOnly />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>
@@ -88,6 +90,9 @@ function View() {
 
       <div className="mt-6">
         <PageHeader title="Token Audit Log" subtitle="Append-only validation attempts" />
+        <div className="flex items-center mb-2">
+          <ExportCsvButton filteredCount={TOKEN_AUDIT_LOG.length} totalCount={TOKEN_AUDIT_LOG.length} resourceLabel="token audit entries" adminOnly />
+        </div>
         <TableShell>
           <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
             <tr>{["Timestamp", "Hashed Token", "IP", "User Agent", "Result"].map((c) => (<th key={c} className="text-left font-medium px-3 py-2">{c}</th>))}</tr>

@@ -12,6 +12,7 @@ import {
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { AffiliateLogo } from "@/routes/affiliates";
 
@@ -173,6 +174,7 @@ function View() {
         ]} />
         <FilterCombobox value={carrier} onChange={setCarrier} placeholder="All carriers" options={carrierOptions} />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={rows.length} totalCount={windows.length} resourceLabel="enrollment windows" />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>

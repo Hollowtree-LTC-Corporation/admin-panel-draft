@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ChevronLeft, Download, FileText, CalendarClock, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, FileText, CalendarClock, CheckCircle2 } from "lucide-react";
 import { PageHeader, Btn, TableShell, THead, TRow, TCell, Pill } from "@/components/wireframe/Bits";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 import { useStore } from "@/lib/wireframe/store";
 import { ORGS } from "@/lib/wireframe/data";
 import { findReport, buildPreview, CATEGORY_LABEL } from "@/lib/wireframe/reports";
@@ -145,9 +146,7 @@ function View() {
               <CheckCircle2 className="h-3 w-3" /> Mark as Submitted
             </Btn>
           ) : null}
-          <Btn onClick={() => handleExport("CSV")} disabled={!canExport} title={!canExport ? "Read-only role cannot export" : undefined}>
-            <Download className="h-3 w-3" /> Export CSV
-          </Btn>
+          <ExportCsvButton filteredCount={preview.rows.length} totalCount={preview.rows.length} resourceLabel="report rows" adminOnly={report.adminOnly} />
           <Btn onClick={() => handleExport("PDF")} disabled={!canExport}>
             <FileText className="h-3 w-3" /> Export PDF
           </Btn>

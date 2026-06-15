@@ -62,6 +62,7 @@ function paymentBadge(status: string | null, retry: number) {
 }
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 type IndSearch = { org?: string; coverage?: string; stage?: string; type?: string; di_type?: string; payment?: string };
 
@@ -168,6 +169,7 @@ function IndividualsView() {
         )}
         <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "Successful", label: "Paid" }, { value: "Failed" }, { value: "Pending" }]} />
         <ClearFiltersLink show={filtersActive} onClick={clearAll} />
+        <ExportCsvButton filteredCount={filtered.length} totalCount={productRows.length} resourceLabel="individuals" />
       </FilterRow>
 
       <TableShell>

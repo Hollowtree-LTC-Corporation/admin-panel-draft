@@ -4,6 +4,7 @@ import { PageHeader, TableShell, TRow, TCell, Pill } from "@/components/wirefram
 import { PAYMENT_LEDGER, INDIVIDUALS, ORGS, formatCents } from "@/lib/wireframe/data";
 import { useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, FilterDate, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/payment-ledger")({ component: View });
 
@@ -104,6 +105,7 @@ function View() {
         <span className="text-[11px] text-black/40">to</span>
         <FilterDate value={to} onChange={setTo} />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={rows.length} totalCount={PAYMENT_LEDGER.length} resourceLabel="payments" />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>

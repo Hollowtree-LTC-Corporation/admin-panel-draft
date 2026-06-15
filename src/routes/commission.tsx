@@ -13,6 +13,7 @@ import { usePermission, useStore } from "@/lib/wireframe/store";
 import {
   FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink,
 } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/commission")({ component: View });
 
@@ -413,6 +414,7 @@ function View() {
         </label>
         <ClearFiltersLink show={pSearch !== "" || pTypes.size > 0 || pEntity !== "all" || pActivations.size > 0 || pInternalOnly}
           onClick={() => { setPSearch(""); setPTypes(new Set()); setPEntity("all"); setPActivations(new Set()); setPInternalOnly(false); }} />
+        <ExportCsvButton filteredCount={filteredPartners.length} totalCount={partners.length} resourceLabel="channel partners" />
       </FilterRow>
       <TableShell>
         <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
@@ -469,6 +471,7 @@ function View() {
           options={[{value:"hollowtree_paid",label:"Hollowtree Paid"},{value:"carrier_direct",label:"Carrier Direct"}]} />
         <ClearFiltersLink show={dPartner !== "all" || dPayeeType !== "all" || dPayMethod !== "all"}
           onClick={() => { setDPartner("all"); setDPayeeType("all"); setDPayMethod("all"); }} />
+        <ExportCsvButton filteredCount={filteredDefaults.length} totalCount={defaults.length} resourceLabel="commission split defaults" />
       </FilterRow>
       <TableShell>
         <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
@@ -525,6 +528,7 @@ function View() {
         </label>
         <ClearFiltersLink show={aPolicy !== "" || aPayee !== "all" || aPayeeType !== "all" || aSource !== "all" || aPayMethod !== "all" || !aCurrentOnly}
           onClick={() => { setAPolicy(""); setAPayee("all"); setAPayeeType("all"); setASource("all"); setAPayMethod("all"); setACurrentOnly(true); }} />
+        <ExportCsvButton filteredCount={filteredActive.length} totalCount={ACTIVE_SPLITS.length} resourceLabel="commission splits" />
       </FilterRow>
       <TableShell>
         <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
@@ -570,6 +574,7 @@ function View() {
           options={[{value:"yes",label:"Payable"},{value:"no",label:"Carrier direct (not payable)"}]} />
         <ClearFiltersLink show={sPartner !== "all" || sStatus !== "all" || sPeriod !== "all" || sPayable !== "all"}
           onClick={() => { setSPartner("all"); setSStatus("all"); setSPeriod("all"); setSPayable("all"); }} />
+        <ExportCsvButton filteredCount={filteredStatements.length} totalCount={statements.length} resourceLabel="commission statements" />
       </FilterRow>
       <TableShell>
         <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">

@@ -4,6 +4,7 @@ import { PageHeader, TableShell, TRow, TCell } from "@/components/wireframe/Bits
 import { ENROLLMENT_RESPONSES_LTC, INDIVIDUALS, ORGS } from "@/lib/wireframe/data";
 import { useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/enrollment-responses")({ component: View });
 
@@ -54,6 +55,7 @@ function View() {
         <FilterCombobox value={ind} onChange={setInd} placeholder="All individuals" options={indOptions} />
         <FilterCombobox value={org} onChange={setOrg} placeholder="All LTC orgs" options={orgOptions} />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={rows.length} totalCount={ENROLLMENT_RESPONSES_LTC.length} resourceLabel="responses" />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>

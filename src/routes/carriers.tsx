@@ -15,6 +15,7 @@ import {
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/carriers")({ component: View });
 
@@ -226,6 +227,7 @@ function View() {
       <FilterRow>
         <FilterSearch value={search} onChange={setSearch} placeholder="Search carrier or product…" />
         <ClearFiltersLink show={activeFilters} onClick={clearAll} />
+        <ExportCsvButton filteredCount={visibleCarriers.length} totalCount={carriers.length} resourceLabel="carriers" />
       </FilterRow>
 
       {showNewCarrier && newCarrierDraft ? (
