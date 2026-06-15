@@ -448,13 +448,8 @@ export type CarrierCommissionSchedule = {
 };
 
 export const CARRIER_COMMISSION_SCHEDULES: CarrierCommissionSchedule[] = [
-  // Legacy (kept for back-compat with existing policies)
-  { id: "ccs_1", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2023-01-01", effective_to: null },
-  { id: "ccs_2", carrier_product_id: "cp_4", carrier_product_name: "Heritage LTC NY", state_code: "NY", schedule_name: "Flat 22%", schedule_type: "flat", is_default: true, effective_from: "2023-01-01", effective_to: null },
-  { id: "ccs_3", carrier_product_id: "cp_5", carrier_product_name: "Sequoia LTC Premier", state_code: null, schedule_name: "Level", schedule_type: "level", is_default: true, effective_from: "2023-01-01", effective_to: null },
-  { id: "ccs_4", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Default", schedule_type: "heaped", is_default: false, effective_from: "2022-01-01", effective_to: "2023-01-01" },
   // Trustmark UL-205
-  { id: "ccs_5", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
+  { id: "ccs_5", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: null, schedule_name: "Heaped Standard", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
   { id: "ccs_6", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: "NY", schedule_name: "Heaped NY", schedule_type: "heaped", is_default: false, effective_from: "2024-01-01", effective_to: null },
   { id: "ccs_7", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: null, schedule_name: "Flat", schedule_type: "flat", is_default: false, effective_from: "2024-01-01", effective_to: null },
   // Trustmark GTL-121
@@ -467,14 +462,6 @@ export const CARRIER_COMMISSION_SCHEDULES: CarrierCommissionSchedule[] = [
 ];
 
 export const COMMISSION_RATE_TIERS = [
-  // Legacy tiers (back-compat)
-  { id: "crt_1", schedule_id: "ccs_1", year_from: 1, year_to: 1, pct: 100 },
-  { id: "crt_2", schedule_id: "ccs_1", year_from: 2, year_to: 5, pct: 4 },
-  { id: "crt_3", schedule_id: "ccs_1", year_from: 6, year_to: 10, pct: 2 },
-  { id: "crt_4", schedule_id: "ccs_2", year_from: 1, year_to: 1, pct: 80 },
-  { id: "crt_5", schedule_id: "ccs_2", year_from: 2, year_to: 5, pct: 3 },
-  { id: "crt_6", schedule_id: "ccs_3", year_from: 1, year_to: 1, pct: 110 },
-  { id: "crt_7", schedule_id: "ccs_3", year_from: 2, year_to: 5, pct: 5 },
   // Trustmark UL-205 Heaped (standard)
   { id: "crt_10", schedule_id: "ccs_5", year_from: 1, year_to: 1, pct: 100 },
   { id: "crt_11", schedule_id: "ccs_5", year_from: 2, year_to: 10, pct: 5 },
