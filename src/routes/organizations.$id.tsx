@@ -1244,7 +1244,6 @@ function PricingFeesSection({ org, readOnly }: { org: OrgDetail; readOnly: boole
     <SectionCard title="Pricing & Fees" defaultOpen canEdit={false} drives={["billing", "payment processing"]}>
       <div className="space-y-5">
         <TpaFeeScheduleSubBlock org={org} readOnly={readOnly} />
-        <PaymentProcessingSubBlock org={org} readOnly={readOnly} />
       </div>
     </SectionCard>
   );
