@@ -739,10 +739,10 @@ function ExtLink({ href, children }: { href: string; children: React.ReactNode }
 
 /* ---------- Sections ---------- */
 
-function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary }: { org: OrgDetail; product: "DI" | "LTC"; statusValue: string; isAdmin: boolean; readOnly: boolean; summary: string }) {
+function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary, variant }: { org: OrgDetail; product: "DI" | "LTC"; statusValue: string; isAdmin: boolean; readOnly: boolean; summary: string; variant?: "info" | "config" | "integration" }) {
   const e = useSectionEdit();
   return (
-    <SectionCard title="Identity" defaultOpen summary={summary} editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+    <SectionCard title="Identity" defaultOpen summary={summary} editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} variant={variant}>
       <Grid2>
         <RField label="Name">{e.editing ? <input className={inputCls} defaultValue={org.name} /> : org.name}</RField>
         <RField label="CCA Group">
