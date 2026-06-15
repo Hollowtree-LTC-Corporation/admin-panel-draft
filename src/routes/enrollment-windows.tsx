@@ -366,6 +366,7 @@ function WindowForm({
                               legal_entity_status: null,
                               notes: "",
                               deleted_at: null,
+                              logo_url: null,
                             });
                             update("affiliate_org_id", id);
                             setInlineOpen(false);
