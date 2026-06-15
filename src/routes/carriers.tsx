@@ -266,7 +266,7 @@ function View() {
                   <span className="inline-flex items-center gap-1">
                     {selected ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3 text-black/30" />}
                     {c.carrier_name}
-                    {c.cca_carrier ? <span className="ml-1 inline-flex items-center gap-1 text-[10px] text-emerald-700"><Check className="h-3 w-3" />CCA</span> : null}
+                    {c.cca_carrier ? <span className="ml-1 inline-flex items-center gap-1 text-[10px] text-emerald-700"><Check className="h-3 w-3" />CCA Eligible</span> : null}
                   </span>
                 </TCell>
                 <TCell className="text-black/70 text-xs">{c.carrier_type}</TCell>
