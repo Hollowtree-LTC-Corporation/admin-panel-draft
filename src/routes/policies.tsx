@@ -17,6 +17,7 @@ import {
   FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink,
   SortableTHead, useSort,
 } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/policies")({ component: View });
 
