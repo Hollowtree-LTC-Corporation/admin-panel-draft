@@ -220,13 +220,22 @@ function synthesize(org: typeof ORGS[number]) {
     std_benefit_pct: 66.7,
     next_sun_life_report_date: "2026-07-15",
     contact_email: idx % 4 === 0 ? null : `hr@${slug}.example.com`,
-    // Carrier & Product (dummy)
+    // Carrier & Product (dummy) — carrier_product_id is the FK; name fields derive from it
+    carrier_product_id: idx === 4 ? null : pickCarrierProductId(product, idx),
     carrier_name: carrierForProduct(product),
     carrier_product_name: carrierProductLabel(product, org.type_of_rate),
-    group_policy_number: product === "DI" ? `GP-${10000000 + idx * 137}` : null,
+    group_policy_number: product === "DI"
+      ? (idx % 5 === 0 ? null : `SL-2024-${String(100 + idx * 17).padStart(5, "0")}`)
+      : null,
+    group_policy_effective_date: product === "DI"
+      ? (idx % 5 === 0 ? null : `2024-${String(((idx * 2) % 12) + 1).padStart(2, "0")}-01`)
+      : null,
     policy_effective_date: "2025-01-01",
     // Klaviyo
     klaviyo_list_id: ["TfRk9b","X4mP2q","Lz8Yhn","aQ3Wpv","R7nB2k","dE9Lto","Vc5Mxs","Jh1Knu"][idx % 8],
+    // Localization (v13)
+    default_language: "en",
+    supported_languages: idx % 4 === 0 ? ["en", "es"] : (idx === 3 ? ["en", "es", "zh"] : ["en"]),
     // Coverage / Billing
     contribution_type: cca ? "voluntary" : "employer_paid",
     pay_mode: "Monthly",
@@ -243,15 +252,15 @@ function synthesize(org: typeof ORGS[number]) {
       : [
           { id: `fs_${org.id}_1`, effective_from: "2025-01-01", effective_to: null as string | null, tpa_fee_cents: 800, tpa_fee_name: "Processing Fee", service_fee_retained_cents: null as number | null, notes: "Standard platform pricing" },
         ]) as FeeSchedule[],
-    // Payment processing & retry config (platform defaults, non-versioned)
-    card_percentage_bps: 370,
+    // Payment processing & retry config (platform defaults; a couple of orgs override)
+    card_percentage_bps: idx === 2 ? 400 : 370,
     ach_first_fee_cents: 100,
     ach_subsequent_fee_cents: 50,
     failed_ach_penalty_cents: 1500,
     failed_card_penalty_mode: "flat" as "flat" | "percentage",
     failed_card_penalty_value_cents: 1000 as number | null,
     failed_card_penalty_pct_bps: null as number | null,
-    free_retry_count: 2,
+    free_retry_count: idx === 2 ? 1 : 2,
     // Broker
     primary_broker: "Westfield Brokers",
     primary_override_pct: null as number | null,
