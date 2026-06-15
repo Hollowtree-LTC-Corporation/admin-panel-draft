@@ -442,7 +442,7 @@ function WindowForm({
         </section>
       </div>
 
-      <div className="border-t border-black/10 px-4 py-3 flex items-center justify-end gap-2 bg-white">
+      <div className="sticky bottom-0 border-t border-black/10 px-4 py-3 flex items-center justify-end gap-2 bg-white">
         <Btn variant="ghost" onClick={onCancel}>Cancel</Btn>
         <Btn variant="primary" onClick={onSave}>Save</Btn>
       </div>
