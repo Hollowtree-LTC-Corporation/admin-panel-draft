@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ORGS, BENEFIT_CLASSES, INDIVIDUALS, CARRIERS,
+  ORGS, BENEFIT_CLASSES, INDIVIDUALS, CARRIERS, CARRIER_PRODUCTS,
   COMMISSION_SPLIT_DEFAULTS, formatCents,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
