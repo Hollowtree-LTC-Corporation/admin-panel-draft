@@ -42,7 +42,10 @@ function Dashboard() {
     status: s,
     n: inds.filter((i) => i.coverage_status === s).length,
   }));
-  const totalCoverage = coverageCounts.reduce((sum, c) => sum + c.n, 0) || 1;
+
+  const enrolledLives = inds.filter((i) => ["active", "purchased", "in_progress"].includes(i.coverage_status)).length;
+  const activePremium = inds.filter((i) => i.coverage_status === "active").reduce((sum, i) => sum + i.monthly_premium_cents, 0);
+  const numOrgs = new Set(inds.map((i) => i.org_id)).size;
 
   const stageCounts = STAGES.map((s) => ({
     stage: s,
