@@ -151,6 +151,15 @@ function policyOwnerLabel(v: string | null | undefined): string {
   if (v === "cca") return "CCA";
   return v ?? "—";
 }
+function productTemplateVariantLabel(v: string | null | undefined): string {
+  switch (v) {
+    case "eob_and_restoration": return "EOB + Restoration";
+    case "eob_only": return "EOB Only";
+    case "restoration_only": return "Restoration Only";
+    case "base": return "Base";
+    default: return v ?? "—";
+  }
+}
 
 const LTC_TIER_DETAILS = {
   bronze:   { benefit_trigger: "2 of 6 ADLs or cognitive impairment", portability: "Available at group rates", inflation_protection: "None" },
