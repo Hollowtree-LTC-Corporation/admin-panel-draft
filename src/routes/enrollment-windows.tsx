@@ -221,6 +221,8 @@ function View() {
           setDraft={setDraft}
           onCancel={() => setDrawerOpen(false)}
           onSave={saveDraft}
+          affiliates={activeAffiliates}
+          addAffiliate={addAffiliate}
         />
       </Drawer>
     </div>
@@ -232,13 +234,20 @@ function WindowForm({
   setDraft,
   onCancel,
   onSave,
+  affiliates,
+  addAffiliate,
 }: {
   draft: Draft;
   setDraft: (d: Draft) => void;
   onCancel: () => void;
   onSave: () => void;
+  affiliates: AffiliateOrganization[];
+  addAffiliate: (a: AffiliateOrganization) => string;
 }) {
   const [partnersOpen, setPartnersOpen] = useState(draft.channel_partners.length > 0);
+  const [inlineOpen, setInlineOpen] = useState(false);
+  const [inlineName, setInlineName] = useState("");
+  const [inlineType, setInlineType] = useState<AffiliateType>("industry_association");
   const update = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft({ ...draft, [k]: v });
 
   const SPONSOR_OPTIONS: Array<{ value: SponsorShape; label: string }> = [
