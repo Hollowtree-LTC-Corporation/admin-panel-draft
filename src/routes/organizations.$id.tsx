@@ -151,6 +151,15 @@ function policyOwnerLabel(v: string | null | undefined): string {
   if (v === "cca") return "CCA";
   return v ?? "—";
 }
+function productTemplateVariantLabel(v: string | null | undefined): string {
+  switch (v) {
+    case "eob_and_restoration": return "EOB + Restoration";
+    case "eob_only": return "EOB Only";
+    case "restoration_only": return "Restoration Only";
+    case "base": return "Base";
+    default: return v ?? "—";
+  }
+}
 
 const LTC_TIER_DETAILS = {
   bronze:   { benefit_trigger: "2 of 6 ADLs or cognitive impairment", portability: "Available at group rates", inflation_protection: "None" },
@@ -568,7 +577,9 @@ function DSelect({ defaultValue, options }: { defaultValue?: string; options: st
 
 function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
   const statusValue = org.enrollment_status === "active" ? "active" : org.enrollment_status === "closed" ? "closed" : "pending_review";
-  const identitySummary = `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible`;
+  const identitySummary = product === "LTC"
+    ? `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible · NAIC ${org.naic_code}`
+    : `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible`;
 
   return (
     <div className="mt-3">
@@ -579,6 +590,7 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
       <div className="space-y-3">
         <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} variant="info" />
         <CarrierProductSection org={org} product={product} readOnly={readOnly} variant="info" />
+        {product === "LTC" && <CarrierIdentifiersSection org={org} readOnly={readOnly} variant="info" />}
       </div>
 
       <BucketHeader
@@ -588,12 +600,10 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
       <div className="space-y-4">
         {product === "DI"
           ? <DIProductPlanSection org={org} readOnly={readOnly} />
-          : <LTCProductConfigSection org={org} readOnly={readOnly} />}
+          : <LTCProductPlanSection org={org} readOnly={readOnly} />}
         <PricingFeesSection org={org} readOnly={readOnly} />
         <BrokerSection org={org} product={product} readOnly={readOnly} />
         <PeopleSection org={org} readOnly={readOnly} />
-        {product === "LTC" && <PlanDetailsSection org={org} product={product} readOnly={readOnly} />}
-        {product === "LTC" && <CarrierOperationalSection org={org} readOnly={readOnly} />}
         {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
       </div>
 
@@ -804,69 +814,107 @@ function ExtLink({ href, children }: { href: string; children: React.ReactNode }
 
 function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary, variant }: { org: OrgDetail; product: "DI" | "LTC"; statusValue: string; isAdmin: boolean; readOnly: boolean; summary: string; variant?: "info" | "config" | "integration" }) {
   const e = useSectionEdit();
+  const NameField = (
+    <RField label="Name">{e.editing ? <input className={inputCls} defaultValue={org.name} /> : org.name}</RField>
+  );
+  const DomainField = (
+    <RField label="Domain">{e.editing ? <input className={inputCls} defaultValue={org.domain} /> : org.domain}</RField>
+  );
+  const IndustryField = (
+    <RField label="Industry">
+      {e.editing
+        ? <select className={inputCls} defaultValue={org.industry}>{INDUSTRIES.map((o) => <option key={o} value={o}>{titleCase(o)}</option>)}</select>
+        : titleCase(org.industry)}
+    </RField>
+  );
+  const OrgTypeField = (
+    <RField label="Org Type">
+      {e.editing
+        ? <select className={inputCls} defaultValue={org.org_type}>{ORG_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
+        : org.org_type}
+    </RField>
+  );
+  const StatusField = (
+    <RField label="Status">
+      {e.editing
+        ? <select className={inputCls} defaultValue={statusValue} disabled={!isAdmin}>{ORG_STATUSES.map((o) => <option key={o} value={o}>{titleCase(o)}</option>)}</select>
+        : titleCase(statusValue)}
+    </RField>
+  );
+  const SitusStateField = (
+    <RField label="Situs State">
+      {e.editing
+        ? <select className={inputCls} defaultValue={org.situs_state}>{US_STATES.map((o) => <option key={o}>{o}</option>)}</select>
+        : org.situs_state}
+    </RField>
+  );
+  const SitusCityField = (
+    <RField label="Situs City">{e.editing ? <input className={inputCls} defaultValue={org.situs_city} /> : org.situs_city}</RField>
+  );
+  const EligibleLivesField = (
+    <RField label="Eligible Lives">{e.editing ? <input className={inputCls} type="number" defaultValue={org.eligible_lives} /> : org.eligible_lives}</RField>
+  );
+  const PolicyOwnerField = (
+    <RField label="Policy Owner Type">
+      {e.editing
+        ? <select className={inputCls} defaultValue={org.policy_owner_type}>{["employer_group","cca"].map((o) => <option key={o} value={o}>{policyOwnerLabel(o)}</option>)}</select>
+        : policyOwnerLabel(org.policy_owner_type)}
+    </RField>
+  );
+  const ContactEmailField = (
+    <RField label="Contact Email">
+      {e.editing
+        ? <input className={inputCls} type="email" defaultValue={org.contact_email ?? ""} />
+        : (org.contact_email ? <a href={`mailto:${org.contact_email}`} className="text-sky-700 hover:underline">{org.contact_email}</a> : <Empty />)}
+    </RField>
+  );
+  const MicrositeFieldRow = (
+    <RField label="Microsite URL"><MicrositeField url={org.microsite_url} product={product} editing={e.editing} /></RField>
+  );
+
   return (
     <SectionCard title="Identity" defaultOpen summary={summary} editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} variant={variant}>
       <Grid2>
-        <RField label="Name">{e.editing ? <input className={inputCls} defaultValue={org.name} /> : org.name}</RField>
-        <RField label="CCA Group">
-          {product === "DI"
-            ? (e.editing ? <Switch defaultChecked={org.cca_group} /> : <YesNo b={org.cca_group} />)
-            : <span className="text-black/40 text-xs">N/A for LTC</span>}
-        </RField>
-        <RField label="Domain">{e.editing ? <input className={inputCls} defaultValue={org.domain} /> : org.domain}</RField>
-        {product === "LTC" ? (
-          <RField label="NAIC Code">
-            {e.editing ? <input className={inputCls} defaultValue={org.naic_code} /> : org.naic_code}
-          </RField>
-        ) : <div />}
-        <RField label="Industry">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.industry}>{INDUSTRIES.map((o) => <option key={o}>{o}</option>)}</select>
-            : titleCase(org.industry)}
-        </RField>
-        <RField label="Microsite URL"><MicrositeField url={org.microsite_url} product={product} editing={e.editing} /></RField>
-        <RField label="Org Type">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.org_type}>{ORG_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.org_type}
-        </RField>
         {product === "DI" ? (
-          <RField label="Contact Email">
-            {e.editing
-              ? <input className={inputCls} type="email" defaultValue={org.contact_email ?? ""} />
-              : (org.contact_email ? <a href={`mailto:${org.contact_email}`} className="text-sky-700 hover:underline">{org.contact_email}</a> : <Empty />)}
-          </RField>
+          <>
+            {NameField}
+            <RField label="CCA Group">{e.editing ? <Switch defaultChecked={org.cca_group} /> : <YesNo b={org.cca_group} />}</RField>
+            {DomainField}
+            <div />
+            {IndustryField}
+            {MicrositeFieldRow}
+            {OrgTypeField}
+            {ContactEmailField}
+            <RField label="DI Healthcare Type">
+              {e.editing
+                ? <select className={inputCls} defaultValue={org.di_healthcare_type}>{DI_HC_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
+                : org.di_healthcare_type}
+            </RField>
+            {StatusField}
+            {SitusStateField}
+            {SitusCityField}
+            {EligibleLivesField}
+            {!org.cca_group && PolicyOwnerField}
+          </>
         ) : (
-          <RField label="Company Years in Existence">{e.editing ? <input className={inputCls} type="number" defaultValue={org.company_years_in_existence} /> : org.company_years_in_existence}</RField>
-        )}
-        {product === "DI" ? (
-          <RField label="DI Healthcare Type">
-            {e.editing
-              ? <select className={inputCls} defaultValue={org.di_healthcare_type}>{DI_HC_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
-              : org.di_healthcare_type}
-          </RField>
-        ) : <div />}
-        <RField label="Status">
-          {e.editing
-            ? <select className={inputCls} defaultValue={statusValue} disabled={!isAdmin}>{ORG_STATUSES.map((o) => <option key={o}>{o}</option>)}</select>
-            : titleCase(statusValue)}
-        </RField>
-        {product === "LTC" ? (
-          <RField label="Org Website"><ExtLink href={org.org_website}>{org.org_website}</ExtLink></RField>
-        ) : <div />}
-        <RField label="Situs State">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.situs_state}>{US_STATES.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.situs_state}
-        </RField>
-        <RField label="Situs City">{e.editing ? <input className={inputCls} defaultValue={org.situs_city} /> : org.situs_city}</RField>
-        <RField label="Eligible Lives">{e.editing ? <input className={inputCls} type="number" defaultValue={org.eligible_lives} /> : org.eligible_lives}</RField>
-        {!(product === "DI" && org.cca_group) && (
-          <RField label="Policy Owner Type">
-            {e.editing
-              ? <select className={inputCls} defaultValue={org.policy_owner_type}>{["employer_group","cca"].map((o) => <option key={o}>{o}</option>)}</select>
-              : policyOwnerLabel(org.policy_owner_type)}
-          </RField>
+          <>
+            {NameField}
+            <RField label="Company Years in Existence">{e.editing ? <input className={inputCls} type="number" defaultValue={org.company_years_in_existence} /> : org.company_years_in_existence}</RField>
+            {DomainField}
+            <RField label="NAIC Code">{e.editing ? <input className={inputCls} defaultValue={org.naic_code} /> : <span className="font-mono text-xs">{org.naic_code}</span>}</RField>
+            {IndustryField}
+            <RField label="Org Website">
+              {e.editing ? <input className={inputCls} defaultValue={org.org_website} /> : <ExtLink href={org.org_website}>{org.org_website}</ExtLink>}
+            </RField>
+            {OrgTypeField}
+            {ContactEmailField}
+            {StatusField}
+            {SitusStateField}
+            {SitusCityField}
+            {EligibleLivesField}
+            {PolicyOwnerField}
+            {MicrositeFieldRow}
+          </>
         )}
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
@@ -987,6 +1035,9 @@ function MicrositeField({ url, product, editing }: { url: string; product: "DI" 
 
 function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; variant?: "info" | "config" | "integration" }) {
   const e = useSectionEdit();
+  const note = product === "LTC"
+    ? "Carrier and product are set during initial onboarding. Commission schedule changes flow to all enrollments after the effective date."
+    : "Carrier and product are set during initial onboarding. To change, contact engineering.";
   return (
     <SectionCard
       title="Carrier & Product"
@@ -994,7 +1045,7 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
       canEdit={!readOnly}
       onEdit={e.onEdit}
       variant={variant}
-      note="Carrier and product are set during initial onboarding. To change, contact engineering."
+      note={note}
     >
       <Grid2>
         <RField label="Carrier">{org.carrier_name}</RField>
@@ -1026,24 +1077,73 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
   );
 }
 
-function LTCProductConfigSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function LTCProductPlanSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
   const e = useSectionEdit();
+  const pd = (org.plan_details ?? {}) as Record<string, Record<string, string> | undefined>;
+  const [active, setActive] = useState<typeof LTC_TIERS[number]>("bronze");
+  const tierData = pd[active];
   return (
-    <SectionCard title="LTC Product Config" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
-      <Grid2>
-        <RField label="Product Template Variant">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.product_template_variant}>{PRODUCT_TEMPLATE_VARIANTS.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.product_template_variant}
-        </RField>
-        <RField label="Extension of Benefits Rider">{e.editing ? <Switch defaultChecked={org.extension_of_benefits_rider} /> : <YesNo b={org.extension_of_benefits_rider} />}</RField>
-        <RField label="Healthcare Company">{e.editing ? <input className={inputCls} defaultValue={org.healthcare_company} /> : org.healthcare_company}</RField>
-        <RField label="Benefit Restoration Rider">{e.editing ? <Switch defaultChecked={org.benefit_restoration_rider} /> : <YesNo b={org.benefit_restoration_rider} />}</RField>
-        <RField label="Benefit Duration">{e.editing ? <input className={inputCls} type="number" defaultValue={org.benefit_duration} /> : org.benefit_duration}</RField>
-        <RField label="Duration">{e.editing ? <input className={inputCls} defaultValue={org.duration} /> : org.duration}</RField>
-        <RField label="Min Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.min_age} /> : org.min_age}</RField>
-        <RField label="Max Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.max_age} /> : org.max_age}</RField>
-      </Grid2>
+    <SectionCard
+      title="LTC Product & Plan Terms"
+      defaultOpen
+      editing={e.editing}
+      canEdit={!readOnly}
+      onEdit={e.onEdit}
+      drives={["microsite", "premium calculation", "rate cells"]}
+    >
+      <div className="mb-5">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Product Configuration</div>
+        <Grid2>
+          <RField label="Product Template Variant">
+            {e.editing
+              ? <select className={inputCls} defaultValue={org.product_template_variant}>{PRODUCT_TEMPLATE_VARIANTS.map((o) => <option key={o} value={o}>{productTemplateVariantLabel(o)}</option>)}</select>
+              : productTemplateVariantLabel(org.product_template_variant)}
+          </RField>
+          <RField label="Extension of Benefits Rider">{e.editing ? <Switch defaultChecked={org.extension_of_benefits_rider} /> : <YesNo b={org.extension_of_benefits_rider} />}</RField>
+          <RField label="Healthcare Company">{e.editing ? <input className={inputCls} defaultValue={org.healthcare_company} /> : titleCase(org.healthcare_company)}</RField>
+          <RField label="Benefit Restoration Rider">{e.editing ? <Switch defaultChecked={org.benefit_restoration_rider} /> : <YesNo b={org.benefit_restoration_rider} />}</RField>
+        </Grid2>
+        <div className="grid grid-cols-4 gap-x-6 gap-y-4 mt-4">
+          <RField label="Benefit Duration">{e.editing ? <input className={inputCls} defaultValue={String(org.benefit_duration)} /> : org.benefit_duration}</RField>
+          <RField label="Duration">{e.editing ? <input className={inputCls} defaultValue={org.duration} /> : org.duration}</RField>
+          <RField label="Min Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.min_age} /> : org.min_age}</RField>
+          <RField label="Max Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.max_age} /> : org.max_age}</RField>
+        </div>
+      </div>
+
+      <hr className="border-black/10 my-5" />
+
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-2 pb-1 border-b border-black/10">Plan Terms by Tier</div>
+        {!e.editing && (
+          <div className="text-xs text-black/50 italic mb-3">Plan terms displayed on the enrollment microsite. Each tab corresponds to one coverage tier.</div>
+        )}
+        <div className="flex gap-1 border-b border-black/10 mb-3">
+          {LTC_TIERS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setActive(t)}
+              className={`px-3 py-1.5 text-xs capitalize border-b-2 -mb-px ${active === t ? "border-[#0a3d3e] text-[#0a3d3e] font-medium" : "border-transparent text-black/50 hover:text-black/80"}`}
+            >{t}</button>
+          ))}
+        </div>
+        <div className="text-xs font-semibold text-black/70 mb-2 capitalize">{active} Tier</div>
+        {tierData && Object.keys(tierData).length > 0 ? (
+          <div className="space-y-2">
+            {Object.entries(tierData).map(([k, v]) => (
+              <div key={k} className="grid grid-cols-[220px_1fr] gap-3 items-start">
+                <div className="text-xs font-semibold text-black/70 pt-2 capitalize">{k.replace(/_/g, " ")}</div>
+                {e.editing
+                  ? <Textarea defaultValue={v} className="text-sm min-h-[44px]" />
+                  : <div className="text-sm text-black/80 leading-relaxed pt-1">{v}</div>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-sm text-black/50 italic">No plan terms configured for {titleCase(active)}. Click edit to add.</div>
+        )}
+      </div>
+
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
   );
@@ -1469,28 +1569,39 @@ function LtcTierPanels({ details, editing }: { details: Record<string, Record<st
   );
 }
 
-function CarrierOperationalSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function CarrierIdentifiersSection({ org, readOnly, variant }: { org: OrgDetail; readOnly: boolean; variant?: "info" | "config" | "integration" }) {
   const e = useSectionEdit();
+  // Left column: Case ID, Enrollment ID (Carrier), Form Number, Agent Number
+  // Right column: Benefit System, Rider Codes, Application Questions
   return (
     <SectionCard
-      title="Carrier / Operational"
-      note="Carrier-assigned identifiers and configuration. Typically set during initial setup."
+      title="Carrier Identifiers"
+      note="Carrier-assigned identifiers and configuration. Set during initial onboarding."
       editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}
+      variant={variant}
     >
       <Grid2>
         <RField label="Case ID">{e.editing ? <input className={inputCls} defaultValue={org.case_id} /> : <span className="font-mono text-xs">{org.case_id}</span>}</RField>
         <RField label="Benefit System">{e.editing ? <input className={inputCls} defaultValue={org.benefit_system} /> : org.benefit_system}</RField>
         <RField label="Enrollment ID (Carrier)">{e.editing ? <input className={inputCls} defaultValue={org.enrollment_id_carrier} /> : <span className="font-mono text-xs">{org.enrollment_id_carrier}</span>}</RField>
         <RField label="Rider Codes">
-          <div className="flex flex-wrap gap-1">
-            {org.rider_codes.map((r) => <span key={r} className="px-1.5 py-0.5 rounded text-[11px] bg-[#d4b87a]/40 text-[#0a3d3e] font-mono">{r}</span>)}
-          </div>
+          {e.editing
+            ? <input className={inputCls} defaultValue={org.rider_codes.join(", ")} placeholder="comma-separated" />
+            : (
+              <div className="flex flex-wrap gap-1">
+                {org.rider_codes.map((r) => <span key={r} className="px-1.5 py-0.5 rounded text-[11px] bg-[#d4b87a]/40 text-[#0a3d3e] font-mono">{r}</span>)}
+              </div>
+            )}
         </RField>
         <RField label="Form Number">{e.editing ? <input className={inputCls} defaultValue={org.form_number} /> : <span className="font-mono text-xs">{org.form_number}</span>}</RField>
         <RField label="Application Questions">
-          <ol className="list-decimal pl-4 text-xs text-black/70 space-y-0.5">
-            {org.application_questions.map((q, i) => <li key={i}>{q}</li>)}
-          </ol>
+          {e.editing
+            ? <Textarea defaultValue={org.application_questions.join("\n")} className="text-sm min-h-[88px]" placeholder="One question per line" />
+            : (
+              <ol className="list-decimal pl-4 text-xs text-black/70 space-y-0.5">
+                {org.application_questions.map((q, i) => <li key={i}>{q}</li>)}
+              </ol>
+            )}
         </RField>
         <RField label="Agent Number">{e.editing ? <input className={inputCls} defaultValue={org.agent_number} /> : <span className="font-mono text-xs">{org.agent_number}</span>}</RField>
       </Grid2>
