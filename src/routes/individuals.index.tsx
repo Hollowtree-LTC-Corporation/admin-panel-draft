@@ -64,7 +64,7 @@ import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
-type IndSearch = { org?: string; coverage?: string; stage?: string; type?: string; di_type?: string; payment?: string };
+type IndSearch = { org?: string; coverage?: string; stage?: string; type?: string; di_type?: string; payment?: string; rep?: string };
 
 export const Route = createFileRoute("/individuals/")({
   component: IndividualsView,
@@ -75,10 +75,11 @@ export const Route = createFileRoute("/individuals/")({
     type: typeof s.type === "string" ? s.type : undefined,
     di_type: typeof s.di_type === "string" ? s.di_type : undefined,
     payment: typeof s.payment === "string" ? s.payment : undefined,
+    rep: typeof s.rep === "string" ? s.rep : undefined,
   }),
 });
 
-type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type" | "di_type" | "face_amount_cents" | "last_payment_status";
+type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type" | "di_type" | "face_amount_cents" | "last_payment_status" | "assigned_rep";
 
 const COVERAGE_OPTIONS = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"];
 
@@ -98,6 +99,7 @@ function IndividualsView() {
   const [typeFilter, setTypeFilter] = useState<string>(searchParams.type ?? "all");
   const [diTypeFilter, setDiTypeFilter] = useState<string>(searchParams.di_type ?? "all");
   const [paymentFilter, setPaymentFilter] = useState<string>(searchParams.payment ?? "all");
+  const [repFilter, setRepFilter] = useState<string>(searchParams.rep ?? "all");
   const sort = useSort<SortKey>("full_name", "asc");
 
   useEffect(() => {
@@ -107,11 +109,13 @@ function IndividualsView() {
     if (searchParams.type !== undefined) setTypeFilter(searchParams.type);
     if (searchParams.di_type !== undefined) setDiTypeFilter(searchParams.di_type);
     if (searchParams.payment !== undefined) setPaymentFilter(searchParams.payment);
-  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type, searchParams.payment]);
+    if (searchParams.rep !== undefined) setRepFilter(searchParams.rep);
+  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type, searchParams.payment, searchParams.rep]);
 
   const productRows = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
   const stageOptions = Array.from(new Set(productRows.map((r) => r.stage)));
+  const repOptions = Array.from(new Set(productRows.map((r) => r.assigned_rep).filter(Boolean))) as string[];
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -127,6 +131,10 @@ function IndividualsView() {
       }
       if (!isLTC && diTypeFilter !== "all" && i.di_type !== diTypeFilter) return false;
       if (paymentFilter !== "all" && i.last_payment_status !== paymentFilter) return false;
+      if (repFilter !== "all") {
+        if (repFilter === "__unassigned__") { if (i.assigned_rep) return false; }
+        else if (i.assigned_rep !== repFilter) return false;
+      }
       return true;
     });
     return sort.applySort(rows, (r, k) => {
@@ -134,12 +142,12 @@ function IndividualsView() {
       if (k === "relationship_type") return r.relationship_type === "spouse" ? "Spouse" : "Employee";
       return (r as unknown as Record<string, string | number>)[k];
     });
-  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, paymentFilter, sort, isLTC]);
+  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, paymentFilter, repFilter, sort, isLTC]);
 
-  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || paymentFilter !== "all" || !sort.isDefault;
+  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || paymentFilter !== "all" || repFilter !== "all" || !sort.isDefault;
 
   const clearAll = () => {
-    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all"); setPaymentFilter("all");
+    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all"); setPaymentFilter("all"); setRepFilter("all");
     sort.reset();
     navigate({ to: "/individuals", search: {} });
   };
@@ -167,6 +175,7 @@ function IndividualsView() {
         {!isLTC && (
           <FilterSelect value={diTypeFilter} onChange={setDiTypeFilter} allLabel="All types" options={[{ value: "STD+LTD" }, { value: "LTD", label: "LTD Only" }]} />
         )}
+        <FilterSelect value={repFilter} onChange={setRepFilter} allLabel="All reps" options={[...repOptions.map((v) => ({ value: v })), { value: "__unassigned__", label: "Unassigned" }]} />
         <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "Successful", label: "Paid" }, { value: "Failed" }, { value: "Pending" }]} />
         <ClearFiltersLink show={filtersActive} onClick={clearAll} />
         <ExportCsvButton filteredCount={filtered.length} totalCount={productRows.length} resourceLabel="individuals" />
@@ -185,6 +194,7 @@ function IndividualsView() {
             ...(isLTC ? [{ key: "face_amount_cents" as SortKey, label: "Face Amount" }, { key: null, label: "Riders" }] : []),
             { key: "effective_date", label: "Effective Date" },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
+            { key: "assigned_rep", label: "Assigned Rep" },
             { key: "last_payment_status", label: "Payment" },
           ]}
           sortKey={sort.sortKey}
@@ -227,12 +237,13 @@ function IndividualsView() {
                 )}
                 <TCell className={i.coverage_status === "in_progress" ? "text-black/40" : ""}>{formatDate(i.effective_date)}</TCell>
                 <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>
+                <TCell>{i.assigned_rep ?? <span className="text-black/40">Unassigned</span>}</TCell>
                 <TCell>{unpurchased ? <span className="text-black/40">—</span> : paymentBadge(i.last_payment_status, i.retry_count)}</TCell>
               </TRow>
             );
           })}
           {filtered.length === 0 && (
-            <tr><td colSpan={11} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
+            <tr><td colSpan={12} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
