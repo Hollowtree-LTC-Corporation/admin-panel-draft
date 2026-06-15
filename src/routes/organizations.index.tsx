@@ -33,11 +33,15 @@ function formatOwnerType(v: string): string {
 
 // Per spec: one closing, one closed, one none, rest open.
 function windowStatusFor(orgId: string): { label: string; tone: "ok" | "warn" | "bad" | "neutral"; variant: "filled" | "outline" } {
-  if (orgId === "org_6") return { label: "Closing Soon", tone: "warn", variant: "filled" };
+  if (orgId === "org_6") return { label: "Closing in 5 days", tone: "warn", variant: "filled" };
   if (orgId === "org_4") return { label: "Closed", tone: "neutral", variant: "filled" };
   if (orgId === "org_9") return { label: "None", tone: "neutral", variant: "outline" };
   return { label: "Open", tone: "ok", variant: "filled" };
 }
+
+// Wireframe-only payment-health overrides (demo orgs that should read "All current").
+const ALL_CURRENT_OVERRIDE = new Set(["org_7", "org_8"]);
+
 
 function OrgsView() {
   const { product } = useStore();
