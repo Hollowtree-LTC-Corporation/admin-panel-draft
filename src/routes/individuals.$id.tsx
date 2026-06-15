@@ -245,11 +245,12 @@ function IndividualDetail() {
             <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
             <ProfessionalClassificationSection i={i} readOnly={readOnly} />
             <EnrollmentSection i={i} />
-            {i._org?.cca_group && i.cca_portal_link && <CCAPortalSection link={i.cca_portal_link} />}
             <SystemRefsSection i={i} />
           </>
         )}
       </div>
+
+
 
       {/* Deactivate confirmation */}
       {deactivateOpen && (
