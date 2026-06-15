@@ -323,6 +323,14 @@ export function AffiliateForm({
           </div>
         )}
 
+        <LogoUpload
+          affiliate={draft}
+          onPick={() => update("logo_url", nextSampleLogo())}
+          onClear={draft.logo_url ? () => update("logo_url", null) : undefined}
+        />
+
+
+
         <Field label="Name">
           <input
             value={draft.name}
