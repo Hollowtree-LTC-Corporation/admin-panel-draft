@@ -582,19 +582,114 @@ export const MISSING_SUBMISSIONS = [
   { id: "ms_4", full_name: "Test Person D", email: "d@example.com", phone: "555-0004", org_name: "Greylock Partners LLC", origin_url: "/enroll/greylock", status: "new" },
 ];
 
-export const RATE_CONFIG_DI = [
-  { id: "rc_1", carrier_product: "Northstar DI Core", age_band: "18-29", rate_per_1000: 0.42 },
-  { id: "rc_2", carrier_product: "Northstar DI Core", age_band: "30-39", rate_per_1000: 0.61 },
-  { id: "rc_3", carrier_product: "Northstar DI Core", age_band: "40-49", rate_per_1000: 0.95 },
-  { id: "rc_4", carrier_product: "Pacific DI Plus", age_band: "18-29", rate_per_1000: 0.38 },
+// DI rate_config: per-org, age-banded rate sheet (rate per $1,000 of monthly coverage).
+// FK: organization_id. Keyed by (employee_class, age_band, product, effective_from).
+export type DIRateRow = {
+  id: string;
+  organization_id: string;
+  employee_class: string;
+  age_band: string;
+  product: string; // text per schema (semantically carrier_product)
+  rate_per_unit: number;
+  benefit_percentage: number;
+  effective_from: string;
+  effective_to: string | null;
+  source: string;
+};
+const DI_AGE_BANDS = ["18-29","30-39","40-49","50-59","60-64","65+"];
+const DI_RATES_STD: Record<string, number> = { "18-29": 0.32, "30-39": 0.48, "40-49": 0.74, "50-59": 1.05, "60-64": 1.18, "65+": 1.22 };
+const DI_RATES_EXEC: Record<string, number> = { "18-29": 0.36, "30-39": 0.54, "40-49": 0.82, "50-59": 1.14, "60-64": 1.28, "65+": 1.34 };
+export const DI_RATE_CONFIG: DIRateRow[] = [
+  // org_1: Acme Widgets — Standard + Executive classes
+  ...DI_AGE_BANDS.map((band, i) => ({
+    id: `dir_a_s_${i}`, organization_id: "org_1", employee_class: "Standard", age_band: band,
+    product: "Group LTD", rate_per_unit: DI_RATES_STD[band], benefit_percentage: 60,
+    effective_from: "2025-01-01", effective_to: null, source: "sun_life_rate_sheet",
+  })),
+  ...DI_AGE_BANDS.map((band, i) => ({
+    id: `dir_a_e_${i}`, organization_id: "org_1", employee_class: "Executive", age_band: band,
+    product: "Group LTD", rate_per_unit: DI_RATES_EXEC[band], benefit_percentage: 66.7,
+    effective_from: "2025-01-01", effective_to: null, source: "sun_life_rate_sheet",
+  })),
+  // org_2: Bluefin — single class, fewer rows
+  ...DI_AGE_BANDS.map((band, i) => ({
+    id: `dir_b_s_${i}`, organization_id: "org_2", employee_class: "All Employees", age_band: band,
+    product: "Group LTD", rate_per_unit: DI_RATES_STD[band] * 0.95, benefit_percentage: 60,
+    effective_from: "2024-07-01", effective_to: null, source: "manual_entry",
+  })),
 ];
 
-export const RATE_CELLS_LTC = [
-  { id: "rcl_1", carrier_product: "Heritage LTC Standard", age: 45, gender: "F", rate_per_1000: 1.22 },
-  { id: "rcl_2", carrier_product: "Heritage LTC Standard", age: 45, gender: "M", rate_per_1000: 1.18 },
-  { id: "rcl_3", carrier_product: "Heritage LTC Standard", age: 55, gender: "F", rate_per_1000: 2.04 },
-  { id: "rcl_4", carrier_product: "Heritage LTC NY", age: 55, gender: "F", rate_per_1000: 2.31 },
-];
+// LTC rate_cells: per benefit_class, smoker_status, issue_age, tier.
+export type LTCRateCell = {
+  id: string;
+  benefit_class_id: string;
+  carrier_product_id: string;
+  smoker_status: "non_tobacco" | "tobacco";
+  issue_age: number;
+  tier: "bronze" | "silver" | "gold" | "platinum" | "diamond";
+  nominal_death_benefit_cents: number;
+  death_benefit_cents: number;
+  monthly_premium_cents: number;
+  effective_date: string;
+  source: string;
+};
+const LTC_TIER_FACES: Record<string, number> = { bronze: 2500000, silver: 5000000, gold: 7500000, platinum: 10000000, diamond: 15000000 };
+const LTC_TIER_BASE: Record<string, number> = { bronze: 1800, silver: 3400, gold: 5100, platinum: 6800, diamond: 10200 };
+function ltcPremiumCents(tier: "bronze" | "silver" | "gold" | "platinum" | "diamond", age: number, smoker: boolean): number {
+  const base = LTC_TIER_BASE[tier];
+  const ageMult = 1 + (age - 25) * 0.045; // ~4.5% per year over 25
+  const smokerMult = smoker ? 1.45 : 1.0;
+  return Math.round(base * ageMult * smokerMult);
+}
+const _ltcCells: LTCRateCell[] = [];
+// bc_1: Standard Trustmark UL — ages 25..65 step 5, both smoker statuses, all 5 tiers
+const BC1_AGES = [25,30,35,40,45,50,55,60,65];
+const BC1_TIERS: Array<"bronze" | "silver" | "gold" | "platinum" | "diamond"> = ["bronze","silver","gold","platinum","diamond"];
+for (const age of BC1_AGES) {
+  for (const smoker of [false, true]) {
+    for (const tier of BC1_TIERS) {
+      const face = LTC_TIER_FACES[tier];
+      _ltcCells.push({
+        id: `lrc_bc1_${age}_${smoker ? "t" : "n"}_${tier}`,
+        benefit_class_id: "bc_1",
+        carrier_product_id: "cp_6",
+        smoker_status: smoker ? "tobacco" : "non_tobacco",
+        issue_age: age,
+        tier,
+        nominal_death_benefit_cents: face,
+        death_benefit_cents: face,
+        monthly_premium_cents: ltcPremiumCents(tier, age, smoker),
+        effective_date: "2025-03-15",
+        source: "carrier_proposal",
+      });
+    }
+  }
+}
+// bc_2: Reduced Eligibility — narrower age range, 3 tiers
+const BC2_AGES = [30,40,50,55];
+const BC2_TIERS: Array<"bronze" | "silver" | "gold" | "platinum" | "diamond"> = ["bronze","silver","gold"];
+for (const age of BC2_AGES) {
+  for (const smoker of [false, true]) {
+    for (const tier of BC2_TIERS) {
+      const face = LTC_TIER_FACES[tier];
+      _ltcCells.push({
+        id: `lrc_bc2_${age}_${smoker ? "t" : "n"}_${tier}`,
+        benefit_class_id: "bc_2",
+        carrier_product_id: "cp_6",
+        smoker_status: smoker ? "tobacco" : "non_tobacco",
+        issue_age: age,
+        tier,
+        nominal_death_benefit_cents: face,
+        death_benefit_cents: face,
+        monthly_premium_cents: ltcPremiumCents(tier, age, smoker),
+        effective_date: "2024-11-01",
+        source: "carrier_proposal",
+      });
+    }
+  }
+}
+export const LTC_RATE_CELLS: LTCRateCell[] = _ltcCells;
+
 
 export const ENROLLMENT_RESPONSES_LTC = [
   { id: "er_1", individual_name: "Test Person 3", question: "Smoker (last 12mo)?", answer: "No", submitted_at: "2025-05-01" },

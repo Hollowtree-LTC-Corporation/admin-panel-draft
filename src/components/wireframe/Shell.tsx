@@ -5,7 +5,7 @@ import logoAsset from "@/assets/hollowtree-logo.png.asset.json";
 import {
   LayoutDashboard, Building2, Users, CalendarRange, Wallet, Receipt,
   Scale, Calculator, HandCoins, Briefcase, FileText, KeyRound, ShieldAlert,
-  ListTodo, Layers, FileBarChart, Handshake,
+  ListTodo, Layers, Handshake,
 } from "lucide-react";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; product?: Product };
@@ -38,8 +38,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/carriers", label: "Carriers & Products", icon: Briefcase },
       { to: "/affiliates", label: "Affiliates", icon: Handshake },
-      { to: "/rate-config", label: "Rate Config", icon: FileBarChart, product: "DI" },
-      { to: "/rate-cells", label: "Rate Cells", icon: FileBarChart, product: "LTC" },
     ],
   },
   {
