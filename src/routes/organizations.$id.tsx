@@ -14,7 +14,7 @@ import {
   DI_RATE_CONFIG, LTC_RATE_CELLS, type DIRateRow, type LTCRateCell,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
-import { ChevronLeft, ChevronDown, ChevronRight, Pencil, ExternalLink, Mail, Phone, Star, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronRight, Pencil, ExternalLink, Mail, Phone, Star, Plus, Trash2, Check, X as XIcon, SkipForward, Circle } from "lucide-react";
 
 export const Route = createFileRoute("/organizations/$id")({ component: OrgDetail });
 
@@ -476,6 +476,10 @@ function OrgDetail() {
           <LifecycleTab
             windows={windows}
             orgName={org.name}
+            orgId={org.id}
+            orgStatus={org.status}
+            product={product}
+            isAdmin={role === "admin"}
             onNew={() => windowDrawer.open(undefined, "create")}
             onEdit={(w) => windowDrawer.open(w, "edit")}
             canEdit={can("enrollment_windows", "update")}
@@ -689,10 +693,14 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
 }
 
 function LifecycleTab({
-  windows, orgName, onNew, onEdit, canEdit, canCreate, readOnly,
+  windows, orgName, orgId, orgStatus, product, isAdmin, onNew, onEdit, canEdit, canCreate, readOnly,
 }: {
   windows: typeof DUMMY_WINDOWS;
   orgName: string;
+  orgId: string;
+  orgStatus: string;
+  product: "DI" | "LTC";
+  isAdmin: boolean;
   onNew: () => void;
   onEdit: (w: typeof DUMMY_WINDOWS[number]) => void;
   canEdit: boolean;
@@ -738,6 +746,10 @@ function LifecycleTab({
         </TableShell>
       </div>
 
+      <OnboardingChecklist orgId={orgId} orgStatus={orgStatus} product={product} isAdmin={isAdmin} />
+
+
+
       <div>
         <h2 className="text-base font-semibold text-gray-900 mb-2">New Joiner Defaults</h2>
         <Card className="p-4 max-w-2xl">
@@ -761,6 +773,145 @@ function LifecycleTab({
     </div>
   );
 }
+
+/* ---------- Onboarding Checklist ---------- */
+
+type CheckStatus = "pending" | "passed" | "failed" | "skipped";
+type CheckItem = {
+  check_type: string;
+  label: string;
+  ltc_only?: boolean;
+  status: CheckStatus;
+  checked_by: string;
+  checked_at: string;
+  notes: string;
+};
+
+const CHECK_DEFS: Array<{ check_type: string; label: string; ltc_only?: boolean }> = [
+  { check_type: "carrier_confirmed", label: "Carrier Confirmed" },
+  { check_type: "rates_loaded", label: "Rates Loaded" },
+  { check_type: "benefit_classes_created", label: "Benefit Classes Created", ltc_only: true },
+  { check_type: "enrollment_window_created", label: "Enrollment Window Created" },
+  { check_type: "fee_schedule_configured", label: "Fee Schedule Configured" },
+  { check_type: "klaviyo_list_linked", label: "Klaviyo List Linked" },
+  { check_type: "contacts_added", label: "Contacts Added" },
+  { check_type: "microsite_verified", label: "Microsite Verified" },
+];
+
+function seedChecks(orgId: string, product: "DI" | "LTC"): CheckItem[] {
+  const defs = CHECK_DEFS.filter((d) => !d.ltc_only || product === "LTC");
+  if (orgId === "org_9") {
+    // Ironwood Robotics: 4 passed, rest pending
+    return defs.map((d, i) => i < 4
+      ? { ...d, status: "passed" as CheckStatus, checked_by: "Jamie Chen", checked_at: "2026-06-08 14:22", notes: "" }
+      : { ...d, status: "pending" as CheckStatus, checked_by: "", checked_at: "", notes: "" });
+  }
+  // Default (active orgs like Acme): all passed
+  return defs.map((d) => ({
+    ...d, status: "passed" as CheckStatus, checked_by: "Jamie Chen", checked_at: "2025-01-14 09:30", notes: "",
+  }));
+}
+
+function statusTone(s: CheckStatus): "ok" | "bad" | "info" | "neutral" {
+  if (s === "passed") return "ok";
+  if (s === "failed") return "bad";
+  if (s === "skipped") return "neutral";
+  return "neutral";
+}
+
+function CheckIcon({ status }: { status: CheckStatus }) {
+  const base = "h-4 w-4";
+  if (status === "passed") return <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-green-600 text-white"><Check className={base} /></span>;
+  if (status === "failed") return <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-red-600 text-white"><XIcon className={base} /></span>;
+  if (status === "skipped") return <span className="inline-flex items-center justify-center h-5 w-5 rounded border border-black/30 text-black/60"><SkipForward className={base} /></span>;
+  return <span className="inline-flex items-center justify-center h-5 w-5 rounded border border-black/30 text-black/30"><Circle className={base} /></span>;
+}
+
+function OnboardingChecklist({ orgId, orgStatus, product, isAdmin }: { orgId: string; orgStatus: string; product: "DI" | "LTC"; isAdmin: boolean }) {
+  const [checks, setChecks] = useState<CheckItem[]>(() => seedChecks(orgId, product));
+  const [expanded, setExpanded] = useState(orgStatus !== "active");
+
+  useEffect(() => {
+    setChecks(seedChecks(orgId, product));
+    setExpanded(orgStatus !== "active");
+  }, [orgId, orgStatus, product]);
+
+  const showCollapsed = orgStatus === "active" && !expanded;
+
+  const total = checks.length;
+  const passed = checks.filter((c) => c.status === "passed").length;
+  const nonSkipped = checks.filter((c) => c.status !== "skipped");
+  const allPassed = nonSkipped.length > 0 && nonSkipped.every((c) => c.status === "passed");
+  const pct = total === 0 ? 0 : Math.round((passed / total) * 100);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-base font-semibold text-gray-900">Onboarding Checklist</h2>
+        {orgStatus === "active" ? (
+          <div className="flex items-center gap-3">
+            <Pill tone="ok">Onboarding: Complete</Pill>
+            <button type="button" className="text-xs text-blue-600 hover:underline" onClick={() => setExpanded((v) => !v)}>
+              {expanded ? "Hide checklist" : "Show checklist"}
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {showCollapsed ? null : (
+        <Card className="p-4 max-w-3xl">
+          <ul className="divide-y divide-black/10">
+            {checks.map((c, idx) => (
+              <li key={c.check_type} className="py-3">
+                <div className="flex items-start gap-3">
+                  <div className="pt-0.5"><CheckIcon status={c.status} /></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-gray-900">{c.label}</span>
+                      <Pill tone={statusTone(c.status)}>{c.status}</Pill>
+                      {c.ltc_only ? <span className="text-[10px] uppercase tracking-wider text-black/40">LTC</span> : null}
+                    </div>
+                    <div className="mt-1 text-xs text-black/60 flex items-center gap-3">
+                      <span>Checked by: <span className="text-black/80">{c.checked_by || "—"}</span></span>
+                      <span>At: <span className="text-black/80">{c.checked_at || "—"}</span></span>
+                    </div>
+                    <textarea
+                      rows={1}
+                      placeholder="Notes…"
+                      defaultValue={c.notes}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setChecks((prev) => prev.map((p, i) => i === idx ? { ...p, notes: v } : p));
+                      }}
+                      className="mt-2 w-full px-2 py-1 text-xs border border-black/15 rounded resize-y min-h-[28px]"
+                    />
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-4 pt-3 border-t border-black/10">
+            <div className="flex items-center justify-between text-xs text-black/70 mb-1">
+              <span>{passed} of {total} checks complete</span>
+              <span className="font-medium">{pct}%</span>
+            </div>
+            <div className="h-2 w-full bg-black/10 rounded overflow-hidden">
+              <div className="h-full bg-green-600 transition-all" style={{ width: `${pct}%` }} />
+            </div>
+            {isAdmin && orgStatus !== "active" ? (
+              <div className="mt-3 flex justify-end">
+                <Btn variant="primary" disabled={!allPassed}>Mark Onboarding Complete</Btn>
+              </div>
+            ) : null}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+
 
 /* ---------- Section building blocks (mirror individual page) ---------- */
 
