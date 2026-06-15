@@ -591,9 +591,8 @@ function ProductDrawerBody({
                   const expanded = expandedScheduleId === s.id;
                   const sTiers = tiers.filter((t) => t.schedule_id === s.id).sort((a, b) => a.year_from - b.year_from);
                   return (
-                    <>
+                    <Fragment key={s.id}>
                       <tr
-                        key={s.id}
                         onClick={() => setExpandedScheduleId(expanded ? null : s.id)}
                         className="border-t border-black/5 cursor-pointer hover:bg-[#f7f3eb]/60"
                       >
@@ -610,7 +609,7 @@ function ProductDrawerBody({
                         <td className="px-3 py-2">{s.effective_to ? <Pill tone="neutral">Expired</Pill> : <Pill tone="ok">Current</Pill>}</td>
                       </tr>
                       {expanded ? (
-                        <tr key={s.id + "_exp"} className="bg-[#f7f3eb]/40">
+                        <tr className="bg-[#f7f3eb]/40">
                           <td colSpan={6} className="px-3 py-3">
                             <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">Rate Tiers</div>
                             <table className="text-xs">
@@ -638,7 +637,8 @@ function ProductDrawerBody({
                           </td>
                         </tr>
                       ) : null}
-                    </>
+                    </Fragment>
+
                   );
                 })}
               </tbody>
