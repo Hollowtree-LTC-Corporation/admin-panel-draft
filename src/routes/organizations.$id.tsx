@@ -362,29 +362,25 @@ function OrgDetail() {
         <AttioDealCard dealId={org.attio_deal_id} />
       </div>
 
-      <Tabs defaultValue="config" className="w-full">
+      <Tabs defaultValue="setup" className="w-full">
         <TabsList>
-          <TabsTrigger value="config">Config</TabsTrigger>
-          <TabsTrigger value="fees">Fees</TabsTrigger>
-          <TabsTrigger value="windows">Enrollment Windows</TabsTrigger>
+          <TabsTrigger value="setup">Setup</TabsTrigger>
+          <TabsTrigger value="lifecycle">Enrollment Lifecycle</TabsTrigger>
           {product === "LTC" ? <TabsTrigger value="bc">Benefit Classes</TabsTrigger> : null}
-          <TabsTrigger value="newjoiner">New Joiner Config</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="config">
-          <ConfigTab org={org} product={product} readOnly={readOnly} isAdmin={role === "admin"} />
+        <TabsContent value="setup">
+          <SetupTab org={org} product={product} readOnly={readOnly} isAdmin={role === "admin"} />
         </TabsContent>
-        <TabsContent value="fees">
-          <FeesTab org={orgBase} readOnly={readOnly} />
-        </TabsContent>
-        <TabsContent value="windows">
-          <WindowsTab
+        <TabsContent value="lifecycle">
+          <LifecycleTab
             windows={windows}
             orgName={org.name}
             onNew={() => windowDrawer.open(undefined, "create")}
             onEdit={(w) => windowDrawer.open(w, "edit")}
             canEdit={can("enrollment_windows", "update")}
             canCreate={can("enrollment_windows", "create")}
+            readOnly={readOnly}
           />
         </TabsContent>
         {product === "LTC" ? (
@@ -398,9 +394,6 @@ function OrgDetail() {
             />
           </TabsContent>
         ) : null}
-        <TabsContent value="newjoiner">
-          <NewJoinerTab readOnly={readOnly} />
-        </TabsContent>
       </Tabs>
 
       {/* Edit drawer (top-of-page shortcut) */}
@@ -510,25 +503,119 @@ function DSelect({ defaultValue, options }: { defaultValue?: string; options: st
    CONFIG TAB — section-card layout
 ============================================================= */
 
-function ConfigTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
+function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
   const statusValue = org.enrollment_status === "active" ? "active" : org.enrollment_status === "closed" ? "closed" : "pending_review";
   const identitySummary = `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible`;
 
   return (
-    <div className="mt-3 space-y-4">
-      <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} />
-      {product === "DI"
-        ? <DIProductPlanSection org={org} readOnly={readOnly} />
-        : <LTCProductConfigSection org={org} readOnly={readOnly} />}
-      <CarrierProductSection org={org} product={product} readOnly={readOnly} />
-      <CoverageBillingSection org={org} readOnly={readOnly} />
-      <BrokerSection org={org} product={product} readOnly={readOnly} />
-      <SignatorySection org={org} readOnly={readOnly} />
-      <LinksRefsSection org={org} product={product} readOnly={readOnly} />
-      {product === "LTC" && <PlanDetailsSection org={org} product={product} readOnly={readOnly} />}
-      {product === "LTC" && <CarrierOperationalSection org={org} readOnly={readOnly} />}
-      {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
-      <SystemRefsSection org={org} product={product} />
+    <div className="mt-3">
+      <BucketHeader
+        label="Organization Information"
+        subtitle="Set during onboarding. Edit if needed, but changes here don't recalculate active enrollments."
+      />
+      <div className="space-y-3">
+        <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} variant="info" />
+        <CarrierProductSection org={org} product={product} readOnly={readOnly} variant="info" />
+      </div>
+
+      <BucketHeader
+        label="Configuration"
+        subtitle="Active operational settings. Changes here flow to downstream systems."
+      />
+      <div className="space-y-4">
+        {product === "DI"
+          ? <DIProductPlanSection org={org} readOnly={readOnly} />
+          : <LTCProductConfigSection org={org} readOnly={readOnly} />}
+        <PricingFeesSection org={org} readOnly={readOnly} />
+        <BrokerSection org={org} product={product} readOnly={readOnly} />
+        <PeopleSection org={org} readOnly={readOnly} />
+        {product === "LTC" && <PlanDetailsSection org={org} product={product} readOnly={readOnly} />}
+        {product === "LTC" && <CarrierOperationalSection org={org} readOnly={readOnly} />}
+        {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
+      </div>
+
+      <BucketHeader
+        label="Integration & System"
+        subtitle="External system links and audit metadata."
+      />
+      <div className="space-y-3">
+        <LinksRefsSection org={org} product={product} readOnly={readOnly} variant="integration" />
+        <SystemRefsSection org={org} product={product} variant="integration" />
+      </div>
+    </div>
+  );
+}
+
+function LifecycleTab({
+  windows, orgName, onNew, onEdit, canEdit, canCreate, readOnly,
+}: {
+  windows: typeof DUMMY_WINDOWS;
+  orgName: string;
+  onNew: () => void;
+  onEdit: (w: typeof DUMMY_WINDOWS[number]) => void;
+  canEdit: boolean;
+  canCreate: boolean;
+  readOnly: boolean;
+}) {
+  const [period, setPeriod] = useState(30);
+  const [waiting, setWaiting] = useState(90);
+  const [rule, setRule] = useState("first_of_next_month");
+  return (
+    <div className="mt-3 space-y-5">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-base font-semibold text-gray-900">Enrollment Windows</h2>
+          <Btn variant="primary" disabled={!canCreate} onClick={onNew}>+ New Window</Btn>
+        </div>
+        <TableShell>
+          <THead cols={["Type", "Sponsor", "Start", "End", "Default Effective", "Status", "GI", "Carrier", "Notes"]} />
+          <tbody>
+            {windows.map((w) => {
+              const isAlwaysOpen = w.window_type === "new_joiner";
+              const sponsor = w.sponsor_type === "affiliate"
+                ? <span><span className="text-black/40">—</span> <span className="text-[11px] text-black/50">(affiliate-sponsored: {w.affiliate})</span></span>
+                : w.affiliate
+                  ? <span>{orgName} <span className="text-black/40">+</span> {w.affiliate}</span>
+                  : <span>{orgName}</span>;
+              return (
+                <TRow key={w.id} onClick={canEdit ? () => onEdit(w) : undefined}>
+                  <TCell className="capitalize font-medium">{w.window_type.replace("_", " ")}</TCell>
+                  <TCell>{sponsor}</TCell>
+                  <TCell>{isAlwaysOpen ? <span className="text-black/40 italic">Always Open</span> : w.start}</TCell>
+                  <TCell>{isAlwaysOpen ? <span className="text-black/40 italic">Always Open</span> : w.end}</TCell>
+                  <TCell>{w.effective}</TCell>
+                  <TCell><Pill tone={w.status === "open" ? "ok" : w.status === "upcoming" ? "info" : "bad"}>{w.status}</Pill></TCell>
+                  <TCell>{w.gi_eligible ? <Pill tone="ok">GI</Pill> : <span className="text-black/30">—</span>}</TCell>
+                  <TCell>{w.carrier}</TCell>
+                  <TCell className="text-black/60">{w.notes}</TCell>
+                </TRow>
+              );
+            })}
+            {windows.length === 0 ? <TRow><TCell className="text-black/40">No enrollment windows.</TCell></TRow> : null}
+          </tbody>
+        </TableShell>
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold text-gray-900 mb-2">New Joiner Defaults</h2>
+        <Card className="p-4 max-w-2xl">
+          <div className="grid grid-cols-[220px_1fr] gap-3 items-center">
+            <div className="text-xs uppercase tracking-wider text-black/60">Enrollment Period (days)</div>
+            <input type="number" defaultValue={period} disabled={readOnly} onChange={(e) => setPeriod(Number(e.target.value))} className="w-32 px-2 py-1 text-sm border border-black/15 rounded" />
+            <div className="text-xs uppercase tracking-wider text-black/60">Waiting Period (days)</div>
+            <input type="number" defaultValue={waiting} disabled={readOnly} onChange={(e) => setWaiting(Number(e.target.value))} className="w-32 px-2 py-1 text-sm border border-black/15 rounded" />
+            <div className="text-xs uppercase tracking-wider text-black/60">Effective Date Rule</div>
+            <select defaultValue={rule} disabled={readOnly} onChange={(e) => setRule(e.target.value)} className="w-64 px-2 py-1 text-sm border border-black/15 rounded bg-white">
+              <option value="first_of_next_month">first_of_next_month</option>
+              <option value="hire_date">hire_date</option>
+              <option value="first_of_month_after_waiting">first_of_month_after_waiting</option>
+            </select>
+          </div>
+          <div className="mt-3 p-3 bg-[#f7f3eb] border border-black/10 rounded text-xs text-black/70">
+            New hires get <b>{period}</b> days to enroll after completing a <b>{waiting}</b> day waiting period. Coverage effective date follows the <b>{rule}</b> rule.
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -549,6 +636,7 @@ function useSectionEdit() {
 
 function SectionCard({
   title, children, defaultOpen = false, summary, editing = false, canEdit = false, onEdit, note,
+  variant = "config", drives,
 }: {
   title: string;
   children: React.ReactNode;
@@ -558,29 +646,61 @@ function SectionCard({
   canEdit?: boolean;
   onEdit?: () => void;
   note?: React.ReactNode;
+  variant?: "info" | "config" | "integration";
+  drives?: string[];
 }) {
-  const [open, setOpen] = useState(defaultOpen || editing);
+  const initiallyOpen = variant === "integration" ? false : (defaultOpen || editing);
+  const [open, setOpen] = useState(initiallyOpen);
   const isOpen = open || editing;
+  const bgCls = variant === "config" ? "bg-white" : "bg-stone-50";
+  const padCls = variant === "info" ? "p-4" : "p-5";
+  const pencilCls = variant === "config"
+    ? "text-stone-700 hover:text-[#0a3d3e]"
+    : "text-stone-400 hover:text-stone-600";
+  const bodySize = variant === "integration" ? "text-sm" : "";
   return (
-    <div className={`bg-white border rounded-lg p-5 ${editing ? "border-blue-300 ring-1 ring-blue-100" : "border-gray-200"}`}>
+    <div className={`${bgCls} border rounded-lg ${padCls} ${editing ? "border-blue-300 ring-1 ring-blue-100" : "border-gray-200"}`}>
       <div className="flex items-center justify-between gap-2">
         <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 text-left flex-1 min-w-0">
           {isOpen ? <ChevronDown className="h-4 w-4 text-black/40 shrink-0" /> : <ChevronRight className="h-4 w-4 text-black/40 shrink-0" />}
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
           {!isOpen && summary && <span className="text-xs text-black/50 truncate">· {summary}</span>}
         </button>
-        {canEdit && !editing && isOpen && onEdit && (
-          <button onClick={onEdit} className="text-black/40 hover:text-[#0a3d3e] p-1" title="Edit section">
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-        )}
+        <div className="flex items-center gap-3 shrink-0">
+          {variant === "config" && isOpen && drives && drives.length > 0 && (
+            <div className="text-xs text-stone-500 lowercase">
+              <span className="font-medium">Drives:</span>{" "}
+              {drives.slice(0, 2).map((d, i) => (
+                <React.Fragment key={d}>
+                  {i > 0 && <span className="mx-1 text-stone-400">·</span>}
+                  <span>{d}</span>
+                </React.Fragment>
+              ))}
+              {drives.length > 2 && <span className="ml-1 text-stone-400">+{drives.length - 2} more</span>}
+            </div>
+          )}
+          {canEdit && !editing && isOpen && onEdit && (
+            <button onClick={onEdit} className={`${pencilCls} p-1`} title="Edit section">
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
       {isOpen && (
-        <div className="mt-4">
+        <div className={`mt-4 ${bodySize}`}>
           {note && <div className="text-xs text-black/50 mb-3 italic">{note}</div>}
           {children}
         </div>
       )}
+    </div>
+  );
+}
+
+function BucketHeader({ label, subtitle }: { label: string; subtitle: string }) {
+  return (
+    <div className="mt-6 mb-3 first:mt-2">
+      <div className="text-xs font-semibold uppercase tracking-wide text-stone-500">{label}</div>
+      <div className="text-sm text-stone-400 mt-0.5">{subtitle}</div>
     </div>
   );
 }
@@ -619,10 +739,10 @@ function ExtLink({ href, children }: { href: string; children: React.ReactNode }
 
 /* ---------- Sections ---------- */
 
-function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary }: { org: OrgDetail; product: "DI" | "LTC"; statusValue: string; isAdmin: boolean; readOnly: boolean; summary: string }) {
+function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary, variant }: { org: OrgDetail; product: "DI" | "LTC"; statusValue: string; isAdmin: boolean; readOnly: boolean; summary: string; variant?: "info" | "config" | "integration" }) {
   const e = useSectionEdit();
   return (
-    <SectionCard title="Identity" defaultOpen summary={summary} editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+    <SectionCard title="Identity" defaultOpen summary={summary} editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} variant={variant}>
       <Grid2>
         <RField label="Name">{e.editing ? <input className={inputCls} defaultValue={org.name} /> : org.name}</RField>
         <RField label="CCA Group">
@@ -696,7 +816,7 @@ function DIProductPlanSection({ org, readOnly }: { org: OrgDetail; readOnly: boo
   const hasStd = org.type_of_rate === "STD+LTD";
   const pd = (org.plan_details ?? {}) as { ltd?: Record<string, string>; std?: Record<string, string> };
   return (
-    <SectionCard title="DI Product & Plan Terms" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+    <SectionCard title="DI Product & Plan Terms" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} drives={["microsite", "premium calculation"]}>
       <div className="mb-5">
         <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Product Mix</div>
         <div className="text-sm text-gray-900 font-medium">
@@ -802,7 +922,7 @@ function MicrositeField({ url, product, editing }: { url: string; product: "DI" 
   );
 }
 
-function CarrierProductSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
+function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; variant?: "info" | "config" | "integration" }) {
   const e = useSectionEdit();
   return (
     <SectionCard
@@ -810,6 +930,7 @@ function CarrierProductSection({ org, product, readOnly }: { org: OrgDetail; pro
       editing={e.editing}
       canEdit={!readOnly}
       onEdit={e.onEdit}
+      variant={variant}
       note="Carrier and product are set during initial onboarding. To change, contact engineering."
     >
       <Grid2>
@@ -865,30 +986,89 @@ function LTCProductConfigSection({ org, readOnly }: { org: OrgDetail; readOnly: 
   );
 }
 
-function CoverageBillingSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function PricingFeesSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
   const e = useSectionEdit();
+  const cca = org.cca_group;
+  const tpa = org.tpa_fee_cents;
+  const retained = org.service_fee_retained_cents;
   return (
-    <SectionCard title="Coverage / Billing" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
-      <Grid2>
-        <RField label="Contribution Type">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
-            : titleCase(org.contribution_type === "buy_up" ? "Buy-Up" : org.contribution_type)}
-        </RField>
-        <RField label="TPA Fee">{e.editing ? <input className={inputCls} defaultValue={String(org.tpa_fee_cents / 100)} /> : `${formatCents(org.tpa_fee_cents)} / mo`}</RField>
-        <RField label="Pay Mode">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.pay_mode}>{PAY_MODES.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.pay_mode}
-        </RField>
-        <RField label="Service Fee Retained">
-          {org.service_fee_retained_cents === null
-            ? <span className="text-black/60 italic">Full retention</span>
-            : (e.editing ? <input className={inputCls} defaultValue={String(org.service_fee_retained_cents / 100)} /> : formatCents(org.service_fee_retained_cents))}
-        </RField>
-        <div />
-        <RField label="TPA Fee Name">{e.editing ? <input className={inputCls} defaultValue={org.tpa_fee_name} /> : org.tpa_fee_name}</RField>
-      </Grid2>
+    <SectionCard
+      title="Pricing & Fees"
+      defaultOpen
+      editing={e.editing}
+      canEdit={!readOnly}
+      onEdit={e.onEdit}
+      drives={["billing", "payment processing"]}
+    >
+      <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Billing Configuration</div>
+          <div className="space-y-4">
+            <RField label="Contribution Type">
+              {e.editing
+                ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
+                : titleCase(org.contribution_type === "buy_up" ? "Buy-Up" : org.contribution_type)}
+            </RField>
+            <RField label="Pay Mode">
+              {e.editing
+                ? <select className={inputCls} defaultValue={org.pay_mode}>{PAY_MODES.map((o) => <option key={o}>{o}</option>)}</select>
+                : org.pay_mode}
+            </RField>
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Fee Schedule</div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+            <RField label="TPA Fee">{e.editing ? <input className={inputCls} defaultValue={String(tpa / 100)} /> : `${formatCents(tpa)} / mo`}</RField>
+            <RField label="TPA Fee Name">{e.editing ? <input className={inputCls} defaultValue={org.tpa_fee_name} /> : org.tpa_fee_name}</RField>
+            <RField label="Service Fee Retained">
+              {retained === null
+                ? <span className="text-black/60 italic">Full retention</span>
+                : (e.editing ? <input className={inputCls} defaultValue={String(retained / 100)} /> : formatCents(retained))}
+            </RField>
+            <RField label="Card Percentage">{e.editing ? <input className={inputCls} defaultValue="3.7" /> : "3.7%"}</RField>
+            <RField label="ACH First Fee">{e.editing ? <input className={inputCls} defaultValue="1.00" /> : "$1.00"}</RField>
+            <RField label="ACH Subsequent Fee">{e.editing ? <input className={inputCls} defaultValue="0.50" /> : "$0.50"}</RField>
+            <RField label="Failed ACH Penalty">{e.editing ? <input className={inputCls} defaultValue="15.00" /> : "$15.00"}</RField>
+            <RField label="Failed Card Penalty Mode">
+              {e.editing
+                ? <select className={inputCls} defaultValue="flat">{["flat","percentage"].map((o) => <option key={o}>{o}</option>)}</select>
+                : "flat"}
+            </RField>
+            <RField label="Failed Card Penalty Value">{e.editing ? <input className={inputCls} defaultValue="10.00" /> : "$10.00"}</RField>
+            <RField label="Free Retry Count">{e.editing ? <input className={inputCls} type="number" defaultValue={2} /> : 2}</RField>
+            <RField label="Effective From">{e.editing ? <input className={inputCls} type="date" defaultValue="2025-01-01" /> : fmtDate("2025-01-01")}</RField>
+            <RField label="Effective To">{e.editing ? <input className={inputCls} type="date" defaultValue="" placeholder="(open-ended)" /> : <span className="text-black/50 italic">(open-ended)</span>}</RField>
+          </div>
+        </div>
+      </div>
+
+      {cca && (
+        <div className="grid grid-cols-2 gap-4 mt-5">
+          <div className="p-3 bg-[#fefaf2] border border-amber-200 rounded">
+            <div className="text-xs font-semibold text-amber-900 mb-2">How CCA fee splitting works</div>
+            <p className="text-xs text-black/70 leading-relaxed mb-2">
+              CCA orgs charge a <b>$20/month</b> membership fee (not the standard $8 TPA fee). Of the $20:
+            </p>
+            <ul className="text-xs text-black/70 list-disc pl-5 space-y-1 mb-2">
+              <li><b>$5.00</b> retained by Hollowtree (<code>service_fee_retained_cents = 500</code>)</li>
+              <li><b>$15.00</b> remitted to CCA</li>
+            </ul>
+            <p className="text-xs text-black/60 italic">
+              This split is for reporting only. The <code>tpa_fee_cents</code> value is what the enrollee is charged regardless.
+            </p>
+          </div>
+          <div className="p-3 bg-white border border-black/10 rounded">
+            <div className="text-xs font-semibold text-black/70 uppercase tracking-wider mb-2">Worked example for this org</div>
+            <div className="text-xs text-black/70 space-y-1">
+              <div>Enrollee charged: <b>{formatCents(tpa)}</b> / mo</div>
+              <div>Retained by Hollowtree: <b>{retained === null ? formatCents(tpa) + " (full)" : formatCents(retained)}</b></div>
+              <div>Remitted to CCA: <b>{retained === null ? formatCents(0) : formatCents(tpa - retained)}</b></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
   );
@@ -944,7 +1124,7 @@ function BrokerSection({ org, product, readOnly }: { org: OrgDetail; product: "D
   }
 
   return (
-    <SectionCard title="Broker" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+    <SectionCard title="Distribution & Broker" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} drives={["commission splits"]}>
       <Grid2>
         <RField label="Primary Broker">
           {e.editing ? <BrokerSelect slot="primary" value={primary} /> : org.primary_broker}
@@ -1001,24 +1181,39 @@ function BrokerSection({ org, product, readOnly }: { org: OrgDetail; product: "D
   );
 }
 
-function SignatorySection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function PeopleSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
   const e = useSectionEdit();
   return (
-    <SectionCard title="Signatory" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
-      <Grid2>
-        <RField label="Name">{e.editing ? <input className={inputCls} defaultValue={org.signatory_name} /> : org.signatory_name}</RField>
-        <RField label="Email">{e.editing ? <input className={inputCls} defaultValue={org.signatory_email} /> : org.signatory_email}</RField>
-        <RField label="Title">{e.editing ? <input className={inputCls} defaultValue={org.signatory_title} /> : org.signatory_title}</RField>
-      </Grid2>
+    <SectionCard title="People" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} drives={["carrier handoff", "operational comms"]}>
+      <div className="mb-4">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Signatory</div>
+        <Grid2>
+          <RField label="Name">{e.editing ? <input className={inputCls} defaultValue={org.signatory_name} /> : org.signatory_name}</RField>
+          <RField label="Email">{e.editing ? <input className={inputCls} defaultValue={org.signatory_email} /> : org.signatory_email}</RField>
+          <RField label="Title">{e.editing ? <input className={inputCls} defaultValue={org.signatory_title} /> : org.signatory_title}</RField>
+        </Grid2>
+      </div>
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Operations</div>
+        <Grid2>
+          <RField label="Ops Contact">
+            {e.editing
+              ? <input className={inputCls} type="email" defaultValue={org.assigned_gmail_person} />
+              : (org.assigned_gmail_person
+                  ? <a href={`mailto:${org.assigned_gmail_person}`} className="text-sky-700 hover:underline">{org.assigned_gmail_person}</a>
+                  : <Empty />)}
+          </RField>
+        </Grid2>
+      </div>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
   );
 }
 
-function LinksRefsSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
+function LinksRefsSection({ org, product, readOnly, variant }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; variant?: "info" | "config" | "integration" }) {
   const e = useSectionEdit();
   return (
-    <SectionCard title="Links & References" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+    <SectionCard title="Links & External References" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} variant={variant}>
       <Grid2>
         <RField label="Google Drive Folder">
           {e.editing ? <input className={inputCls} defaultValue={org.google_drive_folder} /> : <ExtLink href={org.google_drive_folder}>Open folder</ExtLink>}
@@ -1200,9 +1395,9 @@ function EmployerBillingSection({ org, readOnly }: { org: OrgDetail; readOnly: b
   );
 }
 
-function SystemRefsSection({ org, product }: { org: OrgDetail; product: "DI" | "LTC" }) {
+function SystemRefsSection({ org, product, variant }: { org: OrgDetail; product: "DI" | "LTC"; variant?: "info" | "config" | "integration" }) {
   return (
-    <SectionCard title="System References">
+    <SectionCard title="System References" variant={variant}>
       <div className="grid grid-cols-2 gap-x-8 gap-y-2 font-mono text-[11px]">
         <Ref label="Created At" value={org.created_at} />
         <Ref label="Updated At" value={org.updated_at} />
@@ -1234,125 +1429,6 @@ function Ref({ label, value, muted }: { label: string; value: string; muted?: bo
    FEES / WINDOWS / BENEFIT CLASSES / NEW JOINER  (unchanged)
 ============================================================= */
 
-function isCCA(orgId: string) { return orgId === "org_3" || orgId === "org_1" || orgId === "org_7"; }
-
-function FeesTab({ org, readOnly }: { org: typeof ORGS[number]; readOnly: boolean }) {
-  const cca = org.cca_group;
-  const tpa = cca ? 2000 : 800;
-  const retained = cca ? 500 : null;
-  return (
-    <div className="mt-3 grid grid-cols-2 gap-x-8">
-      <Card className="p-4 col-span-1">
-        <SubHead>Fee Schedule</SubHead>
-        <RowLegacy label="TPA Fee"><RO value={formatCents(tpa) + " / mo"} readOnly={readOnly} /></RowLegacy>
-        <RowLegacy label="TPA Fee Name"><RO value={cca ? "CCA Membership Fee" : "Processing Fee"} readOnly={readOnly} /></RowLegacy>
-        <RowLegacy label="Service Fee Retained">{retained === null ? <span className="text-black/60">Full Retention</span> : <RO value={formatCents(retained)} readOnly={readOnly} />}</RowLegacy>
-        <RowLegacy label="Card Percentage"><RO value="3.7%" readOnly={readOnly} /></RowLegacy>
-        <RowLegacy label="ACH First Fee"><RO value="$1.00" readOnly={readOnly} /></RowLegacy>
-        <RowLegacy label="ACH Subsequent Fee"><RO value="$0.50" readOnly={readOnly} /></RowLegacy>
-        <RowLegacy label="Failed ACH Penalty"><RO value="$15.00" readOnly={readOnly} /></RowLegacy>
-        <RowLegacy label="Failed Card Penalty Mode"><SelectLegacy value="flat" options={["flat","percentage"]} readOnly={readOnly} /></RowLegacy>
-        <RowLegacy label="Failed Card Penalty Value"><RO value="$10.00" readOnly={readOnly} /></RowLegacy>
-        <RowLegacy label="Free Retry Count"><RO value={2} readOnly={readOnly} /></RowLegacy>
-        <RowLegacy label="Effective From"><RO value="2025-01-01" readOnly={readOnly} /></RowLegacy>
-        <RowLegacy label="Effective To"><RO value="" readOnly={readOnly} placeholder="(open-ended)" /></RowLegacy>
-      </Card>
-
-      <div className="col-span-1">
-        <Card className="p-4 bg-[#fefaf2] border-amber-200">
-          <div className="text-xs font-semibold text-amber-900 mb-2">How CCA fee splitting works</div>
-          <p className="text-xs text-black/70 leading-relaxed mb-2">
-            CCA orgs charge a <b>$20/month</b> membership fee (not the standard $8 TPA fee). Of the $20:
-          </p>
-          <ul className="text-xs text-black/70 list-disc pl-5 space-y-1 mb-3">
-            <li><b>$5.00</b> retained by Hollowtree (<code>service_fee_retained_cents = 500</code>)</li>
-            <li><b>$15.00</b> remitted to CCA</li>
-          </ul>
-          <p className="text-xs text-black/70 leading-relaxed mb-2">
-            <b>Non-CCA orgs:</b> <code>service_fee_retained_cents = NULL</code> means full retention of the TPA fee.
-          </p>
-          <p className="text-xs text-black/60 italic">
-            This split is for reporting only. The <code>tpa_fee_cents</code> value is what the enrollee is charged regardless.
-          </p>
-        </Card>
-        <Card className="p-4 mt-3">
-          <SubHead>Worked example for this org</SubHead>
-          <div className="text-xs text-black/70 space-y-1">
-            <div>Enrollee charged: <b>{formatCents(tpa)}</b> / mo</div>
-            <div>Retained by Hollowtree: <b>{retained === null ? formatCents(tpa) + " (full)" : formatCents(retained)}</b></div>
-            <div>Remitted to {cca ? "CCA" : "—"}: <b>{retained === null ? formatCents(0) : formatCents(tpa - retained)}</b></div>
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function RowLegacy({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[180px_1fr] items-center gap-3 py-1.5 border-b border-black/5">
-      <div className="text-[11px] uppercase tracking-wider text-black/50">{label}</div>
-      <div className="text-sm">{children}</div>
-    </div>
-  );
-}
-
-function SubHead({ children }: { children: React.ReactNode }) {
-  return <div className="text-[11px] font-semibold uppercase tracking-wider text-black/60 mt-2 mb-2">{children}</div>;
-}
-
-function RO({ value, readOnly, placeholder }: { value?: string | number; readOnly: boolean; placeholder?: string }) {
-  if (readOnly) return <span className="text-black/80">{value || <span className="text-black/30">—</span>}</span>;
-  return <Input defaultValue={value === undefined || value === null ? "" : String(value)} placeholder={placeholder} />;
-}
-
-function SelectLegacy({ value, options, readOnly }: { value: string; options: string[]; readOnly: boolean }) {
-  if (readOnly) return <span className="text-black/80">{value}</span>;
-  return (
-    <select defaultValue={value} className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
-      {options.map((o) => <option key={o} value={o}>{o}</option>)}
-    </select>
-  );
-}
-
-function WindowsTab({ windows, orgName, onNew, onEdit, canEdit, canCreate }: {
-  windows: typeof DUMMY_WINDOWS; orgName: string; onNew: () => void; onEdit: (w: typeof DUMMY_WINDOWS[number]) => void; canEdit: boolean; canCreate: boolean;
-}) {
-  return (
-    <div className="mt-3">
-      <div className="flex justify-end mb-2">
-        <Btn variant="primary" disabled={!canCreate} onClick={onNew}>+ New Window</Btn>
-      </div>
-      <TableShell>
-        <THead cols={["Type", "Sponsor", "Start", "End", "Default Effective", "Status", "GI", "Carrier", "Notes"]} />
-        <tbody>
-          {windows.map((w) => {
-            const isAlwaysOpen = w.window_type === "new_joiner";
-            const sponsor = w.sponsor_type === "affiliate"
-              ? <span><span className="text-black/40">—</span> <span className="text-[11px] text-black/50">(affiliate-sponsored: {w.affiliate})</span></span>
-              : w.affiliate
-                ? <span>{orgName} <span className="text-black/40">+</span> {w.affiliate}</span>
-                : <span>{orgName}</span>;
-            return (
-              <TRow key={w.id} onClick={canEdit ? () => onEdit(w) : undefined}>
-                <TCell className="capitalize font-medium">{w.window_type.replace("_", " ")}</TCell>
-                <TCell>{sponsor}</TCell>
-                <TCell>{isAlwaysOpen ? <span className="text-black/40 italic">Always Open</span> : w.start}</TCell>
-                <TCell>{isAlwaysOpen ? <span className="text-black/40 italic">Always Open</span> : w.end}</TCell>
-                <TCell>{w.effective}</TCell>
-                <TCell><Pill tone={w.status === "open" ? "ok" : w.status === "upcoming" ? "info" : "bad"}>{w.status}</Pill></TCell>
-                <TCell>{w.gi_eligible ? <Pill tone="ok">GI</Pill> : <span className="text-black/30">—</span>}</TCell>
-                <TCell>{w.carrier}</TCell>
-                <TCell className="text-black/60">{w.notes}</TCell>
-              </TRow>
-            );
-          })}
-          {windows.length === 0 ? <TRow><TCell className="text-black/40">No enrollment windows.</TCell></TRow> : null}
-        </tbody>
-      </TableShell>
-    </div>
-  );
-}
 
 function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
   classes: typeof BENEFIT_CLASSES; onNew: () => void; onEdit: (c: typeof BENEFIT_CLASSES[number]) => void; canEdit: boolean; canCreate: boolean;
@@ -1390,31 +1466,3 @@ function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
   );
 }
 
-function NewJoinerTab({ readOnly }: { readOnly: boolean }) {
-  const [period, setPeriod] = useState(30);
-  const [waiting, setWaiting] = useState(90);
-  const [rule, setRule] = useState("first_of_next_month");
-  return (
-    <div className="mt-3 max-w-2xl">
-      <Card className="p-4">
-        <div className="grid grid-cols-[220px_1fr] gap-3 items-center">
-          <div className="text-xs uppercase tracking-wider text-black/60">Enrollment Period (days)</div>
-          <input type="number" defaultValue={period} disabled={readOnly} onChange={(e) => setPeriod(Number(e.target.value))} className="w-32 px-2 py-1 text-sm border border-black/15 rounded" />
-          <div className="text-xs uppercase tracking-wider text-black/60">Waiting Period (days)</div>
-          <input type="number" defaultValue={waiting} disabled={readOnly} onChange={(e) => setWaiting(Number(e.target.value))} className="w-32 px-2 py-1 text-sm border border-black/15 rounded" />
-          <div className="text-xs uppercase tracking-wider text-black/60">Effective Date Rule</div>
-          <select defaultValue={rule} disabled={readOnly} onChange={(e) => setRule(e.target.value)} className="w-64 px-2 py-1 text-sm border border-black/15 rounded bg-white">
-            <option value="first_of_next_month">first_of_next_month</option>
-            <option value="hire_date">hire_date</option>
-            <option value="first_of_month_after_waiting">first_of_month_after_waiting</option>
-          </select>
-        </div>
-      </Card>
-      <Card className="p-3 mt-3 bg-[#f7f3eb] border-black/10">
-        <div className="text-xs text-black/70">
-          New hires get <b>{period}</b> days to enroll after completing a <b>{waiting}</b> day waiting period. Coverage effective date follows the <b>{rule}</b> rule.
-        </div>
-      </Card>
-    </div>
-  );
-}
