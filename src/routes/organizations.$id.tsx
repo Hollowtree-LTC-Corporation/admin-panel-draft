@@ -518,13 +518,14 @@ function ConfigTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; produc
     <div className="mt-3 space-y-4">
       <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} />
       {product === "DI"
-        ? <DISettingsSection org={org} readOnly={readOnly} />
+        ? <DIProductPlanSection org={org} readOnly={readOnly} />
         : <LTCProductConfigSection org={org} readOnly={readOnly} />}
+      <CarrierProductSection org={org} product={product} readOnly={readOnly} />
       <CoverageBillingSection org={org} readOnly={readOnly} />
-      <BrokerSection org={org} readOnly={readOnly} />
+      <BrokerSection org={org} product={product} readOnly={readOnly} />
       <SignatorySection org={org} readOnly={readOnly} />
       <LinksRefsSection org={org} product={product} readOnly={readOnly} />
-      <PlanDetailsSection org={org} product={product} readOnly={readOnly} />
+      {product === "LTC" && <PlanDetailsSection org={org} product={product} readOnly={readOnly} />}
       {product === "LTC" && <CarrierOperationalSection org={org} readOnly={readOnly} />}
       {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
       <SystemRefsSection org={org} product={product} />
