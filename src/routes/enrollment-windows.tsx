@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, TableShell, TRow, TCell, Pill, Btn, Drawer, Field, Input } from "@/components/wireframe/Bits";
 import {
@@ -13,6 +13,7 @@ import {
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
+import { AffiliateLogo } from "@/routes/affiliates";
 
 export const Route = createFileRoute("/enrollment-windows")({ component: View });
 
