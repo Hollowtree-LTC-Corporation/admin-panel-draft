@@ -180,7 +180,7 @@ function IndividualsView() {
             { key: "coverage_status", label: "Coverage Status" },
             { key: "stage", label: "Stage" },
             { key: "plan", label: "Coverage Plan" },
-            ...(isLTC ? [{ key: "employee_face_amount_cents" as SortKey, label: "Face Amount" }, { key: null, label: "Riders" }] : []),
+            ...(isLTC ? [{ key: "face_amount_cents" as SortKey, label: "Face Amount" }, { key: null, label: "Riders" }] : []),
             { key: "effective_date", label: "Effective Date" },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
             { key: "last_payment_status", label: "Payment" },
