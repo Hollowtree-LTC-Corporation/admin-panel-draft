@@ -21,7 +21,7 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/policies")({ component: View });
 
-type SortKey = "id" | "org_name" | "carrier_product_name" | "status" | "carrier_commission_pct" | "override_pct" | "schedule_name" | "initial_effective_date";
+type SortKey = "id" | "policy_name" | "org_name" | "carrier_product_name" | "status" | "carrier_commission_pct" | "override_pct" | "schedule_name" | "initial_effective_date";
 
 const carrierProductLabel = (cpId: string) => {
   const cp = CARRIER_PRODUCTS.find((c) => c.id === cpId);
