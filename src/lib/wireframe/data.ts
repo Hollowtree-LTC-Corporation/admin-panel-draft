@@ -247,11 +247,37 @@ export const COMMISSION_RATE_TIERS = [
   { id: "crt_7", schedule_id: "ccs_3", year_from: 2, year_to: 5, pct: 5 },
 ];
 
-export const ENROLLMENT_WINDOWS = [
-  { id: "ew_1", org_id: "org_1", org_name: "Acme Widgets Co", window_type: "initial", start_date: "2025-01-01", end_date: "2025-01-31", status: "closed", sponsor_type: "employer", carrier: "Northstar Mutual", affiliate_org: null },
-  { id: "ew_2", org_id: "org_1", org_name: "Acme Widgets Co", window_type: "annual", start_date: "2025-09-01", end_date: "2025-09-30", status: "upcoming", sponsor_type: "employer", carrier: "Northstar Mutual", affiliate_org: null },
-  { id: "ew_3", org_id: "org_3", org_name: "Coastal Credit Union", window_type: "annual", start_date: "2025-08-01", end_date: "2025-08-31", status: "open", sponsor_type: "employer+affiliate", carrier: "Heritage LTC Group", affiliate_org: "CCU Member Foundation" },
-  { id: "ew_4", org_id: "org_6", org_name: "Foxtail Education Trust", window_type: "special", start_date: "2025-07-15", end_date: "2025-08-15", status: "open", sponsor_type: "affiliate", carrier: "Sequoia Care Partners", affiliate_org: "Foxtail Alumni Assoc" },
+export const AFFILIATE_ORGANIZATIONS = [
+  { id: "aff_1", name: "CCU Member Foundation" },
+  { id: "aff_2", name: "Foxtail Alumni Assoc" },
+  { id: "aff_3", name: "CCA" },
+  { id: "aff_4", name: "TeamHealth Affiliate Trust" },
+];
+
+export type EnrollmentWindow = {
+  id: string;
+  org_id: string | null;
+  org_name: string | null;
+  affiliate_org_id: string | null;
+  affiliate_org: string | null;
+  window_type: "initial" | "annual" | "new_joiner" | "special";
+  start_date: string | null;
+  end_date: string | null;
+  default_effective_date: string | null;
+  status: "upcoming" | "open" | "closed";
+  sponsor_type: "employer" | "employer+affiliate" | "affiliate";
+  carrier: string;
+  gi_eligible: boolean;
+  notes: string;
+  channel_partners: Array<{ id: string; channel_partner_id: string; role: string }>;
+};
+
+export const ENROLLMENT_WINDOWS: EnrollmentWindow[] = [
+  { id: "ew_1", org_id: "org_1", org_name: "Acme Widgets Co", affiliate_org_id: null, affiliate_org: null, window_type: "initial", start_date: "2025-01-01", end_date: "2025-01-31", default_effective_date: "2025-02-01", status: "closed", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "", channel_partners: [] },
+  { id: "ew_2", org_id: "org_1", org_name: "Acme Widgets Co", affiliate_org_id: null, affiliate_org: null, window_type: "annual", start_date: "2025-09-01", end_date: "2025-09-30", default_effective_date: "2025-10-01", status: "upcoming", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "", channel_partners: [] },
+  { id: "ew_3", org_id: "org_3", org_name: "Coastal Credit Union", affiliate_org_id: "aff_1", affiliate_org: "CCU Member Foundation", window_type: "annual", start_date: "2025-08-01", end_date: "2025-08-31", default_effective_date: "2025-09-01", status: "open", sponsor_type: "employer+affiliate", carrier: "Heritage LTC Group", gi_eligible: true, notes: "", channel_partners: [{ id: "ewcp_1", channel_partner_id: "cpn_1", role: "primary" }] },
+  { id: "ew_4", org_id: null, org_name: null, affiliate_org_id: "aff_2", affiliate_org: "Foxtail Alumni Assoc", window_type: "special", start_date: "2025-07-15", end_date: "2025-08-15", default_effective_date: null, status: "open", sponsor_type: "affiliate", carrier: "Sequoia Care Partners", gi_eligible: false, notes: "", channel_partners: [] },
+  { id: "ew_5", org_id: "org_1", org_name: "Acme Widgets Co", affiliate_org_id: null, affiliate_org: null, window_type: "new_joiner", start_date: null, end_date: null, default_effective_date: null, status: "open", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "Always open. Per-individual deadlines computed from hire date.", channel_partners: [] },
 ];
 
 export const MAGIC_TOKENS = [
