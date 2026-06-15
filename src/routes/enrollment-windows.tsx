@@ -76,7 +76,14 @@ function toDraft(w: EnrollmentWindow): Draft {
 
 function View() {
   const can = usePermission();
-  const { product } = useStore();
+  const { product, affiliates, setAffiliates } = useStore();
+  const activeAffiliates = useMemo(() => affiliates.filter((a) => !a.deleted_at), [affiliates]);
+  const addAffiliate = (a: AffiliateOrganization): string => {
+    const id = `aff_${Date.now()}`;
+    const rec: AffiliateOrganization = { ...a, id };
+    setAffiliates((prev) => [...prev, rec]);
+    return id;
+  };
   const [search, setSearch] = useState("");
   const [org, setOrg] = useState("all");
   const [wtype, setWtype] = useState("all");
@@ -117,7 +124,7 @@ function View() {
 
   const saveDraft = () => {
     const orgRec = draft.org_id ? ORGS.find((o) => o.id === draft.org_id) ?? null : null;
-    const affRec = draft.affiliate_org_id ? AFFILIATE_ORGANIZATIONS.find((a) => a.id === draft.affiliate_org_id) ?? null : null;
+    const affRec = draft.affiliate_org_id ? affiliates.find((a) => a.id === draft.affiliate_org_id) ?? null : null;
     const isNewJoiner = draft.window_type === "new_joiner";
     const next: EnrollmentWindow = {
       id: draft.id ?? `ew_${Date.now()}`,
