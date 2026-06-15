@@ -211,10 +211,12 @@ type DraftSplit = PolicySplit & { _isNew?: boolean };
 function emptyPolicy(product: "DI" | "LTC"): Policy {
   const id = `pol_${Math.floor(Math.random() * 9000) + 1000}`;
   return {
-    id, org_id: "", org_name: "", carrier_product_id: "",
+    id, policy_name: "", org_id: "", org_name: "", carrier_product_id: "",
     product, status: "pending",
+    policy_owner_type: "employer_group",
     carrier_commission_pct: product === "DI" ? 12 : null,
     override_pct: null,
+    channel_partner_id: null,
     commission_schedule_id: null,
     initial_effective_date: "",
     attio_last_synced_at: null,
