@@ -321,21 +321,45 @@ function OrgDetail() {
       />
 
       {/* Summary header */}
-      <div className="grid grid-cols-6 gap-2 mb-4">
-        <SummaryChip label="Active Enrollees" value={activeEnrollees} hint={`filter: org=${id} · active`} onClick={() => navigate({ to: "/individuals", search: { org: id, coverage: "active" } })} />
-        <SummaryChip label="Total Enrollees" value={totalEnrollees} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/individuals", search: { org: id } })} />
-        <SummaryChip label="Policies" value={policies} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/policies" })} />
-        <SummaryChip label="Collected This Cycle" value={formatCents(collectedCents)} hint={`${currentCycle} · org=${id}`} onClick={() => navigate({ to: "/payment-ledger" })} />
-        <SummaryChip label="Outstanding" value={formatCents(outstandingCents)} tone={outstandingCents > 0 ? "bad" : undefined} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/enrollee-balance" })} />
+      <div className="grid grid-cols-5 gap-2 mb-4">
         <SummaryChip
-          label="Open Windows"
-          value={openWindows}
-          sub={openWindows > 0 && nextOpenEnd ? (
-            <span className={daysToClose !== null && daysToClose <= 14 ? "text-amber-700" : "text-black/50"}>
-              Window closes {fmtDate(nextOpenEnd)}
-            </span>
-          ) : undefined}
+          label="Current Monthly Premium"
+          value={formatCents(totalMonthlyPremiumCents)}
+          sub={<span className="text-black/50">across {activeEnrollees} active enrollees</span>}
         />
+        <SummaryChip
+          label="Net HT Commission"
+          value={formatCents(netHtCommissionCents)}
+          sub={<span className="text-black/40 italic">(formula pending)</span>}
+        />
+        <SummaryChip
+          label="Enrolled Lives"
+          value={enrolledLives}
+          sub={<span className="text-black/50">of {org.eligible_lives} eligible</span>}
+          onClick={() => navigate({ to: "/individuals", search: { org: id } })}
+          hint={`filter: org=${id}`}
+        />
+        {nextOpenEnd ? (
+          <SummaryChip
+            label="Next Enrollment Window"
+            value={fmtDate(nextOpenEnd)}
+            tone={daysToClose !== null && daysToClose <= 14 ? "warn" : undefined}
+            sub={<span className={daysToClose !== null && daysToClose <= 14 ? "text-amber-700" : "text-black/50"}>Currently open</span>}
+          />
+        ) : nextUpcomingStart ? (
+          <SummaryChip
+            label="Next Enrollment Window"
+            value={fmtDate(nextUpcomingStart)}
+            sub={<span className="text-black/50">Opens</span>}
+          />
+        ) : (
+          <SummaryChip
+            label="Next Enrollment Window"
+            value="—"
+            sub={<span className="text-black/40 italic">None scheduled</span>}
+          />
+        )}
+        <AttioDealCard dealId={org.attio_deal_id} />
       </div>
 
       <Tabs defaultValue="config" className="w-full">
