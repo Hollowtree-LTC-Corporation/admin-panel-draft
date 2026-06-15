@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TokensRouteImport } from './routes/tokens'
+import { Route as AffiliatesRouteImport } from './routes/affiliates'
 import { Route as RateConfigRouteImport } from './routes/rate-config'
 import { Route as RateCellsRouteImport } from './routes/rate-cells'
 import { Route as PoliciesRouteImport } from './routes/policies'
@@ -22,6 +23,7 @@ import { Route as CommissionRouteImport } from './routes/commission'
 import { Route as CarriersRouteImport } from './routes/carriers'
 import { Route as BillingGroupsRouteImport } from './routes/billing-groups'
 import { Route as AuditRouteImport } from './routes/audit'
+import { Route as AffiliatesRouteImport } from './routes/affiliates'
 import { Route as AccountAdjustmentsRouteImport } from './routes/account-adjustments'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrganizationsIndexRouteImport } from './routes/organizations.index'
@@ -32,6 +34,11 @@ import { Route as IndividualsIdRouteImport } from './routes/individuals.$id'
 const TokensRoute = TokensRouteImport.update({
   id: '/tokens',
   path: '/tokens',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AffiliatesRoute = AffiliatesRouteImport.update({
+  id: '/affiliates',
+  path: '/affiliates',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RateConfigRoute = RateConfigRouteImport.update({
@@ -94,6 +101,11 @@ const AuditRoute = AuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AffiliatesRoute = AffiliatesRouteImport.update({
+  id: '/affiliates',
+  path: '/affiliates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountAdjustmentsRoute = AccountAdjustmentsRouteImport.update({
   id: '/account-adjustments',
   path: '/account-adjustments',
@@ -128,6 +140,7 @@ const IndividualsIdRoute = IndividualsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account-adjustments': typeof AccountAdjustmentsRoute
+  '/affiliates': typeof AffiliatesRoute
   '/audit': typeof AuditRoute
   '/billing-groups': typeof BillingGroupsRoute
   '/carriers': typeof CarriersRoute
@@ -149,6 +162,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account-adjustments': typeof AccountAdjustmentsRoute
+  '/affiliates': typeof AffiliatesRoute
   '/audit': typeof AuditRoute
   '/billing-groups': typeof BillingGroupsRoute
   '/carriers': typeof CarriersRoute
@@ -171,6 +185,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account-adjustments': typeof AccountAdjustmentsRoute
+  '/affiliates': typeof AffiliatesRoute
   '/audit': typeof AuditRoute
   '/billing-groups': typeof BillingGroupsRoute
   '/carriers': typeof CarriersRoute
@@ -194,6 +209,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account-adjustments'
+    | '/affiliates'
     | '/audit'
     | '/billing-groups'
     | '/carriers'
@@ -215,6 +231,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account-adjustments'
+    | '/affiliates'
     | '/audit'
     | '/billing-groups'
     | '/carriers'
@@ -236,6 +253,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/account-adjustments'
+    | '/affiliates'
     | '/audit'
     | '/billing-groups'
     | '/carriers'
@@ -258,6 +276,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountAdjustmentsRoute: typeof AccountAdjustmentsRoute
+  AffiliatesRoute: typeof AffiliatesRoute
   AuditRoute: typeof AuditRoute
   BillingGroupsRoute: typeof BillingGroupsRoute
   CarriersRoute: typeof CarriersRoute
@@ -370,6 +389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/affiliates': {
+      id: '/affiliates'
+      path: '/affiliates'
+      fullPath: '/affiliates'
+      preLoaderRoute: typeof AffiliatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account-adjustments': {
       id: '/account-adjustments'
       path: '/account-adjustments'
@@ -418,6 +444,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountAdjustmentsRoute: AccountAdjustmentsRoute,
+  AffiliatesRoute: AffiliatesRoute,
   AuditRoute: AuditRoute,
   BillingGroupsRoute: BillingGroupsRoute,
   CarriersRoute: CarriersRoute,
