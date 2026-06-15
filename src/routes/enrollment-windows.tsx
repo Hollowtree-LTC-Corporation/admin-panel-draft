@@ -424,7 +424,7 @@ function WindowForm({
               onChange={(e) => update("carrier", e.target.value)}
               className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
             >
-              {CARRIERS.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+              {CARRIERS.map((c) => <option key={c.id} value={c.carrier_name}>{c.carrier_name}</option>)}
             </select>
           </Field>
 
