@@ -50,6 +50,30 @@ function Badge({ map, value }: { map: typeof COVERAGE_BADGE; value: string }) {
   return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${m.cls}`}>{m.label}</span>;
 }
 
+const LANGUAGE_OPTIONS: Array<{ code: string; label: string }> = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Spanish" },
+  { code: "zh", label: "Chinese" },
+];
+function languageLabel(code: string | null | undefined): string {
+  if (!code) return "—";
+  return LANGUAGE_OPTIONS.find((l) => l.code === code)?.label ?? code;
+}
+
+function IssueTypeBadge({ value }: { value: string | null | undefined }) {
+  if (!value) return <span className="text-black/40">—</span>;
+  const isGI = value === "GI";
+  const cls = isGI
+    ? "bg-emerald-100 text-emerald-800"
+    : "bg-sky-100 text-sky-800";
+  const tooltip = isGI
+    ? "Guaranteed Issue: base coverage, no medical questions."
+    : "Simplified Issue: buy-up coverage with medical underwriting.";
+  return (
+    <span title={tooltip} className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>{value}</span>
+  );
+}
+
 function paymentBadge(status: string | null | undefined, retry: number) {
   if (!status) return <span className="text-black/40">—</span>;
   const s = status.toLowerCase();
