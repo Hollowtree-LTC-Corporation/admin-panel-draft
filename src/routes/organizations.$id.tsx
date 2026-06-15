@@ -224,6 +224,25 @@ function synthesize(org: typeof ORGS[number]) {
     tpa_fee_cents: cca ? 2000 : 800,
     service_fee_retained_cents: cca ? 500 : null,
     tpa_fee_name: cca ? "CCA Membership Fee" : "Processing Fee",
+    // Versioned TPA fee schedules (DI v12 / LTC v3.12)
+    fee_schedules: (cca
+      ? [
+          { id: `fs_${org.id}_1`, effective_from: "2024-01-01", effective_to: "2024-12-31", tpa_fee_cents: 1500, tpa_fee_name: "CCA Membership Fee", service_fee_retained_cents: 400, notes: "Initial pricing per launch agreement" },
+          { id: `fs_${org.id}_2`, effective_from: "2025-01-01", effective_to: "2025-12-31", tpa_fee_cents: 1800, tpa_fee_name: "CCA Membership Fee", service_fee_retained_cents: 500, notes: "Year-2 increase per CCA agreement section 4.2" },
+          { id: `fs_${org.id}_3`, effective_from: "2026-01-01", effective_to: null as string | null, tpa_fee_cents: 2000, tpa_fee_name: "CCA Membership Fee", service_fee_retained_cents: 500, notes: "Year-3 increase per CCA agreement section 4.2" },
+        ]
+      : [
+          { id: `fs_${org.id}_1`, effective_from: "2025-01-01", effective_to: null as string | null, tpa_fee_cents: 800, tpa_fee_name: "Processing Fee", service_fee_retained_cents: null as number | null, notes: "Standard platform pricing" },
+        ]) as FeeSchedule[],
+    // Payment processing & retry config (platform defaults, non-versioned)
+    card_percentage_bps: 370,
+    ach_first_fee_cents: 100,
+    ach_subsequent_fee_cents: 50,
+    failed_ach_penalty_cents: 1500,
+    failed_card_penalty_mode: "flat" as "flat" | "percentage",
+    failed_card_penalty_value_cents: 1000 as number | null,
+    failed_card_penalty_pct_bps: null as number | null,
+    free_retry_count: 2,
     // Broker
     primary_broker: "Westfield Brokers",
     primary_override_pct: null as number | null,
