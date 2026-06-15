@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ORGS, BENEFIT_CLASSES, INDIVIDUALS, CARRIERS, CARRIER_PRODUCTS,
   COMMISSION_SPLIT_DEFAULTS, formatCents,
+  DI_RATE_CONFIG, LTC_RATE_CELLS, type DIRateRow, type LTCRateCell,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { ChevronLeft, ChevronDown, ChevronRight, Pencil, ExternalLink, Mail, Phone, Star, Plus, Trash2 } from "lucide-react";
@@ -465,6 +466,7 @@ function OrgDetail() {
           <TabsTrigger value="setup">Setup</TabsTrigger>
           <TabsTrigger value="lifecycle">Enrollment Lifecycle</TabsTrigger>
           {product === "LTC" ? <TabsTrigger value="bc">Benefit Classes</TabsTrigger> : null}
+          {product === "DI" ? <TabsTrigger value="rates">Rates</TabsTrigger> : null}
         </TabsList>
 
         <TabsContent value="setup">
@@ -490,6 +492,11 @@ function OrgDetail() {
               canEdit={can("benefit_classes", "update")}
               canCreate={can("benefit_classes", "create")}
             />
+          </TabsContent>
+        ) : null}
+        {product === "DI" ? (
+          <TabsContent value="rates">
+            <DIRatesTab orgId={id} canEdit={can("rate_config", "update")} canCreate={can("rate_config", "create")} />
           </TabsContent>
         ) : null}
       </Tabs>
