@@ -1696,32 +1696,281 @@ function BrokerSection({ org, product, readOnly }: { org: OrgDetail; product: "D
   );
 }
 
-function PeopleSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
-  const e = useSectionEdit();
+// ---------- Contacts (organization_contacts) ----------
+type ContactRole = "signatory" | "hr_contact" | "billing_contact" | "ops_contact" | "primary_contact";
+type OrgContact = {
+  id: string;
+  role: ContactRole;
+  name: string;
+  title: string | null;
+  email: string | null;
+  phone: string | null;
+  is_primary: boolean;
+};
+
+const CONTACT_ROLES: ContactRole[] = ["signatory", "hr_contact", "billing_contact", "ops_contact", "primary_contact"];
+const ROLE_LABEL: Record<ContactRole, string> = {
+  signatory: "Signatory",
+  hr_contact: "HR",
+  billing_contact: "Billing",
+  ops_contact: "Ops",
+  primary_contact: "Primary",
+};
+// Muted, distinct pill colors per role
+const ROLE_PILL: Record<ContactRole, string> = {
+  signatory:       "bg-amber-50 text-amber-800 border border-amber-200",
+  hr_contact:      "bg-sky-50 text-sky-800 border border-sky-200",
+  billing_contact: "bg-emerald-50 text-emerald-800 border border-emerald-200",
+  ops_contact:     "bg-violet-50 text-violet-800 border border-violet-200",
+  primary_contact: "bg-stone-100 text-stone-700 border border-stone-300",
+};
+
+function buildDummyContacts(orgId: string, slug: string, idx: number): OrgContact[] {
+  const signatoryNames = [
+    ["Sarah Chen", "VP Benefits"],
+    ["Marcus Holloway", "CFO"],
+    ["Priya Ramanathan", "VP HR"],
+    ["David Okafor", "Chief People Officer"],
+    ["Elena Vasquez", "Director of Benefits"],
+    ["James Whitfield", "CFO"],
+    ["Aisha Brooks", "VP Total Rewards"],
+    ["Noah Kimura", "Head of People Ops"],
+  ];
+  const opsNames = [
+    ["Jordan Reyes", "555-0142"],
+    ["Taylor Singh", "555-0188"],
+    ["Riley Nakamura", "555-0231"],
+    ["Casey Lindgren", "555-0177"],
+  ];
+  const hrNames = [
+    ["Morgan Ellis", "HR Director"],
+    ["Jamie Park", "Sr. HR Business Partner"],
+  ];
+  const [sigName, sigTitle] = signatoryNames[idx % signatoryNames.length];
+  const [opsName, opsPhone] = opsNames[idx % opsNames.length];
+  const sameAsSignatory = idx % 3 === 0; // some orgs: signatory is also primary
+  const sigEmail = `${sigName.toLowerCase().replace(/[^a-z]/g, ".")}@${slug}.example.com`;
+  const opsEmail = `${opsName.toLowerCase().replace(/[^a-z]/g, ".")}@${slug}.example.com`;
+  const out: OrgContact[] = [
+    { id: `oc_${orgId}_1`, role: "signatory", name: sigName, title: sigTitle, email: sigEmail, phone: null, is_primary: sameAsSignatory },
+    { id: `oc_${orgId}_2`, role: "ops_contact", name: opsName, title: null, email: opsEmail, phone: opsPhone, is_primary: false },
+  ];
+  if (!sameAsSignatory) {
+    const primaryName = "Alex Donovan";
+    out.push({
+      id: `oc_${orgId}_3`,
+      role: "primary_contact",
+      name: primaryName,
+      title: "Benefits Program Manager",
+      email: `alex.donovan@${slug}.example.com`,
+      phone: "555-0119",
+      is_primary: true,
+    });
+  }
+  // Larger orgs get an HR contact
+  if (idx % 2 === 0) {
+    const [hrName, hrTitle] = hrNames[idx % hrNames.length];
+    out.push({
+      id: `oc_${orgId}_4`,
+      role: "hr_contact",
+      name: hrName,
+      title: hrTitle,
+      email: `${hrName.toLowerCase().replace(/[^a-z]/g, ".")}@${slug}.example.com`,
+      phone: null,
+      is_primary: false,
+    });
+  }
+  return out;
+}
+
+type ContactDraft = Omit<OrgContact, "id"> & { id?: string };
+
+function ContactsSection({ org, readOnly, variant }: { org: OrgDetail; readOnly: boolean; variant?: "info" | "config" | "integration" }) {
+  const [contacts, setContacts] = useState<OrgContact[]>(org.contacts);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ContactDraft | null>(null);
+  const [adding, setAdding] = useState(false);
+
+  const startAdd = () => {
+    setEditingId(null);
+    setAdding(true);
+    setDraft({
+      role: contacts.length === 0 ? "primary_contact" : ("" as unknown as ContactRole),
+      name: "",
+      title: "",
+      email: "",
+      phone: "",
+      is_primary: contacts.length === 0,
+    });
+  };
+  const startEdit = (c: OrgContact) => {
+    setAdding(false);
+    setEditingId(c.id);
+    setDraft({ ...c });
+  };
+  const cancel = () => { setDraft(null); setEditingId(null); setAdding(false); };
+  const save = () => {
+    if (!draft) return;
+    if (!draft.role || !draft.name.trim()) return;
+    let next = [...contacts];
+    if (draft.is_primary) next = next.map((c) => ({ ...c, is_primary: false }));
+    if (adding) {
+      next.push({
+        id: `oc_${org.id}_${Date.now()}`,
+        role: draft.role,
+        name: draft.name.trim(),
+        title: draft.title?.trim() || null,
+        email: draft.email?.trim() || null,
+        phone: draft.phone?.trim() || null,
+        is_primary: draft.is_primary,
+      });
+    } else if (editingId) {
+      next = next.map((c) => c.id === editingId ? {
+        ...c,
+        role: draft.role,
+        name: draft.name.trim(),
+        title: draft.title?.trim() || null,
+        email: draft.email?.trim() || null,
+        phone: draft.phone?.trim() || null,
+        is_primary: draft.is_primary,
+      } : c);
+    }
+    setContacts(next);
+    cancel();
+  };
+  const remove = (c: OrgContact) => {
+    if (!window.confirm(`Remove ${c.name} (${ROLE_LABEL[c.role]}) from contacts?`)) return;
+    setContacts(contacts.filter((x) => x.id !== c.id));
+  };
+
+  const addAction = !readOnly && !adding && !editingId ? (
+    <button
+      onClick={startAdd}
+      className="inline-flex items-center gap-1 text-xs font-medium text-[#0a3d3e] hover:text-[#0a3d3e]/80 px-2 py-1 rounded border border-[#0a3d3e]/20 hover:bg-[#0a3d3e]/5"
+    >
+      <Plus className="h-3 w-3" /> Add Contact
+    </button>
+  ) : null;
+
   return (
-    <SectionCard title="People" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} drives={["carrier handoff", "operational comms"]}>
-      <div className="mb-4">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Signatory</div>
-        <Grid2>
-          <RField label="Name">{e.editing ? <input className={inputCls} defaultValue={org.signatory_name} /> : org.signatory_name}</RField>
-          <RField label="Email">{e.editing ? <input className={inputCls} defaultValue={org.signatory_email} /> : org.signatory_email}</RField>
-          <RField label="Title">{e.editing ? <input className={inputCls} defaultValue={org.signatory_title} /> : org.signatory_title}</RField>
-        </Grid2>
-      </div>
-      <div>
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Operations</div>
-        <Grid2>
-          <RField label="Ops Contact">
-            {e.editing
-              ? <input className={inputCls} type="email" defaultValue={org.assigned_gmail_person} />
-              : (org.assigned_gmail_person
-                  ? <a href={`mailto:${org.assigned_gmail_person}`} className="text-sky-700 hover:underline">{org.assigned_gmail_person}</a>
-                  : <Empty />)}
-          </RField>
-        </Grid2>
-      </div>
-      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    <SectionCard title="Contacts" canEdit={false} variant={variant} headerExtra={addAction}>
+      {contacts.length === 0 && !adding && (
+        <div className="py-6 text-center">
+          <div className="text-sm text-stone-500 mb-3">No contacts added. Add the first contact for this organization.</div>
+          {!readOnly && (
+            <button onClick={startAdd} className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-[#0a3d3e] hover:bg-[#0a3d3e]/90 px-3 py-1.5 rounded">
+              <Plus className="h-3.5 w-3.5" /> Add Contact
+            </button>
+          )}
+        </div>
+      )}
+
+      {contacts.length > 0 && (
+        <ul className="divide-y divide-black/5">
+          {contacts.map((c) => (
+            <li key={c.id}>
+              {editingId === c.id && draft
+                ? <ContactEditRow draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} />
+                : (
+                  <div className="flex items-center gap-3 py-2.5">
+                    <span className={`text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full ${ROLE_PILL[c.role]} shrink-0 w-[68px] text-center`}>
+                      {ROLE_LABEL[c.role]}
+                    </span>
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span className="text-sm font-medium text-gray-900 truncate">{c.name}</span>
+                      {c.is_primary && <Star className="h-3 w-3 text-amber-500 fill-amber-400 shrink-0" />}
+                      {c.title && <span className="text-xs text-stone-500 truncate">· {c.title}</span>}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {c.email
+                        ? <a href={`mailto:${c.email}`} title={c.email} className="p-1.5 text-stone-500 hover:text-[#0a3d3e]"><Mail className="h-3.5 w-3.5" /></a>
+                        : <span className="p-1.5 text-stone-300"><Mail className="h-3.5 w-3.5" /></span>}
+                      {c.phone
+                        ? <a href={`tel:${c.phone}`} title={c.phone} className="p-1.5 text-stone-500 hover:text-[#0a3d3e]"><Phone className="h-3.5 w-3.5" /></a>
+                        : <span className="p-1.5 text-stone-300"><Phone className="h-3.5 w-3.5" /></span>}
+                      {!readOnly && (
+                        <>
+                          <button onClick={() => startEdit(c)} className="p-1.5 text-stone-500 hover:text-[#0a3d3e]" title="Edit">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={() => remove(c)} className="p-1.5 text-stone-500 hover:text-red-600" title="Delete">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {adding && draft && (
+        <div className={contacts.length > 0 ? "border-t border-black/10 mt-2 pt-3" : ""}>
+          <ContactEditRow draft={draft} setDraft={setDraft} onSave={save} onCancel={cancel} isNew />
+        </div>
+      )}
     </SectionCard>
+  );
+}
+
+function ContactEditRow({
+  draft, setDraft, onSave, onCancel, isNew,
+}: {
+  draft: ContactDraft;
+  setDraft: (d: ContactDraft) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  isNew?: boolean;
+}) {
+  const canSave = !!draft.role && draft.name.trim().length > 0;
+  return (
+    <div className="py-3 bg-blue-50/40 -mx-2 px-2 rounded">
+      <div className="grid grid-cols-12 gap-2 items-end">
+        <div className="col-span-3">
+          <label className="block text-[10px] uppercase tracking-wider text-stone-500 mb-1">Role</label>
+          <select
+            className={inputCls}
+            value={draft.role || ""}
+            onChange={(e) => setDraft({ ...draft, role: e.target.value as ContactRole })}
+          >
+            <option value="" disabled>Select…</option>
+            {CONTACT_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+          </select>
+        </div>
+        <div className="col-span-3">
+          <label className="block text-[10px] uppercase tracking-wider text-stone-500 mb-1">Name *</label>
+          <input className={inputCls} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+        </div>
+        <div className="col-span-3">
+          <label className="block text-[10px] uppercase tracking-wider text-stone-500 mb-1">Title</label>
+          <input className={inputCls} value={draft.title ?? ""} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+        </div>
+        <div className="col-span-3 flex items-center gap-2 pb-1.5">
+          <input
+            id={`primary-${draft.id ?? "new"}`}
+            type="checkbox"
+            checked={draft.is_primary}
+            onChange={(e) => setDraft({ ...draft, is_primary: e.target.checked })}
+            className="h-3.5 w-3.5"
+          />
+          <label htmlFor={`primary-${draft.id ?? "new"}`} className="text-xs text-stone-600">Primary contact</label>
+        </div>
+        <div className="col-span-6">
+          <label className="block text-[10px] uppercase tracking-wider text-stone-500 mb-1">Email</label>
+          <input type="email" className={inputCls} value={draft.email ?? ""} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
+        </div>
+        <div className="col-span-6">
+          <label className="block text-[10px] uppercase tracking-wider text-stone-500 mb-1">Phone</label>
+          <input type="tel" className={inputCls} value={draft.phone ?? ""} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} />
+        </div>
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <Btn onClick={onCancel}>Cancel</Btn>
+        <Btn variant="primary" onClick={canSave ? onSave : undefined}>{isNew ? "Add Contact" : "Save"}</Btn>
+      </div>
+    </div>
   );
 }
 
