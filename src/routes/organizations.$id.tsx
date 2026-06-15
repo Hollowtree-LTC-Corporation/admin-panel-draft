@@ -662,7 +662,10 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
           ? <DIProductPlanSection org={org} readOnly={readOnly} />
           : <LTCProductPlanSection org={org} readOnly={readOnly} />}
         <PricingFeesSection org={org} readOnly={readOnly} />
+        <PaymentProcessingSection org={org} readOnly={readOnly} />
+        <LocalizationSection org={org} readOnly={readOnly} />
         <BrokerSection org={org} product={product} readOnly={readOnly} />
+        {product === "DI" && <GroupPolicySection org={org} readOnly={readOnly} />}
         {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
       </div>
 
