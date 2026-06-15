@@ -476,6 +476,10 @@ function OrgDetail() {
           <LifecycleTab
             windows={windows}
             orgName={org.name}
+            orgId={org.id}
+            orgStatus={org.status}
+            product={product}
+            isAdmin={role === "admin"}
             onNew={() => windowDrawer.open(undefined, "create")}
             onEdit={(w) => windowDrawer.open(w, "edit")}
             canEdit={can("enrollment_windows", "update")}
