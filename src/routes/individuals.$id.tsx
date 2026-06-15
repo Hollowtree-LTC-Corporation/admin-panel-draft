@@ -716,30 +716,6 @@ function UpgradeSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
   );
 }
 
-function CCAPortalSection({ link }: { link: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
-    }
-  };
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">CCA Portal</div>
-          <a href={link} target="_blank" rel="noreferrer" className="text-sm text-[#0a3d3e] hover:underline inline-flex items-center gap-1 break-all">
-            {link} <ExternalLink className="h-3 w-3 shrink-0" />
-          </a>
-        </div>
-        <button onClick={copy} className="text-black/50 hover:text-[#0a3d3e] p-1 shrink-0" title="Copy link">
-          <Copy className="h-4 w-4" />
-        </button>
-      </div>
-      {copied && <div className="text-[11px] text-emerald-700 mt-1">Copied</div>}
-    </div>
-  );
-}
 
 
 function EnrollmentSection({ i }: { i: Detail }) {
