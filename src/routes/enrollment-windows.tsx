@@ -527,3 +527,76 @@ function WindowForm({
     </div>
   );
 }
+
+function AffiliateDropdown({
+  value,
+  affiliates,
+  onChange,
+  onNew,
+}: {
+  value: string | null;
+  affiliates: AffiliateOrganization[];
+  onChange: (id: string | null) => void;
+  onNew: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = value ? affiliates.find((a) => a.id === value) ?? null : null;
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white flex items-center justify-between gap-2 text-left"
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          {selected ? <AffiliateLogo affiliate={selected} size={20} /> : null}
+          <span className={`truncate ${selected ? "" : "text-black/50"}`}>
+            {selected ? selected.name : "Select affiliate…"}
+          </span>
+        </span>
+        <ChevronDown className="h-3 w-3 text-black/40 shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute z-30 mt-1 w-full bg-white border border-black/15 rounded shadow-lg max-h-72 overflow-y-auto">
+          <button
+            type="button"
+            onClick={() => { onChange(null); setOpen(false); }}
+            className="w-full text-left px-2 py-1.5 text-xs hover:bg-[#f7f3eb] text-black/50"
+          >
+            Select affiliate…
+          </button>
+          {affiliates.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => { onChange(a.id); setOpen(false); }}
+              className={`w-full text-left px-2 py-1.5 text-xs hover:bg-[#f7f3eb] flex items-center gap-2 ${value === a.id ? "bg-[#f7f3eb] font-medium" : ""}`}
+            >
+              <AffiliateLogo affiliate={a} size={20} />
+              <span className="truncate">{a.name}</span>
+            </button>
+          ))}
+          <div className="border-t border-black/10" />
+          <button
+            type="button"
+            onClick={() => { onNew(); setOpen(false); }}
+            className="w-full text-left px-2 py-1.5 text-xs hover:bg-[#f7f3eb] text-[#0a3d3e]"
+          >
+            + New Affiliate…
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
