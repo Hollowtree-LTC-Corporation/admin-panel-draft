@@ -735,7 +735,7 @@ function useSectionEdit() {
 
 function SectionCard({
   title, children, defaultOpen = false, summary, editing = false, canEdit = false, onEdit, note,
-  variant = "config", drives,
+  variant = "config", drives, headerExtra,
 }: {
   title: string;
   children: React.ReactNode;
@@ -747,6 +747,7 @@ function SectionCard({
   note?: React.ReactNode;
   variant?: "info" | "config" | "integration";
   drives?: string[];
+  headerExtra?: React.ReactNode;
 }) {
   const initiallyOpen = variant === "integration" ? false : (defaultOpen || editing);
   const [open, setOpen] = useState(initiallyOpen);
@@ -778,6 +779,7 @@ function SectionCard({
               {drives.length > 2 && <span className="ml-1 text-stone-400">+{drives.length - 2} more</span>}
             </div>
           )}
+          {isOpen && headerExtra}
           {canEdit && !editing && isOpen && onEdit && (
             <button onClick={onEdit} className={`${pencilCls} p-1`} title="Edit section">
               <Pencil className="h-3.5 w-3.5" />
