@@ -223,6 +223,7 @@ function View() {
       <TableShell>
         <SortableTHead<SortKey>
           cols={[
+            { key: null, label: "" },
             { key: "name", label: "Name" },
             { key: "affiliate_type", label: "Type" },
             { key: "affiliation_level", label: "Level" },
@@ -239,6 +240,7 @@ function View() {
             const deactivated = !!a.deleted_at;
             return (
               <TRow key={a.id} onClick={() => openEdit(a)}>
+                <TCell className="w-10"><div className={deactivated ? "opacity-50" : ""}><AffiliateLogo affiliate={a} size={32} /></div></TCell>
                 <TCell className={`font-medium ${deactivated ? "text-black/40" : ""}`}>{a.name}</TCell>
                 <TCell><TypeBadge type={a.affiliate_type} /></TCell>
                 <TCell className="capitalize text-black/70">{a.affiliation_level}</TCell>
@@ -257,7 +259,7 @@ function View() {
             );
           })}
           {rows.length === 0 && (
-            <tr><td colSpan={6} className="px-3 py-8 text-center text-black/40 text-xs">No affiliates match the current filters.</td></tr>
+            <tr><td colSpan={7} className="px-3 py-8 text-center text-black/40 text-xs">No affiliates match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
