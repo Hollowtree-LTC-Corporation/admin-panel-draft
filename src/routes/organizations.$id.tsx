@@ -91,7 +91,7 @@ function carrierProductOptions(product: "DI" | "LTC"): Array<{ id: string; carri
     .map((cp) => {
       const carrier = CARRIERS.find((c) => c.id === cp.carrier_id);
       if (!carrier || carrier.product !== product) return null;
-      return { id: cp.id, carrier: carrier.name, product: cp.name, label: `${carrier.name} - ${cp.name}` };
+      return { id: cp.id, carrier: carrier.carrier_name, product: cp.product_name, label: `${carrier.carrier_name} - ${cp.product_name}` };
     })
     .filter((x): x is { id: string; carrier: string; product: string; label: string } => x !== null);
 }
