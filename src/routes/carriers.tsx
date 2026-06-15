@@ -1,32 +1,51 @@
 import { useMemo, useState, useEffect, Fragment } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Star, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { Star, ChevronDown, ChevronRight, Plus, Trash2, Check } from "lucide-react";
 import {
   PageHeader, TableShell, TRow, TCell, Btn, SectionTitle, ProductBadge, Pill,
   Drawer, Field,
 } from "@/components/wireframe/Bits";
 import {
   CARRIERS, CARRIER_PRODUCTS, CARRIER_COMMISSION_SCHEDULES, COMMISSION_RATE_TIERS,
+  CARRIER_CONSTRAINTS, CARRIER_RIDER_AVAILABILITY,
   formatCents,
-  type Carrier, type CarrierProduct, type CarrierCommissionSchedule, type ScheduleType,
+  type Carrier, type CarrierType, type CarrierProduct, type CarrierCommissionSchedule,
+  type ScheduleType, type CarrierConstraint, type CarrierRiderAvailability,
+  type RiderAvailability,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 
 export const Route = createFileRoute("/carriers")({ component: View });
 
-type SortKey = "name" | "carrier_code" | "status" | "carrier_products_count";
-type ProdSortKey = "name" | "product_code" | "carrier_name" | "schedules_count" | "default_schedule";
+type SortKey = "carrier_name" | "carrier_type" | "am_best_rating" | "carrier_products_count";
+type ProdSortKey = "product_name" | "product_type" | "carrier_name" | "schedules_count" | "default_schedule" | "constraints_count" | "riders_count" | "active";
 
 const FIELD_INPUT = "w-full px-2 py-1 text-sm border border-black/15 rounded";
 
-function StatusPill({ status }: { status: "active" | "inactive" }) {
-  return <Pill tone={status === "active" ? "ok" : "neutral"}>{status}</Pill>;
-}
+const CARRIER_TYPES: CarrierType[] = ["Group DI Carrier", "Group LTC Carrier", "Lloyds MGU", "Domestic Carrier"];
+
+const US_STATES = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
+  "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
+  "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
+];
 
 function TypePill({ type }: { type: ScheduleType }) {
   const tone = type === "heaped" ? "info" : type === "flat" ? "ok" : "neutral";
   return <Pill tone={tone}>{type}</Pill>;
+}
+
+function AvailabilityPill({ value }: { value: RiderAvailability }) {
+  if (value === "available") return <Pill tone="ok">Available</Pill>;
+  if (value === "not_available") return <Pill tone="neutral">Not Available</Pill>;
+  return <Pill tone="warn">Requires State Proposal</Pill>;
+}
+
+function fmtSync(iso: string | null): string {
+  if (!iso) return "Not yet synced from Attio";
+  const d = new Date(iso);
+  return d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function View() {
@@ -38,25 +57,25 @@ function View() {
   const [products, setProducts] = useState<CarrierProduct[]>(() => CARRIER_PRODUCTS);
   const [schedules, setSchedules] = useState<CarrierCommissionSchedule[]>(() => CARRIER_COMMISSION_SCHEDULES);
   const [tiers, setTiers] = useState(() => COMMISSION_RATE_TIERS);
+  const [constraints, setConstraints] = useState<CarrierConstraint[]>(() => CARRIER_CONSTRAINTS);
+  const [riders, setRiders] = useState<CarrierRiderAvailability[]>(() => CARRIER_RIDER_AVAILABILITY);
 
   const [search, setSearch] = useState("");
-  const sort = useSort<SortKey>("name", "asc");
-  const prodSort = useSort<ProdSortKey>("name", "asc");
+  const sort = useSort<SortKey>("carrier_name", "asc");
+  const prodSort = useSort<ProdSortKey>("product_name", "asc");
 
-  // Carriers shown in the list view: only active for the current product mode.
   const visibleCarriers = useMemo(() => {
     const s = search.trim().toLowerCase();
     const rows = carriers
-      .filter((c) => c.product === product && c.status === "active")
+      .filter((c) => c.product === product)
       .map((c) => ({
         ...c,
-        carrier_products_count: products.filter((p) => p.carrier_id === c.id && p.status === "active").length,
+        carrier_products_count: products.filter((p) => p.carrier_id === c.id && p.active).length,
       }))
-      .filter((c) => !s || c.name.toLowerCase().includes(s) || c.carrier_code.toLowerCase().includes(s));
+      .filter((c) => !s || c.carrier_name.toLowerCase().includes(s));
     return sort.applySort(rows, (r, k) => (r as unknown as Record<string, string | number>)[k]);
   }, [carriers, products, search, product, sort]);
 
-  // Master-detail: selected carrier (auto-select first when list changes).
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
   useEffect(() => {
     if (visibleCarriers.length === 0) {
@@ -70,14 +89,11 @@ function View() {
 
   const selectedCarrier = carriers.find((c) => c.id === selectedCarrierId) ?? null;
 
-  // Products filtered by selected carrier; if none selected, show all active products for this product mode.
   const visibleProducts = useMemo(() => {
     const s = search.trim().toLowerCase();
-    const carrierIds = new Set(
-      carriers.filter((c) => c.product === product && c.status === "active").map((c) => c.id)
-    );
+    const carrierIds = new Set(carriers.filter((c) => c.product === product).map((c) => c.id));
     const rows = products
-      .filter((p) => carrierIds.has(p.carrier_id) && p.status === "active")
+      .filter((p) => carrierIds.has(p.carrier_id))
       .filter((p) => (selectedCarrierId ? p.carrier_id === selectedCarrierId : true))
       .map((p) => {
         const car = carriers.find((c) => c.id === p.carrier_id);
@@ -85,14 +101,16 @@ function View() {
         const def = prodSchedules.find((s2) => s2.is_default);
         return {
           ...p,
-          carrier_name: car?.name ?? "",
+          carrier_name: car?.carrier_name ?? "",
           schedules_count: prodSchedules.length,
           default_schedule: def?.schedule_name ?? "",
+          constraints_count: constraints.filter((c) => c.carrier_product_id === p.id).length,
+          riders_count: riders.filter((r) => r.carrier_product_id === p.id).length,
         };
       })
-      .filter((p) => !s || p.name.toLowerCase().includes(s) || p.product_code.toLowerCase().includes(s) || p.carrier_name.toLowerCase().includes(s));
-    return prodSort.applySort(rows, (r, k) => (r as unknown as Record<string, string | number>)[k]);
-  }, [products, carriers, schedules, selectedCarrierId, search, product, prodSort]);
+      .filter((p) => !s || p.product_name.toLowerCase().includes(s) || p.carrier_name.toLowerCase().includes(s));
+    return prodSort.applySort(rows, (r, k) => (r as unknown as Record<string, string | number | boolean>)[k] as string | number);
+  }, [products, carriers, schedules, constraints, riders, selectedCarrierId, search, product, prodSort]);
 
   const activeFilters = search !== "" || !sort.isDefault || !prodSort.isDefault;
   const clearAll = () => { setSearch(""); sort.reset(); prodSort.reset(); };
@@ -122,13 +140,21 @@ function View() {
   function startNewCarrier() {
     const id = `car_new_${Date.now()}`;
     setNewCarrierDraft({
-      id, name: "", product, carrier_code: "", contact_name: "", contact_email: "",
-      contact_phone: "", website: "", status: "active", notes: "",
+      id, product,
+      attio_carrier_id: null,
+      carrier_name: "",
+      carrier_type: product === "DI" ? "Group DI Carrier" : "Group LTC Carrier",
+      am_best_rating: "",
+      cca_carrier: false,
+      billing_email: "",
+      primary_contact_name: "",
+      primary_contact_email: "",
+      attio_last_synced_at: null,
     });
     setShowNewCarrier(true);
   }
   function saveNewCarrier() {
-    if (!newCarrierDraft || !newCarrierDraft.name.trim()) return;
+    if (!newCarrierDraft || !newCarrierDraft.carrier_name.trim()) return;
     setCarriers((cs) => [...cs, newCarrierDraft]);
     setSelectedCarrierId(newCarrierDraft.id);
     setShowNewCarrier(false);
@@ -152,12 +178,16 @@ function View() {
     if (!selectedCarrier) return;
     const id = `cp_new_${Date.now()}`;
     const fresh: CarrierProduct = {
-      id, carrier_id: selectedCarrier.id, name: "", product_code: "",
-      product_type: product === "DI" ? "disability" : "universal_life",
-      state_availability: "All states",
-      si_max_cents: product === "LTC" ? 25000000 : null,
-      si_increment_cents: product === "LTC" ? 250000 : null,
-      status: "active",
+      id,
+      attio_product_id: null,
+      carrier_id: selectedCarrier.id,
+      product_name: "",
+      product_type: product === "DI" ? "Disability" : "Universal Life",
+      line_of_business: product,
+      cca_product: false,
+      payment_methods_allowed: "ACH",
+      active: true,
+      attio_last_synced_at: null,
     };
     setDrawerProduct(fresh);
     setProductDraft(fresh);
@@ -170,7 +200,7 @@ function View() {
     setProductEditing(false);
   }
   function saveProductDrawer() {
-    if (!productDraft || !productDraft.name.trim()) return;
+    if (!productDraft || !productDraft.product_name.trim()) return;
     if (drawerMode === "create") {
       setProducts((ps) => [...ps, productDraft]);
     } else {
@@ -181,34 +211,27 @@ function View() {
     setProductEditing(false);
   }
 
-  const newCarrierLabel = product === "DI" ? "+ New Carrier" : "+ New Carrier";
-
   return (
     <div>
       <PageHeader
         title="Carriers & Products"
-        subtitle={`${visibleCarriers.length} active carriers · ${visibleProducts.length} ${selectedCarrier ? "products for " + selectedCarrier.name : "products shown"}`}
+        subtitle={`${visibleCarriers.length} carriers · ${visibleProducts.length} ${selectedCarrier ? "products for " + selectedCarrier.carrier_name : "products shown"}`}
         actions={
           <Btn variant="primary" disabled={!can("carriers", "create")} onClick={startNewCarrier}>
-            {newCarrierLabel}
+            + New Carrier
           </Btn>
         }
       />
 
       <FilterRow>
-        <FilterSearch value={search} onChange={setSearch} placeholder="Search carrier, code, or product…" />
+        <FilterSearch value={search} onChange={setSearch} placeholder="Search carrier or product…" />
         <ClearFiltersLink show={activeFilters} onClick={clearAll} />
       </FilterRow>
 
-      {/* New carrier inline form */}
       {showNewCarrier && newCarrierDraft ? (
         <div className="mb-3 bg-[#f7f3eb] border border-black/10 rounded-md p-3">
           <div className="text-xs font-semibold mb-2">New Carrier</div>
-          <CarrierFormFields
-            value={newCarrierDraft}
-            onChange={(v) => setNewCarrierDraft(v)}
-            productLocked={product}
-          />
+          <CarrierFormFields value={newCarrierDraft} onChange={(v) => setNewCarrierDraft(v)} />
           <div className="flex gap-2 mt-3">
             <Btn variant="primary" onClick={saveNewCarrier}>Save Carrier</Btn>
             <Btn variant="ghost" onClick={() => { setShowNewCarrier(false); setNewCarrierDraft(null); }}>Cancel</Btn>
@@ -219,9 +242,9 @@ function View() {
       <TableShell>
         <SortableTHead<SortKey>
           cols={[
-            { key: "name", label: "Carrier" },
-            { key: "carrier_code", label: "Code" },
-            { key: "status", label: "Status" },
+            { key: "carrier_name", label: "Carrier" },
+            { key: "carrier_type", label: "Type" },
+            { key: "am_best_rating", label: "AM Best" },
             { key: "carrier_products_count", label: "# Products" },
           ]}
           sortKey={sort.sortKey}
@@ -240,17 +263,18 @@ function View() {
                 <TCell className="font-medium">
                   <span className="inline-flex items-center gap-1">
                     {selected ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3 text-black/30" />}
-                    {c.name}
+                    {c.carrier_name}
+                    {c.cca_carrier ? <span className="ml-1 inline-flex items-center gap-1 text-[10px] text-emerald-700"><Check className="h-3 w-3" />CCA</span> : null}
                   </span>
                 </TCell>
-                <TCell className="text-black/60 text-[11px] font-mono">{c.carrier_code}</TCell>
-                <TCell><StatusPill status={c.status} /></TCell>
+                <TCell className="text-black/70 text-xs">{c.carrier_type}</TCell>
+                <TCell className="text-black/70 text-xs">{c.am_best_rating || "—"}</TCell>
                 <TCell>{c.carrier_products_count}</TCell>
               </tr>
             );
           })}
           {visibleCarriers.length === 0 ? (
-            <TRow><TCell className="text-black/50 italic" >No active carriers for {product}.</TCell></TRow>
+            <TRow><TCell className="text-black/50 italic">No carriers for {product}.</TCell></TRow>
           ) : null}
         </tbody>
       </TableShell>
@@ -260,9 +284,9 @@ function View() {
         <div className="mt-3 bg-white border border-black/10 rounded-md p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold">{selectedCarrier.name}</h3>
+              <h3 className="text-sm font-semibold">{selectedCarrier.carrier_name}</h3>
               <ProductBadge product={selectedCarrier.product} />
-              <StatusPill status={selectedCarrier.status} />
+              {selectedCarrier.cca_carrier ? <Pill tone="ok">CCA Carrier</Pill> : null}
             </div>
             <div className="flex gap-2">
               {editingCarrier ? (
@@ -279,23 +303,27 @@ function View() {
           {editingCarrier && carrierDraft ? (
             <CarrierFormFields value={carrierDraft} onChange={setCarrierDraft} />
           ) : (
-            <div className="grid grid-cols-3 gap-x-6 gap-y-3 text-sm">
-              <Field label="Code"><span className="font-mono text-xs">{selectedCarrier.carrier_code}</span></Field>
-              <Field label="Status">{selectedCarrier.status}</Field>
-              <Field label="Website">{selectedCarrier.website || "—"}</Field>
-              <Field label="Contact">{selectedCarrier.contact_name || "—"}</Field>
-              <Field label="Email">{selectedCarrier.contact_email || "—"}</Field>
-              <Field label="Phone">{selectedCarrier.contact_phone || "—"}</Field>
-              <div className="col-span-3">
-                <Field label="Notes">{selectedCarrier.notes || "—"}</Field>
-              </div>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <Field label="Carrier Name">{selectedCarrier.carrier_name}</Field>
+              <Field label="Carrier Type">{selectedCarrier.carrier_type}</Field>
+              <Field label="AM Best Rating">{selectedCarrier.am_best_rating || "—"}</Field>
+              <Field label="CCA Carrier">{selectedCarrier.cca_carrier ? "Yes" : "No"}</Field>
+              <Field label="Primary Contact Name">{selectedCarrier.primary_contact_name || "—"}</Field>
+              <Field label="Primary Contact Email">{selectedCarrier.primary_contact_email || "—"}</Field>
+              <Field label="Billing Email">{selectedCarrier.billing_email || "—"}</Field>
+              <div />
             </div>
           )}
+
+          <div className="mt-4 pt-3 border-t border-black/5 text-[11px] text-black/50">
+            Attio ID: {selectedCarrier.attio_carrier_id ?? "Not yet synced from Attio"}
+            {selectedCarrier.attio_carrier_id ? ` · Last synced from Attio: ${fmtSync(selectedCarrier.attio_last_synced_at)}` : ""}
+          </div>
         </div>
       ) : null}
 
       <SectionTitle>
-        {selectedCarrier ? `Carrier Products for ${selectedCarrier.name}` : "Carrier Products"}
+        {selectedCarrier ? `Carrier Products for ${selectedCarrier.carrier_name}` : "Carrier Products"}
       </SectionTitle>
       <div className="flex justify-end mb-2">
         <Btn
@@ -310,13 +338,16 @@ function View() {
       <TableShell>
         <SortableTHead<ProdSortKey>
           cols={[
-            { key: "name", label: "Product Name" },
-            { key: "product_code", label: "Code" },
+            { key: "product_name", label: "Product Name" },
+            { key: "product_type", label: "Product Type" },
             ...(selectedCarrier ? [] : [{ key: "carrier_name" as ProdSortKey, label: "Carrier" }]),
+            { key: "active" as ProdSortKey, label: "Active" },
             ...(product === "LTC"
               ? [
                   { key: "schedules_count" as ProdSortKey, label: "# Schedules" },
                   { key: "default_schedule" as ProdSortKey, label: "Default Schedule" },
+                  { key: "constraints_count" as ProdSortKey, label: "# Constraints" },
+                  { key: "riders_count" as ProdSortKey, label: "# Riders" },
                 ]
               : []),
           ]}
@@ -327,13 +358,21 @@ function View() {
         <tbody>
           {visibleProducts.map((p) => (
             <TRow key={p.id} onClick={() => openProduct(p)}>
-              <TCell className="font-medium">{p.name}</TCell>
-              <TCell className="font-mono text-[11px] text-black/60">{p.product_code}</TCell>
+              <TCell className="font-medium">
+                <span className="inline-flex items-center gap-1">
+                  {p.product_name}
+                  {p.cca_product ? <Check className="h-3 w-3 text-emerald-600" aria-label="CCA Product" /> : null}
+                </span>
+              </TCell>
+              <TCell className="text-black/70 text-xs">{p.product_type}</TCell>
               {!selectedCarrier ? <TCell>{p.carrier_name}</TCell> : null}
+              <TCell>{p.active ? <Pill tone="ok">Active</Pill> : <Pill tone="neutral">Inactive</Pill>}</TCell>
               {product === "LTC" ? (
                 <>
                   <TCell>{p.schedules_count}</TCell>
                   <TCell className="text-black/70">{p.default_schedule || "—"}</TCell>
+                  <TCell>{p.constraints_count}</TCell>
+                  <TCell>{p.riders_count}</TCell>
                 </>
               ) : null}
             </TRow>
@@ -348,7 +387,7 @@ function View() {
       <Drawer
         open={!!drawerProduct}
         onClose={closeProductDrawer}
-        title={drawerMode === "create" ? "New Carrier Product" : (drawerProduct?.name ?? "")}
+        title={drawerMode === "create" ? "New Carrier Product" : (drawerProduct?.product_name ?? "")}
       >
         {drawerProduct && productDraft ? (
           <ProductDrawerBody
@@ -369,10 +408,14 @@ function View() {
             carriers={carriers}
             schedules={schedules.filter((s) => s.carrier_product_id === drawerProduct.id)}
             tiers={tiers}
+            constraints={constraints.filter((c) => c.carrier_product_id === drawerProduct.id)}
+            riders={riders.filter((r) => r.carrier_product_id === drawerProduct.id)}
             onAddSchedule={(s, newTiers) => {
               setSchedules((all) => [...all, s]);
               setTiers((all) => [...all, ...newTiers]);
             }}
+            onAddConstraint={(c) => setConstraints((all) => [...all, c])}
+            onAddRider={(r) => setRiders((all) => [...all, r])}
             mode={drawerMode}
           />
         ) : null}
@@ -382,63 +425,51 @@ function View() {
 }
 
 function CarrierFormFields({
-  value, onChange, productLocked,
+  value, onChange,
 }: {
   value: Carrier;
   onChange: (v: Carrier) => void;
-  productLocked?: "DI" | "LTC";
 }) {
   function set<K extends keyof Carrier>(k: K, v: Carrier[K]) {
     onChange({ ...value, [k]: v });
   }
   return (
-    <div className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
       <Field label="Carrier Name">
-        <input className={FIELD_INPUT} value={value.name} onChange={(e) => set("name", e.target.value)} />
+        <input className={FIELD_INPUT} value={value.carrier_name} onChange={(e) => set("carrier_name", e.target.value)} />
       </Field>
-      <Field label="Code">
-        <input className={FIELD_INPUT} value={value.carrier_code} onChange={(e) => set("carrier_code", e.target.value)} />
-      </Field>
-      <Field label="Status">
-        <select className={FIELD_INPUT} value={value.status} onChange={(e) => set("status", e.target.value as Carrier["status"])}>
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
+      <Field label="Carrier Type">
+        <select className={FIELD_INPUT} value={value.carrier_type} onChange={(e) => set("carrier_type", e.target.value as CarrierType)}>
+          {CARRIER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
       </Field>
-      <Field label="Contact">
-        <input className={FIELD_INPUT} value={value.contact_name} onChange={(e) => set("contact_name", e.target.value)} />
+      <Field label="AM Best Rating">
+        <input className={FIELD_INPUT} value={value.am_best_rating} onChange={(e) => set("am_best_rating", e.target.value)} placeholder="e.g., A+" />
       </Field>
-      <Field label="Email">
-        <input className={FIELD_INPUT} value={value.contact_email} onChange={(e) => set("contact_email", e.target.value)} />
+      <Field label="CCA Carrier">
+        <label className="inline-flex items-center gap-2 text-xs h-7">
+          <input type="checkbox" checked={value.cca_carrier} onChange={(e) => set("cca_carrier", e.target.checked)} />
+          {value.cca_carrier ? "Yes" : "No"}
+        </label>
       </Field>
-      <Field label="Phone">
-        <input className={FIELD_INPUT} value={value.contact_phone} onChange={(e) => set("contact_phone", e.target.value)} />
+      <Field label="Primary Contact Name">
+        <input className={FIELD_INPUT} value={value.primary_contact_name} onChange={(e) => set("primary_contact_name", e.target.value)} />
       </Field>
-      <Field label="Website">
-        <input className={FIELD_INPUT} value={value.website} onChange={(e) => set("website", e.target.value)} />
+      <Field label="Primary Contact Email">
+        <input className={FIELD_INPUT} value={value.primary_contact_email} onChange={(e) => set("primary_contact_email", e.target.value)} />
       </Field>
-      {productLocked ? (
-        <Field label="Product"><span className="text-xs text-black/60">{productLocked} (current view)</span></Field>
-      ) : (
-        <Field label="Product"><span className="text-xs text-black/60">{value.product}</span></Field>
-      )}
+      <Field label="Billing Email">
+        <input className={FIELD_INPUT} value={value.billing_email} onChange={(e) => set("billing_email", e.target.value)} />
+      </Field>
       <div />
-      <div className="col-span-3">
-        <Field label="Notes">
-          <textarea
-            className={`${FIELD_INPUT} min-h-[60px]`}
-            value={value.notes}
-            onChange={(e) => set("notes", e.target.value)}
-          />
-        </Field>
-      </div>
     </div>
   );
 }
 
 function ProductDrawerBody({
   product, draft, onDraftChange, editing, onEdit, onSave, onCancel, productMode,
-  carriers, schedules, tiers, onAddSchedule, mode,
+  carriers, schedules, tiers, constraints, riders,
+  onAddSchedule, onAddConstraint, onAddRider, mode,
 }: {
   product: CarrierProduct;
   draft: CarrierProduct;
@@ -451,7 +482,11 @@ function ProductDrawerBody({
   carriers: Carrier[];
   schedules: CarrierCommissionSchedule[];
   tiers: typeof COMMISSION_RATE_TIERS;
+  constraints: CarrierConstraint[];
+  riders: CarrierRiderAvailability[];
   onAddSchedule: (s: CarrierCommissionSchedule, tiers: typeof COMMISSION_RATE_TIERS) => void;
+  onAddConstraint: (c: CarrierConstraint) => void;
+  onAddRider: (r: CarrierRiderAvailability) => void;
   mode: "view" | "create";
 }) {
   const car = carriers.find((c) => c.id === draft.carrier_id);
@@ -461,13 +496,27 @@ function ProductDrawerBody({
 
   const [expandedScheduleId, setExpandedScheduleId] = useState<string | null>(null);
   const [showNewSchedule, setShowNewSchedule] = useState(false);
+  const [expandedConstraintId, setExpandedConstraintId] = useState<string | null>(null);
+  const [showNewConstraint, setShowNewConstraint] = useState(false);
+  const [showNewRider, setShowNewRider] = useState(false);
+  const [riderStateFilter, setRiderStateFilter] = useState<string>("all");
+  const [riderAvailFilter, setRiderAvailFilter] = useState<RiderAvailability | "all">("all");
+
+  const stateOptions = useMemo(() => {
+    const set = new Set(riders.map((r) => r.state));
+    return Array.from(set).sort();
+  }, [riders]);
+
+  const filteredRiders = riders.filter((r) =>
+    (riderStateFilter === "all" || r.state === riderStateFilter) &&
+    (riderAvailFilter === "all" || r.available === riderAvailFilter)
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header actions */}
       <div className="flex items-center justify-between -mt-1">
         <div className="text-xs text-black/60">
-          {car?.name} · <ProductBadge product={productMode} />
+          {car?.carrier_name} · <ProductBadge product={productMode} />
         </div>
         <div className="flex gap-2">
           {editing ? (
@@ -487,72 +536,45 @@ function ProductDrawerBody({
         {editing ? (
           <div className="grid grid-cols-2 gap-x-4 gap-y-3">
             <Field label="Product Name">
-              <input className={FIELD_INPUT} value={draft.name} onChange={(e) => set("name", e.target.value)} />
+              <input className={FIELD_INPUT} value={draft.product_name} onChange={(e) => set("product_name", e.target.value)} />
             </Field>
-            <Field label="Code">
-              <input className={FIELD_INPUT} value={draft.product_code} onChange={(e) => set("product_code", e.target.value)} />
-            </Field>
-            <Field label="Type">
-              <select className={FIELD_INPUT} value={draft.product_type} onChange={(e) => set("product_type", e.target.value as CarrierProduct["product_type"])}>
-                <option value="universal_life">universal_life</option>
-                <option value="group_life">group_life</option>
-                <option value="term_life">term_life</option>
-                <option value="disability">disability</option>
-                <option value="other">other</option>
-              </select>
+            <Field label="Product Type">
+              <input className={FIELD_INPUT} value={draft.product_type} onChange={(e) => set("product_type", e.target.value)} />
             </Field>
             <Field label="Line of Business">
               <span className="text-xs text-black/60">{productMode}</span>
             </Field>
-            <Field label="State Availability">
-              <input className={FIELD_INPUT} value={draft.state_availability} onChange={(e) => set("state_availability", e.target.value)} />
+            <Field label="CCA Product">
+              <label className="inline-flex items-center gap-2 text-xs h-7">
+                <input type="checkbox" checked={draft.cca_product} onChange={(e) => set("cca_product", e.target.checked)} />
+                {draft.cca_product ? "Yes" : "No"}
+              </label>
             </Field>
-            <Field label="Status">
-              <select className={FIELD_INPUT} value={draft.status} onChange={(e) => set("status", e.target.value as CarrierProduct["status"])}>
-                <option value="active">active</option>
-                <option value="inactive">inactive</option>
-              </select>
+            <Field label="Payment Methods">
+              <input className={FIELD_INPUT} value={draft.payment_methods_allowed} onChange={(e) => set("payment_methods_allowed", e.target.value)} placeholder="e.g., ACH, Credit Card" />
             </Field>
-            {productMode === "LTC" ? (
-              <>
-                <Field label="SI Maximum">
-                  <input
-                    type="number"
-                    className={FIELD_INPUT}
-                    value={draft.si_max_cents ? draft.si_max_cents / 100 : ""}
-                    onChange={(e) => set("si_max_cents", e.target.value ? Math.round(Number(e.target.value) * 100) : null)}
-                  />
-                </Field>
-                <Field label="SI Increment">
-                  <input
-                    type="number"
-                    className={FIELD_INPUT}
-                    value={draft.si_increment_cents ? draft.si_increment_cents / 100 : ""}
-                    onChange={(e) => set("si_increment_cents", e.target.value ? Math.round(Number(e.target.value) * 100) : null)}
-                  />
-                </Field>
-              </>
-            ) : null}
+            <Field label="Active">
+              <label className="inline-flex items-center gap-2 text-xs h-7">
+                <input type="checkbox" checked={draft.active} onChange={(e) => set("active", e.target.checked)} />
+                {draft.active ? "Active" : "Inactive"}
+              </label>
+            </Field>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-            <Field label="Product Name">{product.name}</Field>
-            <Field label="Code"><span className="font-mono text-xs">{product.product_code}</span></Field>
-            <Field label="Type">{product.product_type}</Field>
-            <Field label="Line of Business">{productMode}</Field>
-            <Field label="State Availability">{product.state_availability}</Field>
-            <Field label="Status">{product.status}</Field>
-            {productMode === "LTC" ? (
-              <>
-                <Field label="SI Maximum">{product.si_max_cents != null ? formatCents(product.si_max_cents) : "—"}</Field>
-                <Field label="SI Increment">{product.si_increment_cents != null ? formatCents(product.si_increment_cents) : "—"}</Field>
-              </>
-            ) : null}
+            <Field label="Product Name">{product.product_name}</Field>
+            <Field label="Product Type">{product.product_type}</Field>
+            <Field label="Line of Business"><Pill tone="info">{productMode}</Pill></Field>
+            <Field label="CCA Product">{product.cca_product ? "Yes" : "No"}</Field>
+            <Field label="Payment Methods">{product.payment_methods_allowed || "—"}</Field>
+            <Field label="Active">{product.active ? "Active" : "Inactive"}</Field>
           </div>
         )}
       </div>
 
-      {/* Section 2: Commission Schedules — LTC only, not while creating */}
+      {/* Section 2: Sync — moved below schedules/constraints/riders to keep it last per spec; shown here as a small footer */}
+
+      {/* Section 3: Commission Schedules — LTC only */}
       {productMode === "LTC" && mode === "view" ? (
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -565,7 +587,7 @@ function ProductDrawerBody({
           {showNewSchedule ? (
             <NewScheduleForm
               productId={product.id}
-              productName={product.name}
+              productName={product.product_name}
               onCancel={() => setShowNewSchedule(false)}
               onSave={(s, t) => { onAddSchedule(s, t); setShowNewSchedule(false); }}
             />
@@ -575,17 +597,18 @@ function ProductDrawerBody({
             <table className="w-full text-xs">
               <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
                 <tr>
-                  <th className="text-left font-medium px-3 py-2">Schedule</th>
+                  <th className="text-left font-medium px-3 py-2">Schedule Name</th>
                   <th className="text-left font-medium px-3 py-2">Type</th>
                   <th className="text-left font-medium px-3 py-2">State</th>
                   <th className="text-left font-medium px-3 py-2">Default</th>
                   <th className="text-left font-medium px-3 py-2">Effective From</th>
+                  <th className="text-left font-medium px-3 py-2">Effective To</th>
                   <th className="text-left font-medium px-3 py-2">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {schedules.length === 0 ? (
-                  <tr><td colSpan={6} className="px-3 py-3 text-black/50 italic">No schedules yet.</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-3 text-black/50 italic">No schedules yet.</td></tr>
                 ) : null}
                 {schedules.map((s) => {
                   const expanded = expandedScheduleId === s.id;
@@ -606,29 +629,26 @@ function ProductDrawerBody({
                         <td className="px-3 py-2">{s.state_code ?? "Standard"}</td>
                         <td className="px-3 py-2">{s.is_default ? <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-400" /> : null}</td>
                         <td className="px-3 py-2 text-black/70">{s.effective_from}</td>
+                        <td className="px-3 py-2 text-black/70">{s.effective_to ?? "Current"}</td>
                         <td className="px-3 py-2">{s.effective_to ? <Pill tone="neutral">Expired</Pill> : <Pill tone="ok">Current</Pill>}</td>
                       </tr>
                       {expanded ? (
                         <tr className="bg-[#f7f3eb]/40">
-                          <td colSpan={6} className="px-3 py-3">
+                          <td colSpan={7} className="px-3 py-3">
                             <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">Rate Tiers</div>
                             <table className="text-xs">
                               <thead>
                                 <tr className="text-black/50">
-                                  <th className="text-left font-medium pr-8 pb-1">Year Band</th>
-                                  <th className="text-left font-medium pb-1">Rate</th>
+                                  <th className="text-left font-medium pr-8 pb-1">From Year</th>
+                                  <th className="text-left font-medium pr-8 pb-1">To Year</th>
+                                  <th className="text-left font-medium pb-1">Rate %</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {sTiers.map((t) => (
                                   <tr key={t.id}>
-                                    <td className="pr-8 py-0.5">
-                                      {t.year_from === t.year_to
-                                        ? `Year ${t.year_from}`
-                                        : t.year_to >= 99
-                                          ? `Year ${t.year_from}+`
-                                          : `Year ${t.year_from}-${t.year_to}`}
-                                    </td>
+                                    <td className="pr-8 py-0.5">{t.year_from}</td>
+                                    <td className="pr-8 py-0.5">{t.year_to >= 99 ? "—" : t.year_to}</td>
                                     <td className="py-0.5 font-mono">{t.pct.toFixed(2)}%</td>
                                   </tr>
                                 ))}
@@ -638,7 +658,6 @@ function ProductDrawerBody({
                         </tr>
                       ) : null}
                     </Fragment>
-
                   );
                 })}
               </tbody>
@@ -646,6 +665,151 @@ function ProductDrawerBody({
           </div>
         </div>
       ) : null}
+
+      {/* Section 4: Constraints — LTC only */}
+      {productMode === "LTC" && mode === "view" ? (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] uppercase tracking-wider text-black/50">Constraints</div>
+            <Btn variant="secondary" onClick={() => setShowNewConstraint((v) => !v)}>
+              <Plus className="h-3 w-3" /> New Constraint
+            </Btn>
+          </div>
+          <div className="text-[11px] text-black/50 mb-2">
+            Add a new constraint when carrier rules change. Set effective to on the prior row to today.
+          </div>
+
+          {showNewConstraint ? (
+            <NewConstraintForm
+              productId={product.id}
+              onCancel={() => setShowNewConstraint(false)}
+              onSave={(c) => { onAddConstraint(c); setShowNewConstraint(false); }}
+            />
+          ) : null}
+
+          <div className="bg-white border border-black/10 rounded-md overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
+                <tr>
+                  <th className="text-left font-medium px-3 py-2">SI Max</th>
+                  <th className="text-left font-medium px-3 py-2">Increment</th>
+                  <th className="text-left font-medium px-3 py-2">Tier Floor</th>
+                  <th className="text-left font-medium px-3 py-2">Round Threshold</th>
+                  <th className="text-left font-medium px-3 py-2">Effective</th>
+                  <th className="text-left font-medium px-3 py-2">Last Verified</th>
+                </tr>
+              </thead>
+              <tbody>
+                {constraints.length === 0 ? (
+                  <tr><td colSpan={6} className="px-3 py-3 text-black/50 italic">No constraints recorded.</td></tr>
+                ) : null}
+                {constraints.map((c) => {
+                  const expanded = expandedConstraintId === c.id;
+                  return (
+                    <Fragment key={c.id}>
+                      <tr
+                        onClick={() => setExpandedConstraintId(expanded ? null : c.id)}
+                        className="border-t border-black/5 cursor-pointer hover:bg-[#f7f3eb]/60"
+                      >
+                        <td className="px-3 py-2 font-medium" title="Stored as integer cents per schema">
+                          <span className="inline-flex items-center gap-1">
+                            {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3 text-black/40" />}
+                            {formatCents(c.si_max_cents)}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2" title="Stored as integer cents per schema">{formatCents(c.increment)}</td>
+                        <td className="px-3 py-2" title="Stored as integer cents per schema">{formatCents(c.tier_floor_cents)}</td>
+                        <td className="px-3 py-2" title="Stored as integer cents per schema">{formatCents(c.round_preference_threshold_cents)}</td>
+                        <td className="px-3 py-2 text-black/70">{c.effective_from} → {c.effective_to ?? "Current"}</td>
+                        <td className="px-3 py-2 text-black/70">{c.last_verified}</td>
+                      </tr>
+                      {expanded ? (
+                        <tr className="bg-[#f7f3eb]/40">
+                          <td colSpan={6} className="px-3 py-3 space-y-1 text-xs">
+                            <div><span className="text-black/50">Verified by:</span> {c.verified_by}</div>
+                            <div><span className="text-black/50">Source:</span> {c.source}</div>
+                            <div><span className="text-black/50">Notes:</span> {c.notes || "—"}</div>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Section 5: Rider Availability — LTC only */}
+      {productMode === "LTC" && mode === "view" ? (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] uppercase tracking-wider text-black/50">Rider Availability</div>
+            <Btn variant="secondary" onClick={() => setShowNewRider((v) => !v)}>
+              <Plus className="h-3 w-3" /> New Rider Row
+            </Btn>
+          </div>
+          <div className="text-[11px] text-black/50 mb-2">One row per rider per state.</div>
+
+          <div className="flex gap-2 mb-2">
+            <select className={`${FIELD_INPUT} w-28`} value={riderStateFilter} onChange={(e) => setRiderStateFilter(e.target.value)}>
+              <option value="all">All states</option>
+              {stateOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select className={`${FIELD_INPUT} w-56`} value={riderAvailFilter} onChange={(e) => setRiderAvailFilter(e.target.value as RiderAvailability | "all")}>
+              <option value="all">All availability</option>
+              <option value="available">Available</option>
+              <option value="not_available">Not Available</option>
+              <option value="requires_state_proposal">Requires State Proposal</option>
+            </select>
+          </div>
+
+          {showNewRider ? (
+            <NewRiderForm
+              productId={product.id}
+              onCancel={() => setShowNewRider(false)}
+              onSave={(r) => { onAddRider(r); setShowNewRider(false); }}
+            />
+          ) : null}
+
+          <div className="bg-white border border-black/10 rounded-md overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
+                <tr>
+                  <th className="text-left font-medium px-3 py-2">Rider Code</th>
+                  <th className="text-left font-medium px-3 py-2">Rider Name</th>
+                  <th className="text-left font-medium px-3 py-2">State</th>
+                  <th className="text-left font-medium px-3 py-2">Availability</th>
+                  <th className="text-left font-medium px-3 py-2">Effective</th>
+                  <th className="text-left font-medium px-3 py-2">Last Verified</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRiders.length === 0 ? (
+                  <tr><td colSpan={6} className="px-3 py-3 text-black/50 italic">No rider rows match.</td></tr>
+                ) : null}
+                {filteredRiders.map((r) => (
+                  <tr key={r.id} className="border-t border-black/5">
+                    <td className="px-3 py-2 font-mono text-[11px]">{r.rider_code}</td>
+                    <td className="px-3 py-2">{r.rider_full_name}</td>
+                    <td className="px-3 py-2">{r.state}</td>
+                    <td className="px-3 py-2"><AvailabilityPill value={r.available} /></td>
+                    <td className="px-3 py-2 text-black/70">{r.effective_from ?? "—"} → {r.effective_to ?? "Current"}</td>
+                    <td className="px-3 py-2 text-black/70">{r.last_verified ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Section 2 (footer): Sync */}
+      <div className="pt-3 border-t border-black/5 text-[11px] text-black/50">
+        Attio ID: {product.attio_product_id ?? "Not yet synced from Attio"}
+        {product.attio_product_id ? ` · Last synced: ${fmtSync(product.attio_last_synced_at)}` : ""}
+      </div>
     </div>
   );
 }
@@ -663,6 +827,8 @@ function NewScheduleForm({
   const [stateCode, setStateCode] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const [effFrom, setEffFrom] = useState(new Date().toISOString().slice(0, 10));
+  const [effTo, setEffTo] = useState("");
+  const [notes, setNotes] = useState("");
   const [tierRows, setTierRows] = useState<Array<{ from: number; to: number; pct: number }>>([
     { from: 1, to: 1, pct: 100 },
     { from: 2, to: 10, pct: 5 },
@@ -680,10 +846,13 @@ function NewScheduleForm({
     const sched: CarrierCommissionSchedule = {
       id, carrier_product_id: productId, carrier_product_name: productName,
       state_code: stateCode.trim() || null, schedule_name: name.trim(),
-      schedule_type: type, is_default: isDefault, effective_from: effFrom, effective_to: null,
+      schedule_type: type, is_default: isDefault,
+      effective_from: effFrom, effective_to: effTo || null,
     };
+    void notes; // notes not on existing schedule type; would be added in production schema
     const newTiers = tierRows.map((t, i) => ({
-      id: `${id}_t${i}`, schedule_id: id, year_from: Number(t.from), year_to: Number(t.to), pct: Number(t.pct),
+      id: `${id}_t${i}`, schedule_id: id,
+      year_from: Number(t.from), year_to: Number(t.to), pct: Number(t.pct),
     }));
     onSave(sched, newTiers);
   }
@@ -693,7 +862,7 @@ function NewScheduleForm({
       <div className="text-xs font-semibold mb-2">New Schedule</div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
         <Field label="Schedule Name">
-          <input className={FIELD_INPUT} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Heaped, Flat, Level" />
+          <input className={FIELD_INPUT} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Heaped Standard" />
         </Field>
         <Field label="Type">
           <select className={FIELD_INPUT} value={type} onChange={(e) => setType(e.target.value as ScheduleType)}>
@@ -702,17 +871,25 @@ function NewScheduleForm({
             <option value="level">level</option>
           </select>
         </Field>
-        <Field label="State Code (blank for standard)">
+        <Field label="State (blank for standard)">
           <input className={FIELD_INPUT} value={stateCode} onChange={(e) => setStateCode(e.target.value.toUpperCase())} placeholder="e.g., NY" />
         </Field>
         <Field label="Effective From">
           <input type="date" className={FIELD_INPUT} value={effFrom} onChange={(e) => setEffFrom(e.target.value)} />
         </Field>
-        <div className="col-span-2">
-          <label className="inline-flex items-center gap-2 text-xs">
+        <Field label="Effective To (blank for current)">
+          <input type="date" className={FIELD_INPUT} value={effTo} onChange={(e) => setEffTo(e.target.value)} />
+        </Field>
+        <Field label="Default">
+          <label className="inline-flex items-center gap-2 text-xs h-7">
             <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />
             Default schedule for this product
           </label>
+        </Field>
+        <div className="col-span-2">
+          <Field label="Notes">
+            <input className={FIELD_INPUT} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </Field>
         </div>
       </div>
 
@@ -743,6 +920,165 @@ function NewScheduleForm({
 
       <div className="flex gap-2 mt-3">
         <Btn variant="primary" onClick={submit}>Save Schedule</Btn>
+        <Btn variant="ghost" onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
+function NewConstraintForm({
+  productId, onCancel, onSave,
+}: {
+  productId: string;
+  onCancel: () => void;
+  onSave: (c: CarrierConstraint) => void;
+}) {
+  const [siMax, setSiMax] = useState("500000");
+  const [increment, setIncrement] = useState("25000");
+  const [tierFloor, setTierFloor] = useState("100000");
+  const [roundThreshold, setRoundThreshold] = useState("10000");
+  const [effFrom, setEffFrom] = useState(new Date().toISOString().slice(0, 10));
+  const [effTo, setEffTo] = useState("");
+  const [verifiedBy, setVerifiedBy] = useState("");
+  const [lastVerified, setLastVerified] = useState(new Date().toISOString().slice(0, 10));
+  const [source, setSource] = useState("");
+  const [notes, setNotes] = useState("");
+
+  function submit() {
+    const id = `cc_new_${Date.now()}`;
+    onSave({
+      id, carrier_product_id: productId,
+      si_max_cents: Math.round(Number(siMax) * 100),
+      increment: Math.round(Number(increment) * 100),
+      tier_floor_cents: Math.round(Number(tierFloor) * 100),
+      round_preference_threshold_cents: Math.round(Number(roundThreshold) * 100),
+      effective_from: effFrom,
+      effective_to: effTo || null,
+      verified_by: verifiedBy,
+      last_verified: lastVerified,
+      source, notes,
+    });
+  }
+
+  const dollarHint = "Enter in dollars; stored as integer cents per schema.";
+
+  return (
+    <div className="mb-3 bg-[#f7f3eb] border border-black/10 rounded-md p-3">
+      <div className="text-xs font-semibold mb-2">New Constraint</div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+        <Field label="SI Maximum ($)">
+          <input type="number" className={FIELD_INPUT} value={siMax} onChange={(e) => setSiMax(e.target.value)} title={dollarHint} />
+        </Field>
+        <Field label="Increment ($)">
+          <input type="number" className={FIELD_INPUT} value={increment} onChange={(e) => setIncrement(e.target.value)} title={dollarHint} />
+        </Field>
+        <Field label="Tier Floor ($)">
+          <input type="number" className={FIELD_INPUT} value={tierFloor} onChange={(e) => setTierFloor(e.target.value)} title={dollarHint} />
+        </Field>
+        <Field label="Round Preference Threshold ($)">
+          <input type="number" className={FIELD_INPUT} value={roundThreshold} onChange={(e) => setRoundThreshold(e.target.value)} title={dollarHint} />
+        </Field>
+        <Field label="Effective From">
+          <input type="date" className={FIELD_INPUT} value={effFrom} onChange={(e) => setEffFrom(e.target.value)} />
+        </Field>
+        <Field label="Effective To">
+          <input type="date" className={FIELD_INPUT} value={effTo} onChange={(e) => setEffTo(e.target.value)} />
+        </Field>
+        <Field label="Verified By">
+          <input className={FIELD_INPUT} value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} />
+        </Field>
+        <Field label="Last Verified">
+          <input type="date" className={FIELD_INPUT} value={lastVerified} onChange={(e) => setLastVerified(e.target.value)} />
+        </Field>
+        <Field label="Source">
+          <input className={FIELD_INPUT} value={source} onChange={(e) => setSource(e.target.value)} />
+        </Field>
+        <Field label="Notes">
+          <input className={FIELD_INPUT} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </Field>
+      </div>
+      <div className="flex gap-2 mt-3">
+        <Btn variant="primary" onClick={submit}>Save Constraint</Btn>
+        <Btn variant="ghost" onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
+function NewRiderForm({
+  productId, onCancel, onSave,
+}: {
+  productId: string;
+  onCancel: () => void;
+  onSave: (r: CarrierRiderAvailability) => void;
+}) {
+  const [state, setState] = useState("NY");
+  const [riderCode, setRiderCode] = useState("");
+  const [riderFullName, setRiderFullName] = useState("");
+  const [available, setAvailable] = useState<RiderAvailability>("available");
+  const [effFrom, setEffFrom] = useState(new Date().toISOString().slice(0, 10));
+  const [effTo, setEffTo] = useState("");
+  const [lastVerified, setLastVerified] = useState(new Date().toISOString().slice(0, 10));
+  const [verifiedBy, setVerifiedBy] = useState("");
+  const [sourceDoc, setSourceDoc] = useState("");
+  const [notes, setNotes] = useState("");
+
+  function submit() {
+    if (!riderCode.trim()) return;
+    const id = `cra_new_${Date.now()}`;
+    onSave({
+      id, carrier_product_id: productId,
+      state, rider_code: riderCode.trim(), rider_full_name: riderFullName,
+      available,
+      effective_from: effFrom, effective_to: effTo || null,
+      last_verified: lastVerified, verified_by: verifiedBy,
+      source_document: sourceDoc, notes,
+    });
+  }
+
+  return (
+    <div className="mb-3 bg-[#f7f3eb] border border-black/10 rounded-md p-3">
+      <div className="text-xs font-semibold mb-2">New Rider Row</div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+        <Field label="State">
+          <select className={FIELD_INPUT} value={state} onChange={(e) => setState(e.target.value)}>
+            {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </Field>
+        <Field label="Rider Code">
+          <input className={FIELD_INPUT} value={riderCode} onChange={(e) => setRiderCode(e.target.value)} placeholder="e.g., LTC" />
+        </Field>
+        <Field label="Rider Name">
+          <input className={FIELD_INPUT} value={riderFullName} onChange={(e) => setRiderFullName(e.target.value)} placeholder="e.g., Long-Term Care Rider" />
+        </Field>
+        <Field label="Availability">
+          <select className={FIELD_INPUT} value={available} onChange={(e) => setAvailable(e.target.value as RiderAvailability)}>
+            <option value="available">available</option>
+            <option value="not_available">not_available</option>
+            <option value="requires_state_proposal">requires_state_proposal</option>
+          </select>
+        </Field>
+        <Field label="Effective From">
+          <input type="date" className={FIELD_INPUT} value={effFrom} onChange={(e) => setEffFrom(e.target.value)} />
+        </Field>
+        <Field label="Effective To">
+          <input type="date" className={FIELD_INPUT} value={effTo} onChange={(e) => setEffTo(e.target.value)} />
+        </Field>
+        <Field label="Last Verified">
+          <input type="date" className={FIELD_INPUT} value={lastVerified} onChange={(e) => setLastVerified(e.target.value)} />
+        </Field>
+        <Field label="Verified By">
+          <input className={FIELD_INPUT} value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} />
+        </Field>
+        <Field label="Source Document">
+          <input className={FIELD_INPUT} value={sourceDoc} onChange={(e) => setSourceDoc(e.target.value)} />
+        </Field>
+        <Field label="Notes">
+          <input className={FIELD_INPUT} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </Field>
+      </div>
+      <div className="flex gap-2 mt-3">
+        <Btn variant="primary" onClick={submit}>Save Rider Row</Btn>
         <Btn variant="ghost" onClick={onCancel}>Cancel</Btn>
       </div>
     </div>

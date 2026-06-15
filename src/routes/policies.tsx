@@ -26,7 +26,7 @@ const carrierProductLabel = (cpId: string) => {
   const cp = CARRIER_PRODUCTS.find((c) => c.id === cpId);
   if (!cp) return cpId;
   const car = CARRIERS.find((c) => c.id === cp.carrier_id);
-  return car ? `${car.name} · ${cp.name}` : cp.name;
+  return car ? `${car.carrier_name} · ${cp.product_name}` : cp.product_name;
 };
 
 const fmtDate = (iso: string | null) => {

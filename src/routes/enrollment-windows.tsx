@@ -49,7 +49,7 @@ function emptyDraft(): Draft {
     start_date: "",
     end_date: "",
     default_effective_date: "",
-    carrier: CARRIERS[0]?.name ?? "",
+    carrier: CARRIERS[0]?.carrier_name ?? "",
     gi_eligible: true,
     status: "upcoming",
     notes: "",
@@ -101,7 +101,7 @@ function View() {
 
   const productOrgs = ORGS.filter((o) => o.product === product);
   const orgOptions = productOrgs.map((o) => ({ value: o.name, label: o.name }));
-  const carrierOptions = CARRIERS.map((c) => ({ value: c.name, label: c.name }));
+  const carrierOptions = CARRIERS.map((c) => ({ value: c.carrier_name, label: c.carrier_name }));
 
   const rows = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -424,7 +424,7 @@ function WindowForm({
               onChange={(e) => update("carrier", e.target.value)}
               className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
             >
-              {CARRIERS.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+              {CARRIERS.map((c) => <option key={c.id} value={c.carrier_name}>{c.carrier_name}</option>)}
             </select>
           </Field>
 
