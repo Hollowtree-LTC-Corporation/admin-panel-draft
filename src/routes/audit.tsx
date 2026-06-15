@@ -4,6 +4,7 @@ import { PageHeader, TableShell, TRow, TCell, Pill, Drawer, useDrawer } from "@/
 import { AUDIT_LOG } from "@/lib/wireframe/data";
 import { useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, FilterDate, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/audit")({ component: View });
 
@@ -65,6 +66,7 @@ function View() {
         <span className="text-[11px] text-black/40">to</span>
         <FilterDate value={to} onChange={setTo} />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={rows.length} totalCount={AUDIT_LOG.length} resourceLabel="audit entries" adminOnly />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>

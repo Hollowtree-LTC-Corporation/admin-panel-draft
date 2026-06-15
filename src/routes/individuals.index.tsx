@@ -168,6 +168,7 @@ function IndividualsView() {
         )}
         <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "Successful", label: "Paid" }, { value: "Failed" }, { value: "Pending" }]} />
         <ClearFiltersLink show={filtersActive} onClick={clearAll} />
+        <ExportCsvButton filteredCount={filtered.length} totalCount={productRows.length} resourceLabel="individuals" />
       </FilterRow>
 
       <TableShell>

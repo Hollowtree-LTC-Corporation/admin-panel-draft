@@ -4,6 +4,7 @@ import { PageHeader, TableShell, TRow, TCell, Btn } from "@/components/wireframe
 import { BILLING_GROUPS, INDIVIDUALS, ORGS } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/billing-groups")({ component: View });
 
@@ -50,6 +51,7 @@ function View() {
         <FilterCombobox value={org} onChange={setOrg} placeholder="All orgs" options={orgOptions} />
         <FilterSelect value={pm} onChange={setPm} allLabel="All payment methods" options={pmOptions} />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={rows.length} totalCount={BILLING_GROUPS.length} resourceLabel="billing groups" />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>

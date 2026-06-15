@@ -4,6 +4,7 @@ import { PageHeader, TableShell, TRow, TCell, Pill, Btn, Drawer, useDrawer, Fiel
 import { ORGS } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort, US_STATE_OPTIONS } from "@/components/wireframe/Filters";
+import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/organizations/")({ component: OrgsView });
 
@@ -59,6 +60,7 @@ function OrgsView() {
           { value: "employer", label: "employer_group" }, { value: "employer_group", label: "employer_group" }, { value: "individual", label: "individual" }, { value: "cca", label: "cca" },
         ]} />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={filtered.length} totalCount={productRows.length} resourceLabel="organizations" />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>

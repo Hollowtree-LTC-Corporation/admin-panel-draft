@@ -219,6 +219,7 @@ function View() {
           ]}
         />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={rows.length} totalCount={affiliates.length} resourceLabel="affiliates" />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>

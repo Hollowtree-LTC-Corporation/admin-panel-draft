@@ -173,6 +173,7 @@ function View() {
         ]} />
         <FilterCombobox value={carrier} onChange={setCarrier} placeholder="All carriers" options={carrierOptions} />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={rows.length} totalCount={windows.length} resourceLabel="enrollment windows" />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>

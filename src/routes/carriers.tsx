@@ -226,6 +226,7 @@ function View() {
       <FilterRow>
         <FilterSearch value={search} onChange={setSearch} placeholder="Search carrier or product…" />
         <ClearFiltersLink show={activeFilters} onClick={clearAll} />
+        <ExportCsvButton filteredCount={visibleCarriers.length} totalCount={carriers.length} resourceLabel="carriers" />
       </FilterRow>
 
       {showNewCarrier && newCarrierDraft ? (

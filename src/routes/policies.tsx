@@ -159,6 +159,7 @@ function View() {
         <FilterSelect value={status} onChange={(v) => setStatus(v as PolicyStatus | "all")} allLabel="All statuses" options={statuses} />
         <FilterCombobox value={cp} onChange={setCp} placeholder="All carrier products" options={cpOptions} />
         <ClearFiltersLink show={active} onClick={clearAll} />
+        <ExportCsvButton filteredCount={rows.length} totalCount={policies.length} resourceLabel="policies" />
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey> cols={cols} sortKey={sort.sortKey} sortDir={sort.sortDir} onToggle={sort.toggle} />
