@@ -1,14 +1,15 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useStore } from "@/lib/wireframe/store";
 import type { Product, Role } from "@/lib/wireframe/data";
+import { SCHEDULED_REPORT_COUNT } from "@/lib/wireframe/reports";
 import logoAsset from "@/assets/hollowtree-logo.png.asset.json";
 import {
   LayoutDashboard, Building2, Users, CalendarRange, Wallet, Receipt,
   Scale, Calculator, HandCoins, Briefcase, FileText, KeyRound, ShieldAlert,
-  ListTodo, Layers, Handshake,
+  ListTodo, Layers, Handshake, BarChart3,
 } from "lucide-react";
 
-type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; product?: Product };
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; product?: Product; badge?: number };
 type NavGroup = { label?: string; items: NavItem[] };
 
 const NAV_GROUPS: NavGroup[] = [
@@ -38,6 +39,12 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/carriers", label: "Carriers & Products", icon: Briefcase },
       { to: "/affiliates", label: "Affiliates", icon: Handshake },
+    ],
+  },
+  {
+    label: "REPORTS",
+    items: [
+      { to: "/reports", label: "Reports", icon: BarChart3, badge: SCHEDULED_REPORT_COUNT },
     ],
   },
   {
@@ -87,6 +94,11 @@ export function Shell() {
                     <span>{item.label}</span>
                     {item.product ? (
                       <span className="ml-auto text-[9px] px-1 py-0.5 rounded bg-white/10">{item.product}</span>
+                    ) : null}
+                    {item.badge && item.badge > 0 ? (
+                      <span className={`${item.product ? "" : "ml-auto"} text-[9px] px-1.5 py-0.5 rounded-full bg-[#d4b87a] text-[#0a3d3e] font-semibold`}>
+                        {item.badge}
+                      </span>
                     ) : null}
                   </Link>
                 );
