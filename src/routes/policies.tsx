@@ -170,6 +170,7 @@ function View() {
           {rows.map((p) => (
             <TRow key={p.id} onClick={() => openView(p)}>
               <TCell className="font-mono text-[11px]">{p.id}</TCell>
+              <TCell>{p.policy_name ?? <span className="text-black/30">—</span>}</TCell>
               <TCell className="font-medium">{p.org_name}</TCell>
               <TCell>{p.carrier_product_name}</TCell>
               <TCell><Pill tone={statusTone(p.status)}>{p.status}</Pill></TCell>
