@@ -49,7 +49,7 @@ function emptyDraft(): Draft {
     start_date: "",
     end_date: "",
     default_effective_date: "",
-    carrier: CARRIERS[0]?.name ?? "",
+    carrier: CARRIERS[0]?.carrier_name ?? "",
     gi_eligible: true,
     status: "upcoming",
     notes: "",
