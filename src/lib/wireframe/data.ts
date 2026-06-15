@@ -193,20 +193,55 @@ export const CARRIER_PRODUCTS = [
   { id: "cp_5", carrier_id: "car_4", name: "Sequoia LTC Premier" },
 ];
 
-export const POLICIES = [
-  { id: "pol_1", org_id: "org_1", org_name: "Acme Widgets Co", carrier_product_id: "cp_1", product: "DI", status: "active", carrier_commission_pct: 12, override_pct: 3 },
-  { id: "pol_2", org_id: "org_2", org_name: "Bluefin Logistics", carrier_product_id: "cp_2", product: "DI", status: "active", carrier_commission_pct: 10, override_pct: 2 },
-  { id: "pol_3", org_id: "org_3", org_name: "Coastal Credit Union", carrier_product_id: "cp_3", product: "LTC", status: "active", carrier_commission_pct: null, override_pct: null },
-  { id: "pol_4", org_id: "org_5", org_name: "Evergreen Health", carrier_product_id: "cp_4", product: "LTC", status: "active", carrier_commission_pct: null, override_pct: null },
-  { id: "pol_5", org_id: "org_7", org_name: "Greylock Partners LLC", carrier_product_id: "cp_1", product: "DI", status: "pending", carrier_commission_pct: 12, override_pct: 3 },
+export type PolicyStatus = "active" | "pending" | "terminated";
+export type Policy = {
+  id: string;
+  org_id: string;
+  org_name: string;
+  carrier_product_id: string;
+  product: Product;
+  status: PolicyStatus;
+  carrier_commission_pct: number | null;
+  override_pct: number | null;
+  commission_schedule_id: string | null;
+  initial_effective_date: string;
+  attio_last_synced_at: string | null;
+  updated_at: string;
+  attio_record_id: string;
+};
+
+export const POLICIES: Policy[] = [
+  { id: "pol_1", org_id: "org_1", org_name: "Acme Widgets Co", carrier_product_id: "cp_1", product: "DI", status: "active", carrier_commission_pct: 12, override_pct: 3, commission_schedule_id: null, initial_effective_date: "2025-02-01", attio_last_synced_at: "2025-06-10T14:14:00Z", updated_at: "2025-06-09T11:00:00Z", attio_record_id: "att_pol_1" },
+  { id: "pol_2", org_id: "org_2", org_name: "Bluefin Logistics", carrier_product_id: "cp_2", product: "DI", status: "active", carrier_commission_pct: 10, override_pct: null, commission_schedule_id: null, initial_effective_date: "2025-03-15", attio_last_synced_at: "2025-05-20T09:00:00Z", updated_at: "2025-06-12T16:30:00Z", attio_record_id: "att_pol_2" },
+  { id: "pol_3", org_id: "org_3", org_name: "Coastal Credit Union", carrier_product_id: "cp_3", product: "LTC", status: "active", carrier_commission_pct: null, override_pct: null, commission_schedule_id: "ccs_1", initial_effective_date: "2025-04-01", attio_last_synced_at: "2025-06-11T10:00:00Z", updated_at: "2025-06-08T08:00:00Z", attio_record_id: "att_pol_3" },
+  { id: "pol_4", org_id: "org_5", org_name: "Evergreen Health", carrier_product_id: "cp_4", product: "LTC", status: "active", carrier_commission_pct: null, override_pct: null, commission_schedule_id: "ccs_2", initial_effective_date: "2025-05-01", attio_last_synced_at: "2025-06-12T13:00:00Z", updated_at: "2025-06-10T10:00:00Z", attio_record_id: "att_pol_4" },
+  { id: "pol_5", org_id: "org_7", org_name: "Greylock Partners LLC", carrier_product_id: "cp_1", product: "DI", status: "pending", carrier_commission_pct: 12, override_pct: 3, commission_schedule_id: null, initial_effective_date: "2025-07-01", attio_last_synced_at: null, updated_at: "2025-06-14T09:00:00Z", attio_record_id: "att_pol_5" },
+  { id: "pol_6", org_id: "org_4", org_name: "Delta Manufacturing", carrier_product_id: "cp_2", product: "DI", status: "terminated", carrier_commission_pct: 10, override_pct: 2, commission_schedule_id: null, initial_effective_date: "2024-06-01", attio_last_synced_at: "2025-04-01T10:00:00Z", updated_at: "2025-04-01T10:00:00Z", attio_record_id: "att_pol_6" },
+  { id: "pol_7", org_id: "org_6", org_name: "Foxtail Education Trust", carrier_product_id: "cp_5", product: "LTC", status: "pending", carrier_commission_pct: null, override_pct: null, commission_schedule_id: "ccs_3", initial_effective_date: "2025-08-15", attio_last_synced_at: null, updated_at: "2025-06-13T12:00:00Z", attio_record_id: "att_pol_7" },
+  { id: "pol_8", org_id: "org_3", org_name: "Coastal Credit Union", carrier_product_id: "cp_4", product: "LTC", status: "active", carrier_commission_pct: null, override_pct: null, commission_schedule_id: null, initial_effective_date: "2025-01-15", attio_last_synced_at: "2025-06-10T08:00:00Z", updated_at: "2025-06-10T07:00:00Z", attio_record_id: "att_pol_8" },
 ];
 
 export const CHANNEL_PARTNERS = [
-  { id: "cpn_1", name: "Westfield Brokers", partner_type: "Broker", default_split_pct: 60, payment_method: "hollowtree_paid" },
-  { id: "cpn_2", name: "Hollowtree House", partner_type: "House", default_split_pct: 20, payment_method: "hollowtree_paid" },
-  { id: "cpn_3", name: "Jamie Rep", partner_type: "Internal", default_split_pct: 15, payment_method: "hollowtree_paid" },
-  { id: "cpn_4", name: "Override Group LLC", partner_type: "Override", default_split_pct: 5, payment_method: "carrier_direct" },
+  { id: "cpn_1", name: "WTC Benefits", partner_type: "Broker", default_split_pct: 40, payment_method: "hollowtree_paid" },
+  { id: "cpn_2", name: "Westfield Brokers", partner_type: "Broker", default_split_pct: 60, payment_method: "hollowtree_paid" },
+  { id: "cpn_3", name: "Hollowtree House", partner_type: "House", default_split_pct: 45, payment_method: "hollowtree_paid" },
+  { id: "cpn_4", name: "Jamie Rep", partner_type: "Internal", default_split_pct: 10, payment_method: "hollowtree_paid" },
+  { id: "cpn_5", name: "Gallagher", partner_type: "Override", default_split_pct: 5, payment_method: "carrier_direct" },
+  { id: "cpn_6", name: "Override Group LLC", partner_type: "Override", default_split_pct: 5, payment_method: "carrier_direct" },
 ];
+
+export const INTERNAL_REPS = [
+  { id: "rep_1", name: "Guy Livingstone" },
+  { id: "rep_2", name: "Jamie Rep" },
+  { id: "rep_3", name: "Casey Rep" },
+  { id: "rep_4", name: "Morgan Rep" },
+];
+
+// Maps each org to its primary channel partner (broker firm) for splits defaults.
+export const ORG_PRIMARY_CHANNEL_PARTNER: Record<string, string> = {
+  org_1: "cpn_1", org_2: "cpn_2", org_3: "cpn_1", org_4: "cpn_2",
+  org_5: "cpn_1", org_6: "cpn_2", org_7: "cpn_1", org_8: "cpn_2",
+};
 
 export const COMMISSION_SPLIT_DEFAULTS = CHANNEL_PARTNERS.map((p) => ({
   id: `csd_${p.id}`,
@@ -217,24 +252,71 @@ export const COMMISSION_SPLIT_DEFAULTS = CHANNEL_PARTNERS.map((p) => ({
   payment_method: p.payment_method,
 }));
 
-export const POLICY_SPLITS = [
-  { id: "ps_1", policy_id: "pol_1", channel_partner_name: "Westfield Brokers", pct: 60 },
-  { id: "ps_2", policy_id: "pol_1", channel_partner_name: "Hollowtree House", pct: 20 },
-  { id: "ps_3", policy_id: "pol_1", channel_partner_name: "Jamie Rep", pct: 15 },
-  { id: "ps_4", policy_id: "pol_1", channel_partner_name: "Override Group LLC", pct: 5 },
+export type PayeeType = "house" | "internal_rep" | "channel_partner" | "override";
+export type PaymentMethodSetting = "hollowtree_paid" | "carrier_direct";
+export type SplitSource = "default" | "override";
+
+export type PolicySplit = {
+  id: string;
+  policy_id: string;
+  payee_type: PayeeType;
+  payee_name: string;
+  split_pct: number;
+  payment_method: PaymentMethodSetting;
+  source: SplitSource;
+  effective_to: string | null;
+};
+
+// Initial split rows by policy. pol_3 intentionally totals 85% to demo the warning state.
+export const POLICY_SPLITS_INITIAL: PolicySplit[] = [
+  { id: "ps_1_1", policy_id: "pol_1", payee_type: "house", payee_name: "Hollowtree", split_pct: 45, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_1_2", policy_id: "pol_1", payee_type: "internal_rep", payee_name: "Guy Livingstone", split_pct: 10, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_1_3", policy_id: "pol_1", payee_type: "channel_partner", payee_name: "WTC Benefits", split_pct: 40, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_1_4", policy_id: "pol_1", payee_type: "override", payee_name: "Gallagher", split_pct: 5, payment_method: "carrier_direct", source: "default", effective_to: null },
+
+  { id: "ps_2_1", policy_id: "pol_2", payee_type: "house", payee_name: "Hollowtree", split_pct: 50, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_2_2", policy_id: "pol_2", payee_type: "channel_partner", payee_name: "Westfield Brokers", split_pct: 50, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+
+  { id: "ps_3_1", policy_id: "pol_3", payee_type: "house", payee_name: "Hollowtree", split_pct: 45, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_3_2", policy_id: "pol_3", payee_type: "channel_partner", payee_name: "WTC Benefits", split_pct: 40, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+
+  { id: "ps_4_1", policy_id: "pol_4", payee_type: "house", payee_name: "Hollowtree", split_pct: 50, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_4_2", policy_id: "pol_4", payee_type: "internal_rep", payee_name: "Casey Rep", split_pct: 10, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_4_3", policy_id: "pol_4", payee_type: "channel_partner", payee_name: "WTC Benefits", split_pct: 35, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_4_4", policy_id: "pol_4", payee_type: "override", payee_name: "Override Group LLC", split_pct: 5, payment_method: "carrier_direct", source: "default", effective_to: null },
+
+  { id: "ps_5_1", policy_id: "pol_5", payee_type: "house", payee_name: "Hollowtree", split_pct: 45, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_5_2", policy_id: "pol_5", payee_type: "internal_rep", payee_name: "Guy Livingstone", split_pct: 10, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_5_3", policy_id: "pol_5", payee_type: "channel_partner", payee_name: "WTC Benefits", split_pct: 40, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_5_4", policy_id: "pol_5", payee_type: "override", payee_name: "Gallagher", split_pct: 5, payment_method: "carrier_direct", source: "default", effective_to: null },
+
+  { id: "ps_6_1", policy_id: "pol_6", payee_type: "house", payee_name: "Hollowtree", split_pct: 50, payment_method: "hollowtree_paid", source: "default", effective_to: "2025-04-01" },
+  { id: "ps_6_2", policy_id: "pol_6", payee_type: "channel_partner", payee_name: "Westfield Brokers", split_pct: 50, payment_method: "hollowtree_paid", source: "default", effective_to: "2025-04-01" },
+
+  { id: "ps_7_1", policy_id: "pol_7", payee_type: "house", payee_name: "Hollowtree", split_pct: 60, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_7_2", policy_id: "pol_7", payee_type: "channel_partner", payee_name: "Westfield Brokers", split_pct: 40, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+
+  { id: "ps_8_1", policy_id: "pol_8", payee_type: "house", payee_name: "Hollowtree", split_pct: 55, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+  { id: "ps_8_2", policy_id: "pol_8", payee_type: "channel_partner", payee_name: "WTC Benefits", split_pct: 45, payment_method: "hollowtree_paid", source: "default", effective_to: null },
 ];
 
+// Back-compat alias for the commission view (uses pct + channel_partner_name shape).
+export const POLICY_SPLITS = POLICY_SPLITS_INITIAL.filter((s) => s.policy_id === "pol_1").map((s) => ({
+  id: s.id, policy_id: s.policy_id, channel_partner_name: s.payee_name, pct: s.split_pct,
+}));
+
 export const COMMISSION_STATEMENTS = [
-  { id: "cs_1", payee: "Westfield Brokers", period: "2025-05", amount_cents: 245000, payable: true },
+  { id: "cs_1", payee: "WTC Benefits", period: "2025-05", amount_cents: 245000, payable: true },
   { id: "cs_2", payee: "Hollowtree House", period: "2025-05", amount_cents: 81000, payable: true },
-  { id: "cs_3", payee: "Jamie Rep", period: "2025-05", amount_cents: 60500, payable: true },
-  { id: "cs_4", payee: "Override Group LLC", period: "2025-05", amount_cents: 20000, payable: false },
+  { id: "cs_3", payee: "Guy Livingstone", period: "2025-05", amount_cents: 60500, payable: true },
+  { id: "cs_4", payee: "Gallagher", period: "2025-05", amount_cents: 20000, payable: false },
 ];
 
 export const CARRIER_COMMISSION_SCHEDULES = [
-  { id: "ccs_1", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null },
-  { id: "ccs_2", carrier_product_id: "cp_4", carrier_product_name: "Heritage LTC NY", state_code: "NY" },
-  { id: "ccs_3", carrier_product_id: "cp_5", carrier_product_name: "Sequoia LTC Premier", state_code: null },
+  { id: "ccs_1", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Heaped" },
+  { id: "ccs_2", carrier_product_id: "cp_4", carrier_product_name: "Heritage LTC NY", state_code: "NY", schedule_name: "Flat 22%" },
+  { id: "ccs_3", carrier_product_id: "cp_5", carrier_product_name: "Sequoia LTC Premier", state_code: null, schedule_name: "Level" },
+  { id: "ccs_4", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Default" },
 ];
 
 export const COMMISSION_RATE_TIERS = [
