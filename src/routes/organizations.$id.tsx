@@ -1099,6 +1099,9 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
   const note = product === "LTC"
     ? "Carrier and product are set during initial onboarding. Commission schedule changes flow to all enrollments after the effective date."
     : "Carrier and product are set during initial onboarding. To change, contact engineering.";
+  const options = carrierProductOptions(product);
+  const [carrierProductId, setCarrierProductId] = useState<string | null>(org.carrier_product_id);
+  const selected = options.find((o) => o.id === carrierProductId) ?? null;
   return (
     <SectionCard
       title="Carrier & Product"
@@ -1109,13 +1112,13 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
       note={note}
     >
       <Grid2>
-        <RField label="Carrier">{org.carrier_name}</RField>
+        <RField label="Carrier">{selected ? selected.carrier : <Empty />}</RField>
         <RField label="Effective Date">
           {e.editing
             ? <input className={inputCls} type="date" defaultValue={org.policy_effective_date} />
             : fmtDate(org.policy_effective_date)}
         </RField>
-        <RField label="Product">{org.carrier_product_name}</RField>
+        <RField label="Product">{selected ? selected.product : <Empty />}</RField>
         {product === "LTC" ? (
           <RField label="Carrier Commission Schedule">
             <Link to="/carriers" className="text-sky-700 hover:underline inline-flex items-center gap-1">View schedule <ExternalLink className="h-3 w-3" /></Link>
@@ -1125,13 +1128,24 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
             <span className="text-xs text-black/60 italic">Per-policy commission rates</span>
           </RField>
         )}
-        {product === "DI" && (
-          <RField label="Group Policy Number">
-            {e.editing
-              ? <input className={inputCls} defaultValue={org.group_policy_number ?? ""} />
-              : <span className="font-mono text-xs">{org.group_policy_number}</span>}
-          </RField>
-        )}
+        <RField label="Carrier Product">
+          {e.editing
+            ? (
+                <select
+                  className={inputCls}
+                  value={carrierProductId ?? ""}
+                  onChange={(ev) => setCarrierProductId(ev.target.value || null)}
+                >
+                  <option value="">— Not set —</option>
+                  {options.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+              )
+            : (selected
+                ? <span className="text-sm">{selected.label}</span>
+                : <Empty />)}
+        </RField>
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
