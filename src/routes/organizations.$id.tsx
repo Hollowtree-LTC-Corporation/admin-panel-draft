@@ -1569,28 +1569,39 @@ function LtcTierPanels({ details, editing }: { details: Record<string, Record<st
   );
 }
 
-function CarrierOperationalSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function CarrierIdentifiersSection({ org, readOnly, variant }: { org: OrgDetail; readOnly: boolean; variant?: "info" | "config" | "integration" }) {
   const e = useSectionEdit();
+  // Left column: Case ID, Enrollment ID (Carrier), Form Number, Agent Number
+  // Right column: Benefit System, Rider Codes, Application Questions
   return (
     <SectionCard
-      title="Carrier / Operational"
-      note="Carrier-assigned identifiers and configuration. Typically set during initial setup."
+      title="Carrier Identifiers"
+      note="Carrier-assigned identifiers and configuration. Set during initial onboarding."
       editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}
+      variant={variant}
     >
       <Grid2>
         <RField label="Case ID">{e.editing ? <input className={inputCls} defaultValue={org.case_id} /> : <span className="font-mono text-xs">{org.case_id}</span>}</RField>
         <RField label="Benefit System">{e.editing ? <input className={inputCls} defaultValue={org.benefit_system} /> : org.benefit_system}</RField>
         <RField label="Enrollment ID (Carrier)">{e.editing ? <input className={inputCls} defaultValue={org.enrollment_id_carrier} /> : <span className="font-mono text-xs">{org.enrollment_id_carrier}</span>}</RField>
         <RField label="Rider Codes">
-          <div className="flex flex-wrap gap-1">
-            {org.rider_codes.map((r) => <span key={r} className="px-1.5 py-0.5 rounded text-[11px] bg-[#d4b87a]/40 text-[#0a3d3e] font-mono">{r}</span>)}
-          </div>
+          {e.editing
+            ? <input className={inputCls} defaultValue={org.rider_codes.join(", ")} placeholder="comma-separated" />
+            : (
+              <div className="flex flex-wrap gap-1">
+                {org.rider_codes.map((r) => <span key={r} className="px-1.5 py-0.5 rounded text-[11px] bg-[#d4b87a]/40 text-[#0a3d3e] font-mono">{r}</span>)}
+              </div>
+            )}
         </RField>
         <RField label="Form Number">{e.editing ? <input className={inputCls} defaultValue={org.form_number} /> : <span className="font-mono text-xs">{org.form_number}</span>}</RField>
         <RField label="Application Questions">
-          <ol className="list-decimal pl-4 text-xs text-black/70 space-y-0.5">
-            {org.application_questions.map((q, i) => <li key={i}>{q}</li>)}
-          </ol>
+          {e.editing
+            ? <Textarea defaultValue={org.application_questions.join("\n")} className="text-sm min-h-[88px]" placeholder="One question per line" />
+            : (
+              <ol className="list-decimal pl-4 text-xs text-black/70 space-y-0.5">
+                {org.application_questions.map((q, i) => <li key={i}>{q}</li>)}
+              </ol>
+            )}
         </RField>
         <RField label="Agent Number">{e.editing ? <input className={inputCls} defaultValue={org.agent_number} /> : <span className="font-mono text-xs">{org.agent_number}</span>}</RField>
       </Grid2>
