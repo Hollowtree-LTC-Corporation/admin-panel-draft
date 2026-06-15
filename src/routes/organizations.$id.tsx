@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ORGS, BENEFIT_CLASSES, INDIVIDUALS, POLICIES, PAYMENT_LEDGER, CARRIERS,
+  ORGS, BENEFIT_CLASSES, INDIVIDUALS, CARRIERS,
   COMMISSION_SPLIT_DEFAULTS, formatCents,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
@@ -28,9 +28,33 @@ const SPONSOR_TYPES = ["employer","affiliate"];
 const WINDOW_STATUSES = ["upcoming","open","closed"];
 const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
 const BROKERS = ["Westfield Brokers","Hollowtree House","Override Group LLC","Jamie Rep"];
+const BROKER_TYPES = ["Broker","IMO","Internal"];
+const INBOUND_TYPES = ["Broker Referral","Direct","Partner Referral","Inbound"];
 const PRODUCT_TEMPLATE_VARIANTS = ["base","eob_only","restoration_only","eob_and_restoration"];
 const CONTRIBUTION_TYPES = ["voluntary","buy_up","employer_paid"];
 const PAY_MODES = ["Monthly","10-Pay"];
+
+function defaultMicrositeSuffix(product: "DI" | "LTC"): string {
+  return product === "DI" ? ".hollowtree.co" : ".hollowtreeltc.com";
+}
+function parseMicrositeSubdomain(url: string, suffix: string): { matches: boolean; subdomain: string } {
+  try {
+    const host = new URL(url).hostname;
+    const bare = suffix.startsWith(".") ? suffix.slice(1) : suffix;
+    if (host === bare) return { matches: true, subdomain: "" };
+    if (host.endsWith("." + bare)) {
+      return { matches: true, subdomain: host.slice(0, host.length - bare.length - 1) };
+    }
+  } catch { /* ignore */ }
+  return { matches: false, subdomain: "" };
+}
+function carrierForProduct(product: "DI" | "LTC"): string {
+  return product === "DI" ? "Sun Life" : "Trustmark";
+}
+function carrierProductLabel(product: "DI" | "LTC", typeOfRate: string | null | undefined): string {
+  if (product === "LTC") return "Universal Life with LTC Rider";
+  return typeOfRate === "STD+LTD" ? "Group Disability (STD + LTD)" : "Group Disability (LTD)";
+}
 
 // Dummy enrollment windows scoped per org for this iteration
 const DUMMY_WINDOWS = [
@@ -128,6 +152,10 @@ function synthesize(org: typeof ORGS[number]) {
   const slug = org.name.toLowerCase().replace(/[^a-z]/g, "");
   const idx = parseInt(org.id.replace("org_", ""), 10) || 1;
   const cca = org.cca_group;
+  const product = org.product as "DI" | "LTC";
+  const suffix = defaultMicrositeSuffix(product);
+  // Sprinkle one non-standard microsite to exercise fallback path
+  const micrositeUrl = idx === 4 ? `https://enroll.example.com/${org.id}` : `https://${slug}${suffix}`;
   return {
     ...org,
     domain: `${slug}.example.com`,
@@ -137,13 +165,20 @@ function synthesize(org: typeof ORGS[number]) {
     eligible_lives: org.individuals_count * 3,
     // DI
     gi_offer_cents: 15000000,
-    microsite_url: `https://enroll.hollowtree.app/${org.id}`,
+    microsite_url: micrositeUrl,
     di_healthcare_type: "Healthcare Practice",
     inbound_type: "Broker Referral",
     ltd_benefit_pct: 60,
     std_benefit_pct: 66.7,
     next_sun_life_report_date: "2026-07-15",
     contact_email: idx % 4 === 0 ? null : `hr@${slug}.example.com`,
+    // Carrier & Product (dummy)
+    carrier_name: carrierForProduct(product),
+    carrier_product_name: carrierProductLabel(product, org.type_of_rate),
+    group_policy_number: product === "DI" ? `GP-${10000000 + idx * 137}` : null,
+    policy_effective_date: "2025-01-01",
+    // Klaviyo
+    klaviyo_list_id: ["TfRk9b","X4mP2q","Lz8Yhn","aQ3Wpv","R7nB2k","dE9Lto","Vc5Mxs","Jh1Knu"][idx % 8],
     // Coverage / Billing
     contribution_type: cca ? "voluntary" : "employer_paid",
     pay_mode: "Monthly",
@@ -234,19 +269,23 @@ function OrgDetail() {
   // Summary metrics
   const orgIndividuals = INDIVIDUALS.filter((i) => i.org_id === id);
   const activeEnrollees = orgIndividuals.filter((i) => i.coverage_status === "active").length;
-  const totalEnrollees = orgIndividuals.length;
-  const policies = POLICIES.filter((p) => p.org_id === id).length;
-  const orgIndIds = new Set(orgIndividuals.map((i) => i.id));
-  const currentCycle = "2025-06";
-  const collectedCents = PAYMENT_LEDGER
-    .filter((p) => orgIndIds.has(p.individual_id) && p.status === "successful" && p.date.startsWith(currentCycle))
-    .reduce((s, p) => s + p.amount_cents, 0);
-  const outstandingCents = Math.round(orgIndividuals.reduce((s, i) => s + i.monthly_premium_cents, 0) * 0.1);
+  const enrolledLives = orgIndividuals.filter((i) =>
+    i.coverage_status === "active" || i.coverage_status === "purchased" || i.coverage_status === "suspended"
+  ).length;
+  const totalMonthlyPremiumCents = orgIndividuals
+    .filter((i) => i.coverage_status === "active")
+    .reduce((s, i) => s + i.monthly_premium_cents, 0);
+  // Plausible placeholder: ~12% carrier commission with ~50% house split
+  const netHtCommissionCents = Math.round(totalMonthlyPremiumCents * 0.12 * 0.5);
+  // Next enrollment window
   const openWindowsList = windows.filter((w) => w.status === "open");
-  const openWindows = openWindowsList.length;
-  // earliest dated open window with an end date
+  const upcomingList = windows.filter((w) => w.status === "upcoming");
   const nextOpenEnd = openWindowsList
     .map((w) => w.end)
+    .filter((d): d is string => !!d)
+    .sort()[0] ?? null;
+  const nextUpcomingStart = upcomingList
+    .map((w) => w.start)
     .filter((d): d is string => !!d)
     .sort()[0] ?? null;
   const daysToClose = daysUntil(nextOpenEnd);
@@ -282,21 +321,45 @@ function OrgDetail() {
       />
 
       {/* Summary header */}
-      <div className="grid grid-cols-6 gap-2 mb-4">
-        <SummaryChip label="Active Enrollees" value={activeEnrollees} hint={`filter: org=${id} · active`} onClick={() => navigate({ to: "/individuals", search: { org: id, coverage: "active" } })} />
-        <SummaryChip label="Total Enrollees" value={totalEnrollees} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/individuals", search: { org: id } })} />
-        <SummaryChip label="Policies" value={policies} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/policies" })} />
-        <SummaryChip label="Collected This Cycle" value={formatCents(collectedCents)} hint={`${currentCycle} · org=${id}`} onClick={() => navigate({ to: "/payment-ledger" })} />
-        <SummaryChip label="Outstanding" value={formatCents(outstandingCents)} tone={outstandingCents > 0 ? "bad" : undefined} hint={`filter: org=${id}`} onClick={() => navigate({ to: "/enrollee-balance" })} />
+      <div className="grid grid-cols-5 gap-2 mb-4">
         <SummaryChip
-          label="Open Windows"
-          value={openWindows}
-          sub={openWindows > 0 && nextOpenEnd ? (
-            <span className={daysToClose !== null && daysToClose <= 14 ? "text-amber-700" : "text-black/50"}>
-              Window closes {fmtDate(nextOpenEnd)}
-            </span>
-          ) : undefined}
+          label="Current Monthly Premium"
+          value={formatCents(totalMonthlyPremiumCents)}
+          sub={<span className="text-black/50">across {activeEnrollees} active enrollees</span>}
         />
+        <SummaryChip
+          label="Net HT Commission"
+          value={formatCents(netHtCommissionCents)}
+          sub={<span className="text-black/40 italic">(formula pending)</span>}
+        />
+        <SummaryChip
+          label="Enrolled Lives"
+          value={enrolledLives}
+          sub={<span className="text-black/50">of {org.eligible_lives} eligible</span>}
+          onClick={() => navigate({ to: "/individuals", search: { org: id } })}
+          hint={`filter: org=${id}`}
+        />
+        {nextOpenEnd ? (
+          <SummaryChip
+            label="Next Enrollment Window"
+            value={fmtDate(nextOpenEnd)}
+            tone={daysToClose !== null && daysToClose <= 14 ? "warn" : undefined}
+            sub={<span className={daysToClose !== null && daysToClose <= 14 ? "text-amber-700" : "text-black/50"}>Currently open</span>}
+          />
+        ) : nextUpcomingStart ? (
+          <SummaryChip
+            label="Next Enrollment Window"
+            value={fmtDate(nextUpcomingStart)}
+            sub={<span className="text-black/50">Opens</span>}
+          />
+        ) : (
+          <SummaryChip
+            label="Next Enrollment Window"
+            value="—"
+            sub={<span className="text-black/40 italic">None scheduled</span>}
+          />
+        )}
+        <AttioDealCard dealId={org.attio_deal_id} />
       </div>
 
       <Tabs defaultValue="config" className="w-full">
@@ -413,6 +476,26 @@ function SummaryChip({ label, value, onClick, tone, hint, sub }: { label: string
   );
 }
 
+function AttioDealCard({ dealId }: { dealId: string }) {
+  const url = `https://app.attio.com/deals/${dealId}`;
+  return (
+    <div className="bg-white border border-black/10 rounded-md p-2 flex flex-col justify-between">
+      <div className="text-[9px] uppercase tracking-wider text-black/50">Attio Deal</div>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium border border-[#0a3d3e] text-[#0a3d3e] rounded hover:bg-[#0a3d3e] hover:text-white transition-colors"
+      >
+        Open in Attio <ExternalLink className="h-3 w-3" />
+      </a>
+      <div className="text-[10px] text-black/40 font-mono mt-1 truncate" title={dealId}>{dealId}</div>
+    </div>
+  );
+}
+
+
+
 /* ---------- Drawer Select ---------- */
 
 function DSelect({ defaultValue, options }: { defaultValue?: string; options: string[] }) {
@@ -435,13 +518,14 @@ function ConfigTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; produc
     <div className="mt-3 space-y-4">
       <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} />
       {product === "DI"
-        ? <DISettingsSection org={org} readOnly={readOnly} />
+        ? <DIProductPlanSection org={org} readOnly={readOnly} />
         : <LTCProductConfigSection org={org} readOnly={readOnly} />}
+      <CarrierProductSection org={org} product={product} readOnly={readOnly} />
       <CoverageBillingSection org={org} readOnly={readOnly} />
-      <BrokerSection org={org} readOnly={readOnly} />
+      <BrokerSection org={org} product={product} readOnly={readOnly} />
       <SignatorySection org={org} readOnly={readOnly} />
       <LinksRefsSection org={org} product={product} readOnly={readOnly} />
-      <PlanDetailsSection org={org} product={product} readOnly={readOnly} />
+      {product === "LTC" && <PlanDetailsSection org={org} product={product} readOnly={readOnly} />}
       {product === "LTC" && <CarrierOperationalSection org={org} readOnly={readOnly} />}
       {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
       <SystemRefsSection org={org} product={product} />
@@ -557,7 +641,7 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
             ? <select className={inputCls} defaultValue={org.industry}>{INDUSTRIES.map((o) => <option key={o}>{o}</option>)}</select>
             : titleCase(org.industry)}
         </RField>
-        <RField label="Microsite URL"><ExtLink href={org.microsite_url}>{org.microsite_url}</ExtLink></RField>
+        <RField label="Microsite URL"><MicrositeField url={org.microsite_url} product={product} editing={e.editing} /></RField>
         <RField label="Org Type">
           {e.editing
             ? <select className={inputCls} defaultValue={org.org_type}>{ORG_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
@@ -572,6 +656,13 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
         ) : (
           <RField label="Company Years in Existence">{e.editing ? <input className={inputCls} type="number" defaultValue={org.company_years_in_existence} /> : org.company_years_in_existence}</RField>
         )}
+        {product === "DI" ? (
+          <RField label="DI Healthcare Type">
+            {e.editing
+              ? <select className={inputCls} defaultValue={org.di_healthcare_type}>{DI_HC_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
+              : org.di_healthcare_type}
+          </RField>
+        ) : <div />}
         <RField label="Status">
           {e.editing
             ? <select className={inputCls} defaultValue={statusValue} disabled={!isAdmin}>{ORG_STATUSES.map((o) => <option key={o}>{o}</option>)}</select>
@@ -600,35 +691,151 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
   );
 }
 
-function DISettingsSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function DIProductPlanSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
   const e = useSectionEdit();
   const hasStd = org.type_of_rate === "STD+LTD";
+  const pd = (org.plan_details ?? {}) as { ltd?: Record<string, string>; std?: Record<string, string> };
   return (
-    <SectionCard title="DI Product" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
-      <Grid2>
-        <div>
-          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Product Mix</div>
-          <div className="text-sm text-gray-900 font-medium">
-            {e.editing
-              ? <select className={inputCls} defaultValue={org.type_of_rate ?? "LTD"}>{["LTD","STD+LTD"].map((o) => <option key={o} value={o}>{productMixLabel(o)}</option>)}</select>
-              : productMixLabel(org.type_of_rate)}
-          </div>
-          <div className="text-[11px] text-black/50 mt-1 italic">
-            Drives plan details, rate config, and which premium fields apply to individuals.
-          </div>
-        </div>
-        <RField label="LTD Benefit %">{e.editing ? <input className={inputCls} defaultValue={String(org.ltd_benefit_pct)} /> : `${org.ltd_benefit_pct}%`}</RField>
-        <RField label="DI Healthcare Type">
+    <SectionCard title="DI Product & Plan Terms" defaultOpen editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
+      <div className="mb-5">
+        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Product Mix</div>
+        <div className="text-sm text-gray-900 font-medium">
           {e.editing
-            ? <select className={inputCls} defaultValue={org.di_healthcare_type}>{DI_HC_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.di_healthcare_type}
+            ? <select className={inputCls} defaultValue={org.type_of_rate ?? "LTD"}>{["LTD","STD+LTD"].map((o) => <option key={o} value={o}>{productMixLabel(o)}</option>)}</select>
+            : productMixLabel(org.type_of_rate)}
+        </div>
+        <div className="text-[11px] text-black/50 mt-1 italic">
+          Drives plan terms below, rate config, and which premium fields apply to individuals.
+        </div>
+      </div>
+
+      <DIPlanBlock
+        header="Long-Term Disability (LTD)"
+        benefitPctLabel="Benefit %"
+        benefitPct={org.ltd_benefit_pct}
+        capLabel="Monthly Cap"
+        labels={LTD_LABELS}
+        values={pd.ltd ?? {}}
+        editing={e.editing}
+      />
+      {hasStd && (
+        <div className="mt-5">
+          <DIPlanBlock
+            header="Short-Term Disability (STD)"
+            benefitPctLabel="Benefit %"
+            benefitPct={org.std_benefit_pct}
+            capLabel="Weekly Cap"
+            labels={STD_LABELS}
+            values={pd.std ?? {}}
+            editing={e.editing}
+          />
+        </div>
+      )}
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function DIPlanBlock({
+  header, benefitPctLabel, benefitPct, capLabel, labels, values, editing,
+}: {
+  header: string;
+  benefitPctLabel: string;
+  benefitPct: number;
+  capLabel: string;
+  labels: Record<string, string>;
+  values: Record<string, string>;
+  editing: boolean;
+}) {
+  // Render Benefit % (structured) first, then the labeled text fields. Two-column grid.
+  const entries = Object.entries(labels);
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">{header}</div>
+      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+        <RField label={benefitPctLabel}>
+          {editing
+            ? <div className="flex items-center gap-1"><input className={inputCls} type="number" defaultValue={String(benefitPct)} /><span className="text-sm text-black/60">%</span></div>
+            : `${benefitPct}%`}
         </RField>
-        <RField label="STD Benefit %">
-          {hasStd
-            ? (e.editing ? <input className={inputCls} defaultValue={String(org.std_benefit_pct)} /> : `${org.std_benefit_pct}%`)
-            : <Empty />}
+        {entries.map(([key, label]) => {
+          // benefit_pct_text handled by structured field above; skip it
+          if (key === "benefit_pct_text") return null;
+          const isLong = key === "definition_of_disability" || key === "pre_existing_conditions" || key === "exclusions";
+          return (
+            <div key={key} className={isLong ? "col-span-2" : ""}>
+              <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label === "Monthly Cap" || label === "Weekly Cap" ? capLabel : label}</div>
+              <div className="text-sm text-gray-900">
+                {editing
+                  ? (isLong
+                      ? <Textarea defaultValue={values[key] ?? ""} className="text-sm min-h-[60px]" />
+                      : <input className={inputCls} defaultValue={values[key] ?? ""} />)
+                  : (values[key] || <Empty />)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MicrositeField({ url, product, editing }: { url: string; product: "DI" | "LTC"; editing: boolean }) {
+  const suffix = defaultMicrositeSuffix(product);
+  const parsed = parseMicrositeSubdomain(url, suffix);
+  if (!editing) {
+    return <ExtLink href={url}>{url}</ExtLink>;
+  }
+  if (!parsed.matches) {
+    return (
+      <div>
+        <input className={inputCls} defaultValue={url} />
+        <div className="text-[11px] text-amber-700 mt-1 italic">Non-standard domain — contact engineering.</div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-stretch border border-gray-300 rounded overflow-hidden bg-white focus-within:ring-1 focus-within:ring-blue-400">
+      <input className="flex-1 min-w-0 px-2 py-1 text-sm bg-white focus:outline-none" defaultValue={parsed.subdomain} placeholder="subdomain" />
+      <div className="px-2 py-1 text-sm text-black/60 bg-gray-50 border-l border-gray-300 select-none">{suffix}</div>
+    </div>
+  );
+}
+
+function CarrierProductSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard
+      title="Carrier & Product"
+      editing={e.editing}
+      canEdit={!readOnly}
+      onEdit={e.onEdit}
+      note="Carrier and product are set during initial onboarding. To change, contact engineering."
+    >
+      <Grid2>
+        <RField label="Carrier">{org.carrier_name}</RField>
+        <RField label="Effective Date">
+          {e.editing
+            ? <input className={inputCls} type="date" defaultValue={org.policy_effective_date} />
+            : fmtDate(org.policy_effective_date)}
         </RField>
-        <RField label="Inbound Type">{e.editing ? <input className={inputCls} defaultValue={org.inbound_type} /> : org.inbound_type}</RField>
+        <RField label="Product">{org.carrier_product_name}</RField>
+        {product === "LTC" ? (
+          <RField label="Carrier Commission Schedule">
+            <Link to="/carriers" className="text-sky-700 hover:underline inline-flex items-center gap-1">View schedule <ExternalLink className="h-3 w-3" /></Link>
+          </RField>
+        ) : (
+          <RField label="Carrier Commission Rates">
+            <span className="text-xs text-black/60 italic">Per-policy commission rates</span>
+          </RField>
+        )}
+        {product === "DI" && (
+          <RField label="Group Policy Number">
+            {e.editing
+              ? <input className={inputCls} defaultValue={org.group_policy_number ?? ""} />
+              : <span className="font-mono text-xs">{org.group_policy_number}</span>}
+          </RField>
+        )}
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
@@ -687,34 +894,108 @@ function CoverageBillingSection({ org, readOnly }: { org: OrgDetail; readOnly: b
   );
 }
 
-function BrokerSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function BrokerSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
   const e = useSectionEdit();
+  const [brokers, setBrokers] = useState<string[]>(BROKERS);
+  const [primary, setPrimary] = useState<string>(org.primary_broker);
+  const [secondary, setSecondary] = useState<string>(org.secondary_broker ?? "");
+  const [creatingFor, setCreatingFor] = useState<"primary" | "secondary" | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState(BROKER_TYPES[0]);
+  const [newPct, setNewPct] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+
   function renderOverride(value: number | null, brokerName: string | null) {
     if (value !== null) return `${value}%`;
     const def = brokerDefaultPct(brokerName);
     if (def !== null) return <span>{def}% <span className="text-[11px] text-black/40">(default)</span></span>;
     return <Empty />;
   }
+
+  function handleSelectChange(slot: "primary" | "secondary", value: string) {
+    if (value === "__create__") {
+      setCreatingFor(slot);
+      return;
+    }
+    if (slot === "primary") setPrimary(value); else setSecondary(value);
+  }
+
+  function saveNewBroker() {
+    if (!newName.trim()) return;
+    const name = newName.trim();
+    setBrokers((prev) => prev.includes(name) ? prev : [...prev, name]);
+    if (creatingFor === "primary") setPrimary(name); else setSecondary(name);
+    setCreatingFor(null);
+    setNewName(""); setNewType(BROKER_TYPES[0]); setNewPct(""); setNewEmail("");
+  }
+
+  function BrokerSelect({ slot, value }: { slot: "primary" | "secondary"; value: string }) {
+    return (
+      <select
+        className={inputCls}
+        value={value}
+        onChange={(ev) => handleSelectChange(slot, ev.target.value)}
+      >
+        {slot === "secondary" && <option value="">— None —</option>}
+        {brokers.map((o) => <option key={o} value={o}>{o}</option>)}
+        <option value="__create__">+ Create new broker…</option>
+      </select>
+    );
+  }
+
   return (
     <SectionCard title="Broker" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
       <Grid2>
         <RField label="Primary Broker">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.primary_broker}>{BROKERS.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.primary_broker}
+          {e.editing ? <BrokerSelect slot="primary" value={primary} /> : org.primary_broker}
         </RField>
-        <RField label="Secondary Broker">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.secondary_broker ?? ""}><option value="">— None —</option>{BROKERS.map((o) => <option key={o}>{o}</option>)}</select>
-            : val(org.secondary_broker)}
-        </RField>
+        {product === "DI" ? (
+          <RField label="Inbound Type">
+            {e.editing
+              ? <select className={inputCls} defaultValue={org.inbound_type}>{INBOUND_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
+              : org.inbound_type}
+          </RField>
+        ) : <div />}
         <RField label="Primary Override %">
           {e.editing ? <input className={inputCls} defaultValue={org.primary_override_pct ?? ""} placeholder="default" /> : renderOverride(org.primary_override_pct, org.primary_broker)}
         </RField>
+        <RField label="Secondary Broker">
+          {e.editing ? <BrokerSelect slot="secondary" value={secondary} /> : val(org.secondary_broker)}
+        </RField>
+        <div />
         <RField label="Secondary Override %">
           {e.editing ? <input className={inputCls} defaultValue={org.secondary_override_pct ?? ""} placeholder="default" /> : renderOverride(org.secondary_override_pct, org.secondary_broker)}
         </RField>
       </Grid2>
+
+      {e.editing && creatingFor && (
+        <div className="mt-4 p-3 border border-blue-300 bg-blue-50/40 rounded">
+          <div className="text-xs font-semibold text-[#0a3d3e] mb-2 uppercase tracking-wider">
+            New broker ({creatingFor})
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <RField label="Broker Name *">
+              <input className={inputCls} value={newName} onChange={(ev) => setNewName(ev.target.value)} placeholder="e.g. Pinnacle Benefits" />
+            </RField>
+            <RField label="Broker Type">
+              <select className={inputCls} value={newType} onChange={(ev) => setNewType(ev.target.value)}>
+                {BROKER_TYPES.map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </RField>
+            <RField label="Default Commission %">
+              <input className={inputCls} type="number" value={newPct} onChange={(ev) => setNewPct(ev.target.value)} placeholder="e.g. 15" />
+            </RField>
+            <RField label="Contact Email">
+              <input className={inputCls} type="email" value={newEmail} onChange={(ev) => setNewEmail(ev.target.value)} placeholder="optional" />
+            </RField>
+          </div>
+          <div className="mt-3 flex gap-2 justify-end">
+            <Btn onClick={() => setCreatingFor(null)}>Cancel</Btn>
+            <Btn variant="primary" onClick={saveNewBroker}>Save broker</Btn>
+          </div>
+        </div>
+      )}
+
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
   );
@@ -746,6 +1027,14 @@ function LinksRefsSection({ org, product, readOnly }: { org: OrgDetail; product:
         <RField label="Meeting Link">
           {e.editing ? <input className={inputCls} defaultValue={org.meeting_link} /> : <ExtLink href={org.meeting_link}>{org.meeting_link}</ExtLink>}
         </RField>
+        <RField label="Klaviyo List">
+          {e.editing
+            ? <input className={inputCls} defaultValue={org.klaviyo_list_id ?? ""} placeholder="List ID (e.g. TfRk9b)" />
+            : (org.klaviyo_list_id
+                ? <ExtLink href={`https://www.klaviyo.com/list/${org.klaviyo_list_id}/members`}>{org.klaviyo_list_id}</ExtLink>
+                : <Empty />)}
+        </RField>
+        
         
         <RField label="Attio Deal">
           <ExtLink href={`https://app.attio.com/deals/${org.attio_deal_id}`}><span className="font-mono text-xs">{org.attio_deal_id}</span></ExtLink>
