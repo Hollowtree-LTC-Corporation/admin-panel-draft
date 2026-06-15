@@ -129,6 +129,7 @@ function View() {
   const cols: { key: SortKey | null; label: string }[] = product === "DI"
     ? [
         { key: "id", label: "Policy" },
+        { key: "policy_name", label: "Policy Name" },
         { key: "org_name", label: "Org" },
         { key: "carrier_product_name", label: "Carrier Product" },
         { key: "status", label: "Status" },
@@ -139,6 +140,7 @@ function View() {
       ]
     : [
         { key: "id", label: "Policy" },
+        { key: "policy_name", label: "Policy Name" },
         { key: "org_name", label: "Org" },
         { key: "carrier_product_name", label: "Carrier Product" },
         { key: "status", label: "Status" },
