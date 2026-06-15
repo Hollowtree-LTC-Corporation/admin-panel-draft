@@ -186,6 +186,15 @@ function daysUntil(d: string | null | undefined): number | null {
 }
 
 /* ---------- Synthesize per-org detail ---------- */
+type FeeSchedule = {
+  id: string;
+  effective_from: string;
+  effective_to: string | null;
+  tpa_fee_cents: number;
+  tpa_fee_name: string | null;
+  service_fee_retained_cents: number | null;
+  notes: string;
+};
 type OrgDetail = ReturnType<typeof synthesize>;
 function synthesize(org: typeof ORGS[number]) {
   const slug = org.name.toLowerCase().replace(/[^a-z]/g, "");
@@ -224,6 +233,25 @@ function synthesize(org: typeof ORGS[number]) {
     tpa_fee_cents: cca ? 2000 : 800,
     service_fee_retained_cents: cca ? 500 : null,
     tpa_fee_name: cca ? "CCA Membership Fee" : "Processing Fee",
+    // Versioned TPA fee schedules (DI v12 / LTC v3.12)
+    fee_schedules: (cca
+      ? [
+          { id: `fs_${org.id}_1`, effective_from: "2024-01-01", effective_to: "2024-12-31", tpa_fee_cents: 1500, tpa_fee_name: "CCA Membership Fee", service_fee_retained_cents: 400, notes: "Initial pricing per launch agreement" },
+          { id: `fs_${org.id}_2`, effective_from: "2025-01-01", effective_to: "2025-12-31", tpa_fee_cents: 1800, tpa_fee_name: "CCA Membership Fee", service_fee_retained_cents: 500, notes: "Year-2 increase per CCA agreement section 4.2" },
+          { id: `fs_${org.id}_3`, effective_from: "2026-01-01", effective_to: null as string | null, tpa_fee_cents: 2000, tpa_fee_name: "CCA Membership Fee", service_fee_retained_cents: 500, notes: "Year-3 increase per CCA agreement section 4.2" },
+        ]
+      : [
+          { id: `fs_${org.id}_1`, effective_from: "2025-01-01", effective_to: null as string | null, tpa_fee_cents: 800, tpa_fee_name: "Processing Fee", service_fee_retained_cents: null as number | null, notes: "Standard platform pricing" },
+        ]) as FeeSchedule[],
+    // Payment processing & retry config (platform defaults, non-versioned)
+    card_percentage_bps: 370,
+    ach_first_fee_cents: 100,
+    ach_subsequent_fee_cents: 50,
+    failed_ach_penalty_cents: 1500,
+    failed_card_penalty_mode: "flat" as "flat" | "percentage",
+    failed_card_penalty_value_cents: 1000 as number | null,
+    failed_card_penalty_pct_bps: null as number | null,
+    free_retry_count: 2,
     // Broker
     primary_broker: "Westfield Brokers",
     primary_override_pct: null as number | null,
@@ -1149,91 +1177,362 @@ function LTCProductPlanSection({ org, readOnly }: { org: OrgDetail; readOnly: bo
   );
 }
 
-function PricingFeesSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
-  const e = useSectionEdit();
-  const cca = org.cca_group;
-  const tpa = org.tpa_fee_cents;
-  const retained = org.service_fee_retained_cents;
-  return (
-    <SectionCard
-      title="Pricing & Fees"
-      defaultOpen
-      editing={e.editing}
-      canEdit={!readOnly}
-      onEdit={e.onEdit}
-      drives={["billing", "payment processing"]}
-    >
-      <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Billing Configuration</div>
-          <div className="space-y-4">
-            <RField label="Contribution Type">
-              {e.editing
-                ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
-                : titleCase(org.contribution_type === "buy_up" ? "Buy-Up" : org.contribution_type)}
-            </RField>
-            <RField label="Pay Mode">
-              {e.editing
-                ? <select className={inputCls} defaultValue={org.pay_mode}>{PAY_MODES.map((o) => <option key={o}>{o}</option>)}</select>
-                : org.pay_mode}
-            </RField>
-          </div>
-        </div>
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0a3d3e] mb-3 pb-1 border-b border-black/10">Fee Schedule</div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-            <RField label="TPA Fee">{e.editing ? <input className={inputCls} defaultValue={String(tpa / 100)} /> : `${formatCents(tpa)} / mo`}</RField>
-            <RField label="TPA Fee Name">{e.editing ? <input className={inputCls} defaultValue={org.tpa_fee_name} /> : org.tpa_fee_name}</RField>
-            <RField label="Service Fee Retained">
-              {retained === null
-                ? <span className="text-black/60 italic">Full retention</span>
-                : (e.editing ? <input className={inputCls} defaultValue={String(retained / 100)} /> : formatCents(retained))}
-            </RField>
-            <RField label="Card Percentage">{e.editing ? <input className={inputCls} defaultValue="3.7" /> : "3.7%"}</RField>
-            <RField label="ACH First Fee">{e.editing ? <input className={inputCls} defaultValue="1.00" /> : "$1.00"}</RField>
-            <RField label="ACH Subsequent Fee">{e.editing ? <input className={inputCls} defaultValue="0.50" /> : "$0.50"}</RField>
-            <RField label="Failed ACH Penalty">{e.editing ? <input className={inputCls} defaultValue="15.00" /> : "$15.00"}</RField>
-            <RField label="Failed Card Penalty Mode">
-              {e.editing
-                ? <select className={inputCls} defaultValue="flat">{["flat","percentage"].map((o) => <option key={o}>{o}</option>)}</select>
-                : "flat"}
-            </RField>
-            <RField label="Failed Card Penalty Value">{e.editing ? <input className={inputCls} defaultValue="10.00" /> : "$10.00"}</RField>
-            <RField label="Free Retry Count">{e.editing ? <input className={inputCls} type="number" defaultValue={2} /> : 2}</RField>
-            <RField label="Effective From">{e.editing ? <input className={inputCls} type="date" defaultValue="2025-01-01" /> : fmtDate("2025-01-01")}</RField>
-            <RField label="Effective To">{e.editing ? <input className={inputCls} type="date" defaultValue="" placeholder="(open-ended)" /> : <span className="text-black/50 italic">(open-ended)</span>}</RField>
-          </div>
-        </div>
-      </div>
+const TODAY_ISO = "2026-06-14";
+function isCurrent(s: FeeSchedule): boolean {
+  if (s.effective_from > TODAY_ISO) return false;
+  if (s.effective_to && s.effective_to < TODAY_ISO) return false;
+  return true;
+}
+function isFuture(s: FeeSchedule): boolean { return s.effective_from > TODAY_ISO; }
+function isPast(s: FeeSchedule): boolean { return !!s.effective_to && s.effective_to < TODAY_ISO; }
+function addDaysIso(iso: string, days: number): string {
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+function bpsToPct(bps: number): string { return (bps / 100).toFixed(2) + "%"; }
 
-      {cca && (
+function PricingFeesSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  return (
+    <SectionCard title="Pricing & Fees" defaultOpen canEdit={false} drives={["billing", "payment processing"]}>
+      <div className="space-y-5">
+        <TpaFeeScheduleSubBlock org={org} readOnly={readOnly} />
+        <PaymentProcessingSubBlock org={org} readOnly={readOnly} />
+      </div>
+    </SectionCard>
+  );
+}
+
+function SubBlockHeader({
+  title, subtitle, editing, canEdit, onEdit,
+}: { title: string; subtitle: string; editing: boolean; canEdit: boolean; onEdit: () => void }) {
+  return (
+    <div className="flex items-start justify-between mb-3 pb-2 border-b border-black/10">
+      <div>
+        <div className="text-sm font-semibold text-[#0a3d3e]">{title}</div>
+        <div className="text-xs text-stone-500 mt-0.5">{subtitle}</div>
+      </div>
+      {canEdit && !editing && (
+        <button onClick={onEdit} className="text-stone-700 hover:text-[#0a3d3e] p-1" title="Edit">
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function TpaFeeScheduleSubBlock({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const cca = org.cca_group;
+  const [schedules, setSchedules] = useState<FeeSchedule[]>(() =>
+    [...org.fee_schedules].sort((a, b) => b.effective_from.localeCompare(a.effective_from))
+  );
+  const [editing, setEditing] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const current = schedules.find(isCurrent) ?? null;
+
+  // Add-form state
+  const [nfFrom, setNfFrom] = useState("");
+  const [nfTo, setNfTo] = useState("");
+  const [nfFee, setNfFee] = useState("");
+  const [nfName, setNfName] = useState(cca ? "CCA Membership Fee" : "Processing Fee");
+  const [nfRetained, setNfRetained] = useState("");
+  const [nfNotes, setNfNotes] = useState("");
+  const [nfError, setNfError] = useState<string | null>(null);
+
+  function resetAddForm() {
+    setNfFrom(""); setNfTo(""); setNfFee(""); setNfRetained(""); setNfNotes(""); setNfError(null);
+    setNfName(cca ? "CCA Membership Fee" : "Processing Fee");
+  }
+  function saveNewSchedule() {
+    setNfError(null);
+    if (!nfFrom) return setNfError("Effective From is required.");
+    if (nfFrom <= TODAY_ISO) return setNfError("Effective From must be later than today.");
+    if (!nfFee || isNaN(Number(nfFee))) return setNfError("TPA Fee is required.");
+    if (nfTo && nfTo < nfFrom) return setNfError("Effective To must be on/after Effective From.");
+    if (!nfNotes.trim()) return setNfError("Notes are required.");
+    // Overlap pre-check
+    const newFrom = nfFrom, newTo = nfTo || null;
+    let truncateCurrentTo: { schedId: string; newTo: string } | null = null;
+    for (const s of schedules) {
+      const sTo = s.effective_to ?? "9999-12-31";
+      const nTo = newTo ?? "9999-12-31";
+      const overlaps = !(nTo < s.effective_from || newFrom > sTo);
+      if (!overlaps) continue;
+      // Auto-close current open-ended schedule if new is in the future
+      if (s.effective_to === null && isCurrent(s) && newFrom > TODAY_ISO) {
+        const closeDate = addDaysIso(newFrom, -1);
+        if (!confirm(`This will close the current schedule on ${closeDate}. Continue?`)) return;
+        truncateCurrentTo = { schedId: s.id, newTo: closeDate };
+      } else {
+        return setNfError(`Overlaps with existing schedule ${fmtDate(s.effective_from)} – ${s.effective_to ? fmtDate(s.effective_to) : "open"}.`);
+      }
+    }
+    const next: FeeSchedule = {
+      id: `fs_new_${Date.now()}`,
+      effective_from: newFrom,
+      effective_to: newTo,
+      tpa_fee_cents: Math.round(Number(nfFee) * 100),
+      tpa_fee_name: nfName.trim() || null,
+      service_fee_retained_cents: cca && nfRetained ? Math.round(Number(nfRetained) * 100) : null,
+      notes: nfNotes.trim(),
+    };
+    setSchedules((prev) => {
+      const updated = truncateCurrentTo
+        ? prev.map((s) => s.id === truncateCurrentTo!.schedId ? { ...s, effective_to: truncateCurrentTo!.newTo } : s)
+        : prev;
+      return [...updated, next].sort((a, b) => b.effective_from.localeCompare(a.effective_from));
+    });
+    setAdding(false);
+    resetAddForm();
+  }
+
+  // Edit-current form state
+  const [efFrom, setEfFrom] = useState("");
+  const [efTo, setEfTo] = useState("");
+  const [efFee, setEfFee] = useState("");
+  const [efName, setEfName] = useState("");
+  const [efRetained, setEfRetained] = useState("");
+  const [efNotes, setEfNotes] = useState("");
+  useEffect(() => {
+    if (editing && current) {
+      setEfFrom(current.effective_from);
+      setEfTo(current.effective_to ?? "");
+      setEfFee(String(current.tpa_fee_cents / 100));
+      setEfName(current.tpa_fee_name ?? "");
+      setEfRetained(current.service_fee_retained_cents == null ? "" : String(current.service_fee_retained_cents / 100));
+      setEfNotes(current.notes);
+    }
+  }, [editing, current]);
+  function saveEditCurrent() {
+    if (!current) return;
+    setSchedules((prev) => prev.map((s) => s.id === current.id ? {
+      ...s,
+      effective_from: efFrom,
+      effective_to: efTo || null,
+      tpa_fee_cents: Math.round(Number(efFee) * 100),
+      tpa_fee_name: efName.trim() || null,
+      service_fee_retained_cents: cca && efRetained ? Math.round(Number(efRetained) * 100) : null,
+      notes: efNotes.trim(),
+    } : s));
+    setEditing(false);
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-md p-4 bg-white">
+      <SubBlockHeader
+        title="TPA Fee Schedule"
+        subtitle="Versioned per commercial agreement. Schedule future fee changes here."
+        editing={editing}
+        canEdit={!readOnly && !adding}
+        onEdit={() => setEditing(true)}
+      />
+
+      {/* Current schedule */}
+      {current ? (
+        editing ? (
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+            <RField label="Effective From"><input className={inputCls} type="date" value={efFrom} onChange={(e) => setEfFrom(e.target.value)} /></RField>
+            <RField label="Effective To"><input className={inputCls} type="date" value={efTo} onChange={(e) => setEfTo(e.target.value)} placeholder="(open-ended)" /></RField>
+            <RField label="TPA Fee"><input className={inputCls} value={efFee} onChange={(e) => setEfFee(e.target.value)} /></RField>
+            <RField label="TPA Fee Name"><input className={inputCls} value={efName} onChange={(e) => setEfName(e.target.value)} /></RField>
+            {cca && <RField label="Service Fee Retained"><input className={inputCls} value={efRetained} onChange={(e) => setEfRetained(e.target.value)} /></RField>}
+            <div className="col-span-2">
+              <RField label="Notes"><Textarea className="w-full" rows={2} value={efNotes} onChange={(e) => setEfNotes(e.target.value)} /></RField>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+            <RField label="Effective From">{fmtDate(current.effective_from)}</RField>
+            <RField label="Effective To">{current.effective_to ? fmtDate(current.effective_to) : <span className="text-black/50 italic">Open-ended</span>}</RField>
+            <RField label="TPA Fee">{`${formatCents(current.tpa_fee_cents)} / mo`}</RField>
+            <RField label="TPA Fee Name">{current.tpa_fee_name ?? "—"}</RField>
+            <RField label="Service Fee Retained">
+              {current.service_fee_retained_cents == null
+                ? <span className="text-black/60 italic">Full retention by Hollowtree</span>
+                : formatCents(current.service_fee_retained_cents)}
+            </RField>
+            <div className="col-span-2">
+              <RField label="Notes"><span className="text-black/70">{current.notes}</span></RField>
+            </div>
+          </div>
+        )
+      ) : (
+        <div className="text-sm text-black/50 italic">No current schedule. Add one via "+ Schedule a fee change".</div>
+      )}
+
+      {editing && (
+        <>
+          <div className="mt-3 text-xs text-stone-500 italic">
+            Editing the current schedule corrects the active row. To schedule a future change, use "Schedule a fee change" instead.
+          </div>
+          <SectionActions onCancel={() => setEditing(false)} onSave={saveEditCurrent} />
+        </>
+      )}
+
+      {!editing && (
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <button onClick={() => setShowHistory((v) => !v)} className="text-xs text-sky-700 hover:underline">
+            {showHistory ? "Hide" : "View"} schedule history ({schedules.length})
+          </button>
+          {!readOnly && !adding && (
+            <Btn variant="primary" onClick={() => setAdding(true)}>+ Schedule a fee change</Btn>
+          )}
+        </div>
+      )}
+
+      {showHistory && !editing && (
+        <div className="mt-3 border border-gray-200 rounded overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-stone-50 text-stone-600">
+              <tr>
+                <th className="text-left px-2 py-1.5 font-medium">Effective From</th>
+                <th className="text-left px-2 py-1.5 font-medium">Effective To</th>
+                <th className="text-left px-2 py-1.5 font-medium">TPA Fee</th>
+                <th className="text-left px-2 py-1.5 font-medium">TPA Fee Name</th>
+                <th className="text-left px-2 py-1.5 font-medium">Service Fee Retained</th>
+                <th className="text-left px-2 py-1.5 font-medium">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {schedules.map((s) => {
+                const cur = isCurrent(s);
+                const past = isPast(s);
+                const rowCls = past ? "text-stone-400" : "text-stone-800";
+                const borderCls = cur ? "border-l-2 border-emerald-500" : "border-l-2 border-transparent";
+                return (
+                  <tr key={s.id} className={`${rowCls} ${borderCls} border-t border-gray-100`}>
+                    <td className="px-2 py-1.5">{fmtDate(s.effective_from)}</td>
+                    <td className="px-2 py-1.5">{s.effective_to ? fmtDate(s.effective_to) : <span className="italic">Open</span>}</td>
+                    <td className="px-2 py-1.5">{formatCents(s.tpa_fee_cents)}</td>
+                    <td className="px-2 py-1.5">{s.tpa_fee_name ?? "—"}</td>
+                    <td className="px-2 py-1.5">{s.service_fee_retained_cents == null ? "—" : formatCents(s.service_fee_retained_cents)}</td>
+                    <td className="px-2 py-1.5">{s.notes}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {adding && !editing && (
+        <div className="mt-4 p-3 border border-blue-200 bg-blue-50/40 rounded">
+          <div className="text-xs font-semibold text-[#0a3d3e] mb-3">Schedule a fee change</div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+            <RField label="Effective From (required, future)"><input className={inputCls} type="date" value={nfFrom} onChange={(e) => setNfFrom(e.target.value)} /></RField>
+            <RField label="Effective To (optional)"><input className={inputCls} type="date" value={nfTo} onChange={(e) => setNfTo(e.target.value)} /></RField>
+            <RField label="TPA Fee ($/mo)"><input className={inputCls} value={nfFee} onChange={(e) => setNfFee(e.target.value)} placeholder="e.g. 22.00" /></RField>
+            <RField label="TPA Fee Name (optional)"><input className={inputCls} value={nfName} onChange={(e) => setNfName(e.target.value)} /></RField>
+            {cca && <RField label="Service Fee Retained ($)"><input className={inputCls} value={nfRetained} onChange={(e) => setNfRetained(e.target.value)} placeholder="e.g. 5.00" /></RField>}
+            <div className="col-span-2">
+              <RField label="Notes (required)">
+                <Textarea className="w-full" rows={2} value={nfNotes} onChange={(e) => setNfNotes(e.target.value)}
+                  placeholder="Reason for this change, e.g., 'Annual TPA fee increase per CCA agreement section 4.2'" />
+              </RField>
+            </div>
+          </div>
+          {nfError && <div className="mt-2 text-xs text-red-700">{nfError}</div>}
+          <div className="mt-3 flex justify-end gap-2">
+            <Btn onClick={() => { setAdding(false); resetAddForm(); }}>Cancel</Btn>
+            <Btn variant="primary" onClick={saveNewSchedule}>Save schedule</Btn>
+          </div>
+        </div>
+      )}
+
+      {cca && !editing && (
         <div className="grid grid-cols-2 gap-4 mt-5">
           <div className="p-3 bg-[#fefaf2] border border-amber-200 rounded">
             <div className="text-xs font-semibold text-amber-900 mb-2">How CCA fee splitting works</div>
             <p className="text-xs text-black/70 leading-relaxed mb-2">
-              CCA orgs charge a <b>$20/month</b> membership fee (not the standard $8 TPA fee). Of the $20:
+              CCA orgs charge a membership fee (not the standard TPA fee). The fee splits between Hollowtree and CCA per schedule.
             </p>
-            <ul className="text-xs text-black/70 list-disc pl-5 space-y-1 mb-2">
-              <li><b>$5.00</b> retained by Hollowtree (<code>service_fee_retained_cents = 500</code>)</li>
-              <li><b>$15.00</b> remitted to CCA</li>
-            </ul>
             <p className="text-xs text-black/60 italic">
               This split is for reporting only. The <code>tpa_fee_cents</code> value is what the enrollee is charged regardless.
             </p>
           </div>
           <div className="p-3 bg-white border border-black/10 rounded">
-            <div className="text-xs font-semibold text-black/70 uppercase tracking-wider mb-2">Worked example for this org</div>
-            <div className="text-xs text-black/70 space-y-1">
-              <div>Enrollee charged: <b>{formatCents(tpa)}</b> / mo</div>
-              <div>Retained by Hollowtree: <b>{retained === null ? formatCents(tpa) + " (full)" : formatCents(retained)}</b></div>
-              <div>Remitted to CCA: <b>{retained === null ? formatCents(0) : formatCents(tpa - retained)}</b></div>
-            </div>
+            <div className="text-xs font-semibold text-black/70 uppercase tracking-wider mb-2">Worked example (current schedule)</div>
+            {current ? (
+              <div className="text-xs text-black/70 space-y-1">
+                <div>Enrollee charged: <b>{formatCents(current.tpa_fee_cents)}</b> / mo</div>
+                <div>Retained by Hollowtree: <b>{current.service_fee_retained_cents == null ? formatCents(current.tpa_fee_cents) + " (full)" : formatCents(current.service_fee_retained_cents)}</b></div>
+                <div>Remitted to CCA: <b>{current.service_fee_retained_cents == null ? formatCents(0) : formatCents(current.tpa_fee_cents - current.service_fee_retained_cents)}</b></div>
+              </div>
+            ) : <div className="text-xs text-black/50 italic">No current schedule.</div>}
           </div>
         </div>
       )}
+    </div>
+  );
+}
 
-      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
-    </SectionCard>
+function PaymentProcessingSubBlock({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [cardPct, setCardPct] = useState(String(org.card_percentage_bps / 100));
+  const [achFirst, setAchFirst] = useState(String(org.ach_first_fee_cents / 100));
+  const [achSub, setAchSub] = useState(String(org.ach_subsequent_fee_cents / 100));
+  const [achPenalty, setAchPenalty] = useState(String(org.failed_ach_penalty_cents / 100));
+  const [penaltyMode, setPenaltyMode] = useState<"flat" | "percentage">(org.failed_card_penalty_mode);
+  const [penaltyValue, setPenaltyValue] = useState(
+    org.failed_card_penalty_mode === "flat"
+      ? String((org.failed_card_penalty_value_cents ?? 0) / 100)
+      : String((org.failed_card_penalty_pct_bps ?? 0) / 100)
+  );
+  const [retry, setRetry] = useState(String(org.free_retry_count));
+
+  function cancel() {
+    setEditing(false);
+    setCardPct(String(org.card_percentage_bps / 100));
+    setAchFirst(String(org.ach_first_fee_cents / 100));
+    setAchSub(String(org.ach_subsequent_fee_cents / 100));
+    setAchPenalty(String(org.failed_ach_penalty_cents / 100));
+    setPenaltyMode(org.failed_card_penalty_mode);
+    setPenaltyValue(org.failed_card_penalty_mode === "flat"
+      ? String((org.failed_card_penalty_value_cents ?? 0) / 100)
+      : String((org.failed_card_penalty_pct_bps ?? 0) / 100));
+    setRetry(String(org.free_retry_count));
+  }
+
+  const penaltyDisplay = org.failed_card_penalty_mode === "flat"
+    ? formatCents(org.failed_card_penalty_value_cents ?? 0)
+    : bpsToPct(org.failed_card_penalty_pct_bps ?? 0);
+
+  return (
+    <div className="border border-gray-200 rounded-md p-4 bg-white">
+      <SubBlockHeader
+        title="Payment Processing & Retry Config"
+        subtitle="Platform defaults. Override per org only if commercially negotiated."
+        editing={editing}
+        canEdit={!readOnly}
+        onEdit={() => setEditing(true)}
+      />
+      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+        <div className="space-y-4">
+          <RField label="Card Percentage">{editing ? <input className={inputCls} value={cardPct} onChange={(e) => setCardPct(e.target.value)} /> : bpsToPct(org.card_percentage_bps)}</RField>
+          <RField label="ACH First Fee">{editing ? <input className={inputCls} value={achFirst} onChange={(e) => setAchFirst(e.target.value)} /> : formatCents(org.ach_first_fee_cents)}</RField>
+          <RField label="ACH Subsequent Fee">{editing ? <input className={inputCls} value={achSub} onChange={(e) => setAchSub(e.target.value)} /> : formatCents(org.ach_subsequent_fee_cents)}</RField>
+        </div>
+        <div className="space-y-4">
+          <RField label="Failed ACH Penalty">{editing ? <input className={inputCls} value={achPenalty} onChange={(e) => setAchPenalty(e.target.value)} /> : formatCents(org.failed_ach_penalty_cents)}</RField>
+          <RField label="Failed Card Penalty Mode">
+            {editing
+              ? <select className={inputCls} value={penaltyMode} onChange={(e) => setPenaltyMode(e.target.value as "flat" | "percentage")}>
+                  <option value="flat">Flat</option>
+                  <option value="percentage">Percentage</option>
+                </select>
+              : (org.failed_card_penalty_mode === "flat" ? "Flat" : "Percentage")}
+          </RField>
+          <RField label={`Failed Card Penalty Value${editing ? (penaltyMode === "flat" ? " ($)" : " (%)") : ""}`}>
+            {editing
+              ? <input className={inputCls} value={penaltyValue} onChange={(e) => setPenaltyValue(e.target.value)} />
+              : penaltyDisplay}
+          </RField>
+          <RField label="Free Retry Count">{editing ? <input className={inputCls} type="number" value={retry} onChange={(e) => setRetry(e.target.value)} /> : org.free_retry_count}</RField>
+        </div>
+      </div>
+      {editing && <SectionActions onCancel={cancel} onSave={() => setEditing(false)} />}
+    </div>
   );
 }
 
