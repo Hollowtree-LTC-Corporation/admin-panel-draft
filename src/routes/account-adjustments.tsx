@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader, TableShell, TRow, TCell, Btn, Drawer, useDrawer, Field, Input } from "@/components/wireframe/Bits";
+import { PageHeader, TableShell, TRow, TCell, Btn, Drawer, useDrawer, Field, Input, Pill } from "@/components/wireframe/Bits";
 import { ACCOUNT_ADJUSTMENTS, INDIVIDUALS, BILLING_GROUPS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
@@ -8,7 +8,9 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/account-adjustments")({ component: View });
 
-type SortKey = "individual_name" | "billing_group_id" | "adjustment_type" | "amount_cents" | "reason" | "effective_date" | "approved_by";
+type SortKey = "individual_name" | "billing_group_id" | "adjustment_type" | "amount_cents" | "reason" | "effective_date" | "applied_to_next_charge" | "approved_by";
+
+const ADJ_TYPES = ["premium_correction", "write_off", "refund", "penalty_waiver", "billing_error", "other"] as const;
 
 function View() {
   const can = usePermission();
