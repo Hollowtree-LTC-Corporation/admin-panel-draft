@@ -27,7 +27,7 @@ function OrgsView() {
     const s = search.trim().toLowerCase();
     const rows = productRows.filter((o) => {
       if (s && !o.name.toLowerCase().includes(s)) return false;
-      if (status !== "all" && o.enrollment_status !== status) return false;
+      if (status !== "all" && o.status !== status) return false;
       if (situs !== "all" && o.situs_state !== situs) return false;
       if (owner !== "all" && o.policy_owner_type !== owner) return false;
       return true;
