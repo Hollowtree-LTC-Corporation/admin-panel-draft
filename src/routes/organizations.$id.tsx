@@ -257,10 +257,8 @@ function synthesize(org: typeof ORGS[number]) {
     primary_override_pct: null as number | null,
     secondary_broker: null as string | null,
     secondary_override_pct: null as number | null,
-    // Signatory
-    signatory_name: "Test Signatory",
-    signatory_title: "VP HR",
-    signatory_email: `signatory@${slug}.example.com`,
+    // Contacts (organization_contacts table — replaces legacy scalar signatory_* fields)
+    contacts: buildDummyContacts(org.id, slug, idx),
     // Links
     google_drive_folder: `https://drive.google.com/drive/folders/${org.id}_dummy`,
     meeting_link: "https://meet.google.com/abc-defg-hij",
