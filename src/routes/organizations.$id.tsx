@@ -1027,6 +1027,14 @@ function LinksRefsSection({ org, product, readOnly }: { org: OrgDetail; product:
         <RField label="Meeting Link">
           {e.editing ? <input className={inputCls} defaultValue={org.meeting_link} /> : <ExtLink href={org.meeting_link}>{org.meeting_link}</ExtLink>}
         </RField>
+        <RField label="Klaviyo List">
+          {e.editing
+            ? <input className={inputCls} defaultValue={org.klaviyo_list_id ?? ""} placeholder="List ID (e.g. TfRk9b)" />
+            : (org.klaviyo_list_id
+                ? <ExtLink href={`https://www.klaviyo.com/list/${org.klaviyo_list_id}/members`}>{org.klaviyo_list_id}</ExtLink>
+                : <Empty />)}
+        </RField>
+        
         
         <RField label="Attio Deal">
           <ExtLink href={`https://app.attio.com/deals/${org.attio_deal_id}`}><span className="font-mono text-xs">{org.attio_deal_id}</span></ExtLink>
