@@ -230,11 +230,12 @@ function IndividualDetail() {
             <Btn variant="danger" disabled={!can("individuals", "delete")} onClick={() => setDeactivateOpen(true)}>Deactivate</Btn>
           </div>
         </div>
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-8 gap-2">
           <SummaryChip label="Organization"
             value={i.org_name ?? <span className="italic text-black/50">Affiliate</span>}
             onClick={i.org_id ? () => navigate({ to: "/organizations/$id", params: { id: i.org_id! } }) : undefined} />
           <SummaryChip label="Coverage Status" value={<Badge map={COVERAGE_BADGE} value={i.coverage_status} />} />
+          <SummaryChip label="Current Stage" value={<Badge map={STAGE_BADGE} value={i.stage} />} />
           <SummaryChip label="Last Payment"
             value={<span className="inline-flex items-center gap-1">{paymentBadge(i.last_payment_status, i.retry_count)}<span className="text-[11px] text-black/50">{fmtDate(i.last_charge_date)}</span></span>}
             onClick={() => navigate({ to: "/payment-ledger" })} />
