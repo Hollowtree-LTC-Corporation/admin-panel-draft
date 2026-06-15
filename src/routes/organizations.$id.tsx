@@ -503,25 +503,119 @@ function DSelect({ defaultValue, options }: { defaultValue?: string; options: st
    CONFIG TAB — section-card layout
 ============================================================= */
 
-function ConfigTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
+function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
   const statusValue = org.enrollment_status === "active" ? "active" : org.enrollment_status === "closed" ? "closed" : "pending_review";
   const identitySummary = `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible`;
 
   return (
-    <div className="mt-3 space-y-4">
-      <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} />
-      {product === "DI"
-        ? <DIProductPlanSection org={org} readOnly={readOnly} />
-        : <LTCProductConfigSection org={org} readOnly={readOnly} />}
-      <CarrierProductSection org={org} product={product} readOnly={readOnly} />
-      <CoverageBillingSection org={org} readOnly={readOnly} />
-      <BrokerSection org={org} product={product} readOnly={readOnly} />
-      <SignatorySection org={org} readOnly={readOnly} />
-      <LinksRefsSection org={org} product={product} readOnly={readOnly} />
-      {product === "LTC" && <PlanDetailsSection org={org} product={product} readOnly={readOnly} />}
-      {product === "LTC" && <CarrierOperationalSection org={org} readOnly={readOnly} />}
-      {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
-      <SystemRefsSection org={org} product={product} />
+    <div className="mt-3">
+      <BucketHeader
+        label="Organization Information"
+        subtitle="Set during onboarding. Edit if needed, but changes here don't recalculate active enrollments."
+      />
+      <div className="space-y-3">
+        <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} variant="info" />
+        <CarrierProductSection org={org} product={product} readOnly={readOnly} variant="info" />
+      </div>
+
+      <BucketHeader
+        label="Configuration"
+        subtitle="Active operational settings. Changes here flow to downstream systems."
+      />
+      <div className="space-y-4">
+        {product === "DI"
+          ? <DIProductPlanSection org={org} readOnly={readOnly} />
+          : <LTCProductConfigSection org={org} readOnly={readOnly} />}
+        <PricingFeesSection org={org} readOnly={readOnly} />
+        <BrokerSection org={org} product={product} readOnly={readOnly} />
+        <PeopleSection org={org} readOnly={readOnly} />
+        {product === "LTC" && <PlanDetailsSection org={org} product={product} readOnly={readOnly} />}
+        {product === "LTC" && <CarrierOperationalSection org={org} readOnly={readOnly} />}
+        {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
+      </div>
+
+      <BucketHeader
+        label="Integration & System"
+        subtitle="External system links and audit metadata."
+      />
+      <div className="space-y-3">
+        <LinksRefsSection org={org} product={product} readOnly={readOnly} variant="integration" />
+        <SystemRefsSection org={org} product={product} variant="integration" />
+      </div>
+    </div>
+  );
+}
+
+function LifecycleTab({
+  windows, orgName, onNew, onEdit, canEdit, canCreate, readOnly,
+}: {
+  windows: typeof DUMMY_WINDOWS;
+  orgName: string;
+  onNew: () => void;
+  onEdit: (w: typeof DUMMY_WINDOWS[number]) => void;
+  canEdit: boolean;
+  canCreate: boolean;
+  readOnly: boolean;
+}) {
+  const [period, setPeriod] = useState(30);
+  const [waiting, setWaiting] = useState(90);
+  const [rule, setRule] = useState("first_of_next_month");
+  return (
+    <div className="mt-3 space-y-5">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-base font-semibold text-gray-900">Enrollment Windows</h2>
+          <Btn variant="primary" disabled={!canCreate} onClick={onNew}>+ New Window</Btn>
+        </div>
+        <TableShell>
+          <THead cols={["Type", "Sponsor", "Start", "End", "Default Effective", "Status", "GI", "Carrier", "Notes"]} />
+          <tbody>
+            {windows.map((w) => {
+              const isAlwaysOpen = w.window_type === "new_joiner";
+              const sponsor = w.sponsor_type === "affiliate"
+                ? <span><span className="text-black/40">—</span> <span className="text-[11px] text-black/50">(affiliate-sponsored: {w.affiliate})</span></span>
+                : w.affiliate
+                  ? <span>{orgName} <span className="text-black/40">+</span> {w.affiliate}</span>
+                  : <span>{orgName}</span>;
+              return (
+                <TRow key={w.id} onClick={canEdit ? () => onEdit(w) : undefined}>
+                  <TCell className="capitalize font-medium">{w.window_type.replace("_", " ")}</TCell>
+                  <TCell>{sponsor}</TCell>
+                  <TCell>{isAlwaysOpen ? <span className="text-black/40 italic">Always Open</span> : w.start}</TCell>
+                  <TCell>{isAlwaysOpen ? <span className="text-black/40 italic">Always Open</span> : w.end}</TCell>
+                  <TCell>{w.effective}</TCell>
+                  <TCell><Pill tone={w.status === "open" ? "ok" : w.status === "upcoming" ? "info" : "bad"}>{w.status}</Pill></TCell>
+                  <TCell>{w.gi_eligible ? <Pill tone="ok">GI</Pill> : <span className="text-black/30">—</span>}</TCell>
+                  <TCell>{w.carrier}</TCell>
+                  <TCell className="text-black/60">{w.notes}</TCell>
+                </TRow>
+              );
+            })}
+            {windows.length === 0 ? <TRow><TCell className="text-black/40">No enrollment windows.</TCell></TRow> : null}
+          </tbody>
+        </TableShell>
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold text-gray-900 mb-2">New Joiner Defaults</h2>
+        <Card className="p-4 max-w-2xl">
+          <div className="grid grid-cols-[220px_1fr] gap-3 items-center">
+            <div className="text-xs uppercase tracking-wider text-black/60">Enrollment Period (days)</div>
+            <input type="number" defaultValue={period} disabled={readOnly} onChange={(e) => setPeriod(Number(e.target.value))} className="w-32 px-2 py-1 text-sm border border-black/15 rounded" />
+            <div className="text-xs uppercase tracking-wider text-black/60">Waiting Period (days)</div>
+            <input type="number" defaultValue={waiting} disabled={readOnly} onChange={(e) => setWaiting(Number(e.target.value))} className="w-32 px-2 py-1 text-sm border border-black/15 rounded" />
+            <div className="text-xs uppercase tracking-wider text-black/60">Effective Date Rule</div>
+            <select defaultValue={rule} disabled={readOnly} onChange={(e) => setRule(e.target.value)} className="w-64 px-2 py-1 text-sm border border-black/15 rounded bg-white">
+              <option value="first_of_next_month">first_of_next_month</option>
+              <option value="hire_date">hire_date</option>
+              <option value="first_of_month_after_waiting">first_of_month_after_waiting</option>
+            </select>
+          </div>
+          <div className="mt-3 p-3 bg-[#f7f3eb] border border-black/10 rounded text-xs text-black/70">
+            New hires get <b>{period}</b> days to enroll after completing a <b>{waiting}</b> day waiting period. Coverage effective date follows the <b>{rule}</b> rule.
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
