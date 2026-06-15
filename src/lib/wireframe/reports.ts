@@ -281,9 +281,21 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
     case "window-status": {
       const today = new Date("2025-06-15");
       const extra = [{
-        id: "ew_6", org_name: "Acme Widgets Co", window_type: "special",
-        start_date: "2025-06-01", end_date: "2025-06-20",
-        status: "open", carrier: "Northstar Mutual",
+        id: "ew_6",
+        org_id: "org_1",
+        org_name: "Acme Widgets Co",
+        affiliate_org_id: null,
+        affiliate_org: null,
+        window_type: "special" as const,
+        start_date: "2025-06-01",
+        end_date: "2025-06-20",
+        default_effective_date: "2025-07-01",
+        status: "open" as const,
+        sponsor_type: "employer" as const,
+        carrier: "Northstar Mutual",
+        gi_eligible: true,
+        notes: "",
+        channel_partners: [],
       }];
       const all = [...ENROLLMENT_WINDOWS, ...extra];
       return {
@@ -347,7 +359,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
         rows: INDIVIDUALS.filter((i) => i.coverage_status === "in_progress").slice(0, 25).map((i, idx) => ({
           individual: i.full_name,
           org: i.org_name,
-          stage: i.current_stage,
+          stage: (i as { stage?: string }).stage ?? "—",
           days: 14 + (idx * 3) % 40,
           owner: i.assigned_rep ?? "—",
         })),
