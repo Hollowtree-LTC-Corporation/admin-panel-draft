@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ORGS, BENEFIT_CLASSES, INDIVIDUALS, CARRIERS,
+  ORGS, BENEFIT_CLASSES, INDIVIDUALS, CARRIERS, CARRIER_PRODUCTS,
   COMMISSION_SPLIT_DEFAULTS, formatCents,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
@@ -84,6 +84,30 @@ function carrierForProduct(product: "DI" | "LTC"): string {
 function carrierProductLabel(product: "DI" | "LTC", typeOfRate: string | null | undefined): string {
   if (product === "LTC") return "Universal Life with LTC Rider";
   return typeOfRate === "STD+LTD" ? "Group Disability (STD + LTD)" : "Group Disability (LTD)";
+}
+// Map carrier_product_id → "{carrier} - {product}" label using dummy carrier/product tables.
+function carrierProductOptions(product: "DI" | "LTC"): Array<{ id: string; carrier: string; product: string; label: string }> {
+  return CARRIER_PRODUCTS
+    .map((cp) => {
+      const carrier = CARRIERS.find((c) => c.id === cp.carrier_id);
+      if (!carrier || carrier.product !== product) return null;
+      return { id: cp.id, carrier: carrier.name, product: cp.name, label: `${carrier.name} - ${cp.name}` };
+    })
+    .filter((x): x is { id: string; carrier: string; product: string; label: string } => x !== null);
+}
+function pickCarrierProductId(product: "DI" | "LTC", idx: number): string | null {
+  const opts = carrierProductOptions(product);
+  if (opts.length === 0) return null;
+  return opts[idx % opts.length].id;
+}
+
+const LANGUAGE_OPTIONS: Array<{ code: string; label: string }> = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Spanish" },
+  { code: "zh", label: "Chinese" },
+];
+function languageLabel(code: string): string {
+  return LANGUAGE_OPTIONS.find((l) => l.code === code)?.label ?? code;
 }
 
 // Dummy enrollment windows scoped per org for this iteration
@@ -220,13 +244,22 @@ function synthesize(org: typeof ORGS[number]) {
     std_benefit_pct: 66.7,
     next_sun_life_report_date: "2026-07-15",
     contact_email: idx % 4 === 0 ? null : `hr@${slug}.example.com`,
-    // Carrier & Product (dummy)
+    // Carrier & Product (dummy) — carrier_product_id is the FK; name fields derive from it
+    carrier_product_id: idx === 4 ? null : pickCarrierProductId(product, idx),
     carrier_name: carrierForProduct(product),
     carrier_product_name: carrierProductLabel(product, org.type_of_rate),
-    group_policy_number: product === "DI" ? `GP-${10000000 + idx * 137}` : null,
+    group_policy_number: product === "DI"
+      ? (idx % 5 === 0 ? null : `SL-2024-${String(100 + idx * 17).padStart(5, "0")}`)
+      : null,
+    group_policy_effective_date: product === "DI"
+      ? (idx % 5 === 0 ? null : `2024-${String(((idx * 2) % 12) + 1).padStart(2, "0")}-01`)
+      : null,
     policy_effective_date: "2025-01-01",
     // Klaviyo
     klaviyo_list_id: ["TfRk9b","X4mP2q","Lz8Yhn","aQ3Wpv","R7nB2k","dE9Lto","Vc5Mxs","Jh1Knu"][idx % 8],
+    // Localization (v13)
+    default_language: "en",
+    supported_languages: idx % 4 === 0 ? ["en", "es"] : (idx === 3 ? ["en", "es", "zh"] : ["en"]),
     // Coverage / Billing
     contribution_type: cca ? "voluntary" : "employer_paid",
     pay_mode: "Monthly",
@@ -243,15 +276,15 @@ function synthesize(org: typeof ORGS[number]) {
       : [
           { id: `fs_${org.id}_1`, effective_from: "2025-01-01", effective_to: null as string | null, tpa_fee_cents: 800, tpa_fee_name: "Processing Fee", service_fee_retained_cents: null as number | null, notes: "Standard platform pricing" },
         ]) as FeeSchedule[],
-    // Payment processing & retry config (platform defaults, non-versioned)
-    card_percentage_bps: 370,
+    // Payment processing & retry config (platform defaults; a couple of orgs override)
+    card_percentage_bps: idx === 2 ? 400 : 370,
     ach_first_fee_cents: 100,
     ach_subsequent_fee_cents: 50,
     failed_ach_penalty_cents: 1500,
     failed_card_penalty_mode: "flat" as "flat" | "percentage",
     failed_card_penalty_value_cents: 1000 as number | null,
     failed_card_penalty_pct_bps: null as number | null,
-    free_retry_count: 2,
+    free_retry_count: idx === 2 ? 1 : 2,
     // Broker
     primary_broker: "Westfield Brokers",
     primary_override_pct: null as number | null,
@@ -629,7 +662,10 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
           ? <DIProductPlanSection org={org} readOnly={readOnly} />
           : <LTCProductPlanSection org={org} readOnly={readOnly} />}
         <PricingFeesSection org={org} readOnly={readOnly} />
+        <PaymentProcessingSection org={org} readOnly={readOnly} />
+        <LocalizationSection org={org} readOnly={readOnly} />
         <BrokerSection org={org} product={product} readOnly={readOnly} />
+        {product === "DI" && <GroupPolicySection org={org} readOnly={readOnly} />}
         {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
       </div>
 
@@ -1066,6 +1102,9 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
   const note = product === "LTC"
     ? "Carrier and product are set during initial onboarding. Commission schedule changes flow to all enrollments after the effective date."
     : "Carrier and product are set during initial onboarding. To change, contact engineering.";
+  const options = carrierProductOptions(product);
+  const [carrierProductId, setCarrierProductId] = useState<string | null>(org.carrier_product_id);
+  const selected = options.find((o) => o.id === carrierProductId) ?? null;
   return (
     <SectionCard
       title="Carrier & Product"
@@ -1076,13 +1115,13 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
       note={note}
     >
       <Grid2>
-        <RField label="Carrier">{org.carrier_name}</RField>
+        <RField label="Carrier">{selected ? selected.carrier : <Empty />}</RField>
         <RField label="Effective Date">
           {e.editing
             ? <input className={inputCls} type="date" defaultValue={org.policy_effective_date} />
             : fmtDate(org.policy_effective_date)}
         </RField>
-        <RField label="Product">{org.carrier_product_name}</RField>
+        <RField label="Product">{selected ? selected.product : <Empty />}</RField>
         {product === "LTC" ? (
           <RField label="Carrier Commission Schedule">
             <Link to="/carriers" className="text-sky-700 hover:underline inline-flex items-center gap-1">View schedule <ExternalLink className="h-3 w-3" /></Link>
@@ -1092,13 +1131,24 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
             <span className="text-xs text-black/60 italic">Per-policy commission rates</span>
           </RField>
         )}
-        {product === "DI" && (
-          <RField label="Group Policy Number">
-            {e.editing
-              ? <input className={inputCls} defaultValue={org.group_policy_number ?? ""} />
-              : <span className="font-mono text-xs">{org.group_policy_number}</span>}
-          </RField>
-        )}
+        <RField label="Carrier Product">
+          {e.editing
+            ? (
+                <select
+                  className={inputCls}
+                  value={carrierProductId ?? ""}
+                  onChange={(ev) => setCarrierProductId(ev.target.value || null)}
+                >
+                  <option value="">— Not set —</option>
+                  {options.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+              )
+            : (selected
+                ? <span className="text-sm">{selected.label}</span>
+                : <Empty />)}
+        </RField>
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
@@ -1197,7 +1247,6 @@ function PricingFeesSection({ org, readOnly }: { org: OrgDetail; readOnly: boole
     <SectionCard title="Pricing & Fees" defaultOpen canEdit={false} drives={["billing", "payment processing"]}>
       <div className="space-y-5">
         <TpaFeeScheduleSubBlock org={org} readOnly={readOnly} />
-        <PaymentProcessingSubBlock org={org} readOnly={readOnly} />
       </div>
     </SectionCard>
   );
@@ -1467,74 +1516,200 @@ function TpaFeeScheduleSubBlock({ org, readOnly }: { org: OrgDetail; readOnly: b
   );
 }
 
-function PaymentProcessingSubBlock({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
-  const [editing, setEditing] = useState(false);
-  const [cardPct, setCardPct] = useState(String(org.card_percentage_bps / 100));
-  const [achFirst, setAchFirst] = useState(String(org.ach_first_fee_cents / 100));
-  const [achSub, setAchSub] = useState(String(org.ach_subsequent_fee_cents / 100));
-  const [achPenalty, setAchPenalty] = useState(String(org.failed_ach_penalty_cents / 100));
+function PaymentProcessingSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const e = useSectionEdit();
+  const [cardBps, setCardBps] = useState(String(org.card_percentage_bps));
+  const [achFirst, setAchFirst] = useState(String(org.ach_first_fee_cents));
+  const [achSub, setAchSub] = useState(String(org.ach_subsequent_fee_cents));
+  const [achPenalty, setAchPenalty] = useState(String(org.failed_ach_penalty_cents));
   const [penaltyMode, setPenaltyMode] = useState<"flat" | "percentage">(org.failed_card_penalty_mode);
-  const [penaltyValue, setPenaltyValue] = useState(
-    org.failed_card_penalty_mode === "flat"
-      ? String((org.failed_card_penalty_value_cents ?? 0) / 100)
-      : String((org.failed_card_penalty_pct_bps ?? 0) / 100)
-  );
+  const [penaltyFlat, setPenaltyFlat] = useState(String(org.failed_card_penalty_value_cents ?? ""));
+  const [penaltyBps, setPenaltyBps] = useState(String(org.failed_card_penalty_pct_bps ?? ""));
   const [retry, setRetry] = useState(String(org.free_retry_count));
 
   function cancel() {
-    setEditing(false);
-    setCardPct(String(org.card_percentage_bps / 100));
-    setAchFirst(String(org.ach_first_fee_cents / 100));
-    setAchSub(String(org.ach_subsequent_fee_cents / 100));
-    setAchPenalty(String(org.failed_ach_penalty_cents / 100));
+    setCardBps(String(org.card_percentage_bps));
+    setAchFirst(String(org.ach_first_fee_cents));
+    setAchSub(String(org.ach_subsequent_fee_cents));
+    setAchPenalty(String(org.failed_ach_penalty_cents));
     setPenaltyMode(org.failed_card_penalty_mode);
-    setPenaltyValue(org.failed_card_penalty_mode === "flat"
-      ? String((org.failed_card_penalty_value_cents ?? 0) / 100)
-      : String((org.failed_card_penalty_pct_bps ?? 0) / 100));
+    setPenaltyFlat(String(org.failed_card_penalty_value_cents ?? ""));
+    setPenaltyBps(String(org.failed_card_penalty_pct_bps ?? ""));
     setRetry(String(org.free_retry_count));
+    e.onCancel();
   }
+
+  const cardPctHelp = (() => {
+    const n = parseInt(cardBps, 10);
+    if (isNaN(n)) return null;
+    return `${(n / 100).toFixed(2)}%`;
+  })();
 
   const penaltyDisplay = org.failed_card_penalty_mode === "flat"
     ? formatCents(org.failed_card_penalty_value_cents ?? 0)
     : bpsToPct(org.failed_card_penalty_pct_bps ?? 0);
 
   return (
-    <div className="border border-gray-200 rounded-md p-4 bg-white">
-      <SubBlockHeader
-        title="Payment Processing & Retry Config"
-        subtitle="Platform defaults. Override per org only if commercially negotiated."
-        editing={editing}
-        canEdit={!readOnly}
-        onEdit={() => setEditing(true)}
-      />
+    <SectionCard
+      title="Payment Processing"
+      editing={e.editing}
+      canEdit={!readOnly}
+      onEdit={e.onEdit}
+      drives={["billing automation", "fee calculation"]}
+    >
       <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-        <div className="space-y-4">
-          <RField label="Card Percentage">{editing ? <input className={inputCls} value={cardPct} onChange={(e) => setCardPct(e.target.value)} /> : bpsToPct(org.card_percentage_bps)}</RField>
-          <RField label="ACH First Fee">{editing ? <input className={inputCls} value={achFirst} onChange={(e) => setAchFirst(e.target.value)} /> : formatCents(org.ach_first_fee_cents)}</RField>
-          <RField label="ACH Subsequent Fee">{editing ? <input className={inputCls} value={achSub} onChange={(e) => setAchSub(e.target.value)} /> : formatCents(org.ach_subsequent_fee_cents)}</RField>
-        </div>
-        <div className="space-y-4">
-          <RField label="Failed ACH Penalty">{editing ? <input className={inputCls} value={achPenalty} onChange={(e) => setAchPenalty(e.target.value)} /> : formatCents(org.failed_ach_penalty_cents)}</RField>
-          <RField label="Failed Card Penalty Mode">
-            {editing
-              ? <select className={inputCls} value={penaltyMode} onChange={(e) => setPenaltyMode(e.target.value as "flat" | "percentage")}>
-                  <option value="flat">Flat</option>
-                  <option value="percentage">Percentage</option>
-                </select>
-              : (org.failed_card_penalty_mode === "flat" ? "Flat" : "Percentage")}
-          </RField>
-          <RField label={`Failed Card Penalty Value${editing ? (penaltyMode === "flat" ? " ($)" : " (%)") : ""}`}>
-            {editing
-              ? <input className={inputCls} value={penaltyValue} onChange={(e) => setPenaltyValue(e.target.value)} />
-              : penaltyDisplay}
-          </RField>
-          <RField label="Free Retry Count">{editing ? <input className={inputCls} type="number" value={retry} onChange={(e) => setRetry(e.target.value)} /> : org.free_retry_count}</RField>
-        </div>
+        <RField label="Card Fee (bps)">
+          {e.editing
+            ? (
+              <div>
+                <input className={inputCls} type="number" value={cardBps} onChange={(ev) => setCardBps(ev.target.value)} />
+                <div className="text-[11px] text-stone-500 mt-1">{cardPctHelp ? `${cardBps} = ${cardPctHelp}` : "370 = 3.70%"}</div>
+              </div>
+            )
+            : <span>{org.card_percentage_bps} <span className="text-stone-400 text-xs">({bpsToPct(org.card_percentage_bps)})</span></span>}
+        </RField>
+        <RField label="Failed ACH Penalty">
+          {e.editing
+            ? <input className={inputCls} type="number" value={achPenalty} onChange={(ev) => setAchPenalty(ev.target.value)} />
+            : formatCents(org.failed_ach_penalty_cents)}
+        </RField>
+        <RField label="ACH First Payment">
+          {e.editing
+            ? <input className={inputCls} type="number" value={achFirst} onChange={(ev) => setAchFirst(ev.target.value)} />
+            : formatCents(org.ach_first_fee_cents)}
+        </RField>
+        <RField label="Free Retries">
+          {e.editing
+            ? <input className={inputCls} type="number" value={retry} onChange={(ev) => setRetry(ev.target.value)} />
+            : org.free_retry_count}
+        </RField>
+        <RField label="ACH Subsequent">
+          {e.editing
+            ? <input className={inputCls} type="number" value={achSub} onChange={(ev) => setAchSub(ev.target.value)} />
+            : formatCents(org.ach_subsequent_fee_cents)}
+        </RField>
+        <RField label="Failed Card Penalty Mode">
+          {e.editing
+            ? (
+              <select className={inputCls} value={penaltyMode} onChange={(ev) => setPenaltyMode(ev.target.value as "flat" | "percentage")}>
+                <option value="flat">Flat</option>
+                <option value="percentage">Percentage</option>
+              </select>
+            )
+            : (org.failed_card_penalty_mode === "flat" ? "Flat" : "Percentage")}
+        </RField>
+        {(e.editing ? penaltyMode : org.failed_card_penalty_mode) === "flat"
+          ? (
+            <RField label="Failed Card Penalty (flat)">
+              {e.editing
+                ? <input className={inputCls} type="number" value={penaltyFlat} onChange={(ev) => setPenaltyFlat(ev.target.value)} placeholder="cents" />
+                : penaltyDisplay}
+            </RField>
+          )
+          : (
+            <RField label="Failed Card Penalty (bps)">
+              {e.editing
+                ? <input className={inputCls} type="number" value={penaltyBps} onChange={(ev) => setPenaltyBps(ev.target.value)} placeholder="basis points" />
+                : penaltyDisplay}
+            </RField>
+          )}
       </div>
-      {editing && <SectionActions onCancel={cancel} onSave={() => setEditing(false)} />}
-    </div>
+      {e.editing && <SectionActions onCancel={cancel} onSave={e.onSave} />}
+    </SectionCard>
   );
 }
+
+function LocalizationSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const e = useSectionEdit();
+  const [defaultLang, setDefaultLang] = useState(org.default_language);
+  const [supported, setSupported] = useState<string[]>(org.supported_languages);
+  function toggleLang(code: string) {
+    setSupported(supported.includes(code) ? supported.filter((c) => c !== code) : [...supported, code]);
+  }
+  function cancel() {
+    setDefaultLang(org.default_language);
+    setSupported(org.supported_languages);
+    e.onCancel();
+  }
+  return (
+    <SectionCard
+      title="Localization"
+      editing={e.editing}
+      canEdit={!readOnly}
+      onEdit={e.onEdit}
+      drives={["microsite language", "email templates"]}
+      note="Individual language preferences (preferred_language) override the org default for communications."
+    >
+      <Grid2>
+        <RField label="Default Language">
+          {e.editing
+            ? (
+              <select className={inputCls} value={defaultLang} onChange={(ev) => setDefaultLang(ev.target.value)}>
+                {LANGUAGE_OPTIONS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+              </select>
+            )
+            : languageLabel(org.default_language)}
+        </RField>
+        <RField label="Supported Languages">
+          {e.editing
+            ? (
+              <div className="flex flex-wrap gap-1.5">
+                {LANGUAGE_OPTIONS.map((l) => {
+                  const on = supported.includes(l.code);
+                  return (
+                    <button
+                      key={l.code}
+                      type="button"
+                      onClick={() => toggleLang(l.code)}
+                      className={`text-xs px-2 py-1 rounded-full border ${on ? "bg-[#0a3d3e] text-white border-[#0a3d3e]" : "bg-white text-stone-600 border-stone-300 hover:border-stone-400"}`}
+                    >{l.label}</button>
+                  );
+                })}
+              </div>
+            )
+            : (
+              <div className="flex flex-wrap gap-1.5">
+                {org.supported_languages.map((c) => (
+                  <span key={c} className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">{languageLabel(c)}</span>
+                ))}
+              </div>
+            )}
+        </RField>
+      </Grid2>
+      {e.editing && <SectionActions onCancel={cancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
+function GroupPolicySection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard
+      title="Group Policy"
+      editing={e.editing}
+      canEdit={!readOnly}
+      onEdit={e.onEdit}
+      drives={["carrier reporting", "Sun Life integration"]}
+    >
+      <Grid2>
+        <RField label="Policy Number">
+          {e.editing
+            ? <input className={inputCls} defaultValue={org.group_policy_number ?? ""} placeholder="e.g. SL-2024-00147" />
+            : (org.group_policy_number
+                ? <span className="font-mono text-xs">{org.group_policy_number}</span>
+                : <Empty />)}
+        </RField>
+        <RField label="Effective Date">
+          {e.editing
+            ? <input className={inputCls} type="date" defaultValue={org.group_policy_effective_date ?? ""} />
+            : (org.group_policy_effective_date ? fmtDate(org.group_policy_effective_date) : <Empty />)}
+        </RField>
+      </Grid2>
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
 
 function BrokerSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
   const e = useSectionEdit();
