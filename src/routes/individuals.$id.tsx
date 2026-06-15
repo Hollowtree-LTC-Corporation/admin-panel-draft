@@ -476,6 +476,13 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
         </RField>
         <RField label="Failed Attempt Date" value={fmtDate(i.failed_attempt_date)} locked={editing} />
         <RField label="Next Retry Date" value={fmtDate(i.next_retry_date)} locked={editing} />
+
+        <RField label="Active Date" value={fmtDate(i.active_date)} locked={editing} />
+        <RField label="Canceled Date">
+          {i.canceled_date ? <span className="text-red-700">{fmtDate(i.canceled_date)}</span> : <span className="text-gray-400">—</span>}
+        </RField>
+        <div />
+        <div />
       </Grid>
       <div className="mt-3">
         <Link to="/payment-ledger" className="text-xs text-[#0a3d3e] hover:underline inline-flex items-center gap-1">
