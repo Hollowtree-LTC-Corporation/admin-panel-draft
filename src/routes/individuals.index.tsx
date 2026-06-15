@@ -131,6 +131,10 @@ function IndividualsView() {
       }
       if (!isLTC && diTypeFilter !== "all" && i.di_type !== diTypeFilter) return false;
       if (paymentFilter !== "all" && i.last_payment_status !== paymentFilter) return false;
+      if (repFilter !== "all") {
+        if (repFilter === "__unassigned__") { if (i.assigned_rep) return false; }
+        else if (i.assigned_rep !== repFilter) return false;
+      }
       return true;
     });
     return sort.applySort(rows, (r, k) => {
@@ -138,12 +142,12 @@ function IndividualsView() {
       if (k === "relationship_type") return r.relationship_type === "spouse" ? "Spouse" : "Employee";
       return (r as unknown as Record<string, string | number>)[k];
     });
-  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, paymentFilter, sort, isLTC]);
+  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, paymentFilter, repFilter, sort, isLTC]);
 
-  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || paymentFilter !== "all" || !sort.isDefault;
+  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || paymentFilter !== "all" || repFilter !== "all" || !sort.isDefault;
 
   const clearAll = () => {
-    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all"); setPaymentFilter("all");
+    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all"); setPaymentFilter("all"); setRepFilter("all");
     sort.reset();
     navigate({ to: "/individuals", search: {} });
   };
