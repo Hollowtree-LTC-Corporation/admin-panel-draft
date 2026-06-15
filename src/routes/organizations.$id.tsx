@@ -28,9 +28,33 @@ const SPONSOR_TYPES = ["employer","affiliate"];
 const WINDOW_STATUSES = ["upcoming","open","closed"];
 const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
 const BROKERS = ["Westfield Brokers","Hollowtree House","Override Group LLC","Jamie Rep"];
+const BROKER_TYPES = ["Broker","IMO","Internal"];
+const INBOUND_TYPES = ["Broker Referral","Direct","Partner Referral","Inbound"];
 const PRODUCT_TEMPLATE_VARIANTS = ["base","eob_only","restoration_only","eob_and_restoration"];
 const CONTRIBUTION_TYPES = ["voluntary","buy_up","employer_paid"];
 const PAY_MODES = ["Monthly","10-Pay"];
+
+function defaultMicrositeSuffix(product: "DI" | "LTC"): string {
+  return product === "DI" ? ".hollowtree.co" : ".hollowtreeltc.com";
+}
+function parseMicrositeSubdomain(url: string, suffix: string): { matches: boolean; subdomain: string } {
+  try {
+    const host = new URL(url).hostname;
+    const bare = suffix.startsWith(".") ? suffix.slice(1) : suffix;
+    if (host === bare) return { matches: true, subdomain: "" };
+    if (host.endsWith("." + bare)) {
+      return { matches: true, subdomain: host.slice(0, host.length - bare.length - 1) };
+    }
+  } catch { /* ignore */ }
+  return { matches: false, subdomain: "" };
+}
+function carrierForProduct(product: "DI" | "LTC"): string {
+  return product === "DI" ? "Sun Life" : "Trustmark";
+}
+function carrierProductLabel(product: "DI" | "LTC", typeOfRate: string | null | undefined): string {
+  if (product === "LTC") return "Universal Life with LTC Rider";
+  return typeOfRate === "STD+LTD" ? "Group Disability (STD + LTD)" : "Group Disability (LTD)";
+}
 
 // Dummy enrollment windows scoped per org for this iteration
 const DUMMY_WINDOWS = [
