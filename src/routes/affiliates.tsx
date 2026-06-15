@@ -1,13 +1,75 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, TableShell, TRow, TCell, Btn, Drawer, Field } from "@/components/wireframe/Bits";
 import { FilterRow, FilterSearch, FilterSelect, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import type { AffiliateOrganization, AffiliateType, AffiliationLevel, AffiliateIndustry, LegalEntityStatus } from "@/lib/wireframe/data";
+import { Shield, Building2, Handshake, Camera, ImageIcon } from "lucide-react";
 
 export const Route = createFileRoute("/affiliates")({ component: View });
 
 type SortKey = "name" | "affiliate_type" | "affiliation_level" | "industry" | "is_external" | "status";
+
+// Cycle of sample "uploaded" logos for the wireframe upload interaction.
+const SAMPLE_LOGOS = ["icon:shield", "icon:building", "icon:handshake", "icon:image"];
+let sampleLogoIdx = 0;
+function nextSampleLogo() {
+  const v = SAMPLE_LOGOS[sampleLogoIdx % SAMPLE_LOGOS.length];
+  sampleLogoIdx++;
+  return v;
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+export function AffiliateLogo({
+  affiliate,
+  size = 32,
+}: {
+  affiliate: Pick<AffiliateOrganization, "name" | "logo_url">;
+  size?: number;
+}) {
+  const px = `${size}px`;
+  const radius = size >= 48 ? "rounded-md" : "rounded";
+  const iconSize = Math.max(12, Math.round(size * 0.5));
+  const baseStyle = { width: px, height: px, minWidth: px } as const;
+
+  if (affiliate.logo_url) {
+    if (affiliate.logo_url.startsWith("icon:")) {
+      const which = affiliate.logo_url.slice(5);
+      const Icon = which === "shield" ? Shield : which === "handshake" ? Handshake : which === "building" ? Building2 : ImageIcon;
+      return (
+        <div
+          style={baseStyle}
+          className={`${radius} bg-white border border-black/10 flex items-center justify-center text-[#0a3d3e]`}
+        >
+          <Icon style={{ width: iconSize, height: iconSize }} strokeWidth={1.75} />
+        </div>
+      );
+    }
+    return (
+      <img
+        src={affiliate.logo_url}
+        alt={`${affiliate.name} logo`}
+        style={baseStyle}
+        className={`${radius} object-cover border border-black/10`}
+      />
+    );
+  }
+  const fontSize = Math.max(9, Math.round(size * 0.36));
+  return (
+    <div
+      style={baseStyle}
+      className={`${radius} bg-black/10 text-black/60 font-semibold flex items-center justify-center select-none`}
+    >
+      <span style={{ fontSize }}>{initials(affiliate.name)}</span>
+    </div>
+  );
+}
 
 const TYPE_OPTIONS: Array<{ value: AffiliateType; label: string }> = [
   { value: "cca", label: "CCA (Clinicians Care Association)" },
@@ -65,6 +127,7 @@ function emptyDraft(): AffiliateOrganization {
     legal_entity_status: null,
     notes: "",
     deleted_at: null,
+    logo_url: null,
   };
 }
 
@@ -160,6 +223,7 @@ function View() {
       <TableShell>
         <SortableTHead<SortKey>
           cols={[
+            { key: null, label: "" },
             { key: "name", label: "Name" },
             { key: "affiliate_type", label: "Type" },
             { key: "affiliation_level", label: "Level" },
@@ -176,6 +240,7 @@ function View() {
             const deactivated = !!a.deleted_at;
             return (
               <TRow key={a.id} onClick={() => openEdit(a)}>
+                <TCell className="w-10"><div className={deactivated ? "opacity-50" : ""}><AffiliateLogo affiliate={a} size={32} /></div></TCell>
                 <TCell className={`font-medium ${deactivated ? "text-black/40" : ""}`}>{a.name}</TCell>
                 <TCell><TypeBadge type={a.affiliate_type} /></TCell>
                 <TCell className="capitalize text-black/70">{a.affiliation_level}</TCell>
@@ -194,7 +259,7 @@ function View() {
             );
           })}
           {rows.length === 0 && (
-            <tr><td colSpan={6} className="px-3 py-8 text-center text-black/40 text-xs">No affiliates match the current filters.</td></tr>
+            <tr><td colSpan={7} className="px-3 py-8 text-center text-black/40 text-xs">No affiliates match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
@@ -257,6 +322,14 @@ export function AffiliateForm({
             This affiliate is deactivated. It does not appear in selectors.
           </div>
         )}
+
+        <LogoUpload
+          affiliate={draft}
+          onPick={() => update("logo_url", nextSampleLogo())}
+          onClear={draft.logo_url ? () => update("logo_url", null) : undefined}
+        />
+
+
 
         <Field label="Name">
           <input
@@ -356,3 +429,65 @@ export function AffiliateForm({
     </div>
   );
 }
+
+function LogoUpload({
+  affiliate,
+  onPick,
+  onClear,
+}: {
+  affiliate: Pick<AffiliateOrganization, "name" | "logo_url">;
+  onPick: () => void;
+  onClear?: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1.5">Logo</div>
+      <div className="flex items-center gap-3">
+        <div className="relative group">
+          <AffiliateLogo affiliate={affiliate} size={64} />
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-[#0a3d3e] text-white flex items-center justify-center shadow border border-white hover:bg-[#0a3d3e]/90"
+            aria-label="Upload logo"
+            title="Upload logo"
+          >
+            <Camera className="h-3 w-3" />
+          </button>
+        </div>
+        <div className="flex flex-col gap-1">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="text-xs text-[#0a3d3e] hover:underline text-left"
+          >
+            {affiliate.logo_url ? "Replace logo" : "Upload logo"}
+          </button>
+          {onClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-xs text-black/50 hover:text-rose-600 text-left"
+            >
+              Remove
+            </button>
+          )}
+          <div className="text-[11px] text-black/40">PNG or SVG, square preferred.</div>
+        </div>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          // Wireframe: ignore the actual file, swap to a sample logo.
+          if (e.target.files && e.target.files.length > 0) onPick();
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+

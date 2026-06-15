@@ -264,17 +264,18 @@ export type AffiliateOrganization = {
   legal_entity_status: LegalEntityStatus | null;
   notes: string;
   deleted_at: string | null;
+  logo_url: string | null;
 };
 
 export const AFFILIATE_ORGANIZATIONS: AffiliateOrganization[] = [
-  { id: "aff_1", name: "CCU Member Foundation", affiliate_type: "industry_association", affiliation_level: "individual", industry: null, is_external: true, legal_entity_status: "operational", notes: "From enrollment windows dummy data.", deleted_at: null },
-  { id: "aff_2", name: "Foxtail Alumni Assoc", affiliate_type: "industry_association", affiliation_level: "individual", industry: null, is_external: true, legal_entity_status: "operational", notes: "From enrollment windows dummy data.", deleted_at: null },
-  { id: "aff_3", name: "Clinicians Care Association", affiliate_type: "cca", affiliation_level: "individual", industry: "healthcare", is_external: true, legal_entity_status: "operational", notes: "DI primary. The CCA.", deleted_at: null },
-  { id: "aff_4", name: "TeamHealth Affiliate Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "healthcare", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null },
-  { id: "aff_5", name: "Healthcare Workers United", affiliate_type: "union", affiliation_level: "individual", industry: "healthcare", is_external: true, legal_entity_status: "operational", notes: "Example union.", deleted_at: null },
-  { id: "aff_6", name: "Pacific Educators Alliance", affiliate_type: "industry_association", affiliation_level: "individual", industry: "education", is_external: true, legal_entity_status: "operational", notes: "Example association.", deleted_at: null },
-  { id: "aff_7", name: "National Education Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "education", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null },
-  { id: "aff_8", name: "Public Sector Benefits Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "government", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null },
+  { id: "aff_1", name: "CCU Member Foundation", affiliate_type: "industry_association", affiliation_level: "individual", industry: null, is_external: true, legal_entity_status: "operational", notes: "From enrollment windows dummy data.", deleted_at: null, logo_url: null },
+  { id: "aff_2", name: "Foxtail Alumni Assoc", affiliate_type: "industry_association", affiliation_level: "individual", industry: null, is_external: true, legal_entity_status: "operational", notes: "From enrollment windows dummy data.", deleted_at: null, logo_url: null },
+  { id: "aff_3", name: "Clinicians Care Association", affiliate_type: "cca", affiliation_level: "individual", industry: "healthcare", is_external: true, legal_entity_status: "operational", notes: "DI primary. The CCA.", deleted_at: null, logo_url: "icon:shield" },
+  { id: "aff_4", name: "TeamHealth Affiliate Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "healthcare", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null, logo_url: "icon:building" },
+  { id: "aff_5", name: "Healthcare Workers United", affiliate_type: "union", affiliation_level: "individual", industry: "healthcare", is_external: true, legal_entity_status: "operational", notes: "Example union.", deleted_at: null, logo_url: "icon:handshake" },
+  { id: "aff_6", name: "Pacific Educators Alliance", affiliate_type: "industry_association", affiliation_level: "individual", industry: "education", is_external: true, legal_entity_status: "operational", notes: "Example association.", deleted_at: null, logo_url: null },
+  { id: "aff_7", name: "National Education Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "education", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null, logo_url: null },
+  { id: "aff_8", name: "Public Sector Benefits Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "government", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null, logo_url: null },
 ];
 
 export type EnrollmentWindow = {

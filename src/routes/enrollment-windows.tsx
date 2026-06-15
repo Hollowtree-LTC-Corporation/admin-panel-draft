@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, TableShell, TRow, TCell, Pill, Btn, Drawer, Field, Input } from "@/components/wireframe/Bits";
 import {
@@ -13,6 +13,7 @@ import {
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
+import { AffiliateLogo } from "@/routes/affiliates";
 
 export const Route = createFileRoute("/enrollment-windows")({ component: View });
 
@@ -304,20 +305,12 @@ function WindowForm({
             )}
             {showAffiliate && (
               <Field label="Affiliate">
-                <select
-                  value={draft.affiliate_org_id ?? "__NULL__"}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === "__NEW__") { setInlineOpen(true); return; }
-                    update("affiliate_org_id", v === "__NULL__" ? null : v);
-                  }}
-                  className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
-                >
-                  <option value="__NULL__">Select affiliate…</option>
-                  {affiliates.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  <option disabled>──────────</option>
-                  <option value="__NEW__">+ New Affiliate…</option>
-                </select>
+                <AffiliateDropdown
+                  value={draft.affiliate_org_id}
+                  affiliates={affiliates}
+                  onChange={(id) => update("affiliate_org_id", id)}
+                  onNew={() => setInlineOpen(true)}
+                />
                 {inlineOpen && (
                   <div className="mt-2 rounded-md border border-black/15 bg-[#f7f3eb] p-2.5 space-y-2">
                     <div className="text-[10px] uppercase tracking-wider text-black/50">Create Affiliate</div>
@@ -366,6 +359,7 @@ function WindowForm({
                               legal_entity_status: null,
                               notes: "",
                               deleted_at: null,
+                              logo_url: null,
                             });
                             update("affiliate_org_id", id);
                             setInlineOpen(false);
@@ -533,3 +527,76 @@ function WindowForm({
     </div>
   );
 }
+
+function AffiliateDropdown({
+  value,
+  affiliates,
+  onChange,
+  onNew,
+}: {
+  value: string | null;
+  affiliates: AffiliateOrganization[];
+  onChange: (id: string | null) => void;
+  onNew: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = value ? affiliates.find((a) => a.id === value) ?? null : null;
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white flex items-center justify-between gap-2 text-left"
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          {selected ? <AffiliateLogo affiliate={selected} size={20} /> : null}
+          <span className={`truncate ${selected ? "" : "text-black/50"}`}>
+            {selected ? selected.name : "Select affiliate…"}
+          </span>
+        </span>
+        <ChevronDown className="h-3 w-3 text-black/40 shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute z-30 mt-1 w-full bg-white border border-black/15 rounded shadow-lg max-h-72 overflow-y-auto">
+          <button
+            type="button"
+            onClick={() => { onChange(null); setOpen(false); }}
+            className="w-full text-left px-2 py-1.5 text-xs hover:bg-[#f7f3eb] text-black/50"
+          >
+            Select affiliate…
+          </button>
+          {affiliates.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => { onChange(a.id); setOpen(false); }}
+              className={`w-full text-left px-2 py-1.5 text-xs hover:bg-[#f7f3eb] flex items-center gap-2 ${value === a.id ? "bg-[#f7f3eb] font-medium" : ""}`}
+            >
+              <AffiliateLogo affiliate={a} size={20} />
+              <span className="truncate">{a.name}</span>
+            </button>
+          ))}
+          <div className="border-t border-black/10" />
+          <button
+            type="button"
+            onClick={() => { onNew(); setOpen(false); }}
+            className="w-full text-left px-2 py-1.5 text-xs hover:bg-[#f7f3eb] text-[#0a3d3e]"
+          >
+            + New Affiliate…
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
