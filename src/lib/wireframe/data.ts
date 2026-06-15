@@ -13,6 +13,7 @@ export const ORGS = [
   { id: "org_6", name: "Foxtail Education Trust", product: "LTC", situs_state: "WA", status: "onboarding", individuals_count: 2, policy_owner_type: "employer_group", type_of_rate: null, extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
   { id: "org_7", name: "Greylock Partners LLC", product: "DI", situs_state: "MA", status: "active", individuals_count: 5, policy_owner_type: "cca", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: true },
   { id: "org_8", name: "Harborline Shipping", product: "DI", situs_state: "WA", status: "active", individuals_count: 8, policy_owner_type: "employer_group", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
+  { id: "org_9", name: "Ironwood Robotics", product: "DI", situs_state: "CO", status: "onboarding", individuals_count: 0, policy_owner_type: "employer_group", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
 ];
 
 export const LTC_FACE_TIERS_CENTS = [2500000, 5000000, 7500000, 10000000, 15000000, 20000000, 25000000]; // $25K..$250K
