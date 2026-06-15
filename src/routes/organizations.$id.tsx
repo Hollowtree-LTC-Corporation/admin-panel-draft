@@ -642,7 +642,7 @@ function DSelect({ defaultValue, options }: { defaultValue?: string; options: st
 ============================================================= */
 
 function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
-  const statusValue = org.enrollment_status === "active" ? "active" : org.enrollment_status === "closed" ? "closed" : "pending_review";
+  const statusValue = org.status;
   const identitySummary = product === "LTC"
     ? `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible · NAIC ${org.naic_code}`
     : `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible`;
