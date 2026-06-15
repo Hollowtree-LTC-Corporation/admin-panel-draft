@@ -641,7 +641,7 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
             ? <select className={inputCls} defaultValue={org.industry}>{INDUSTRIES.map((o) => <option key={o}>{o}</option>)}</select>
             : titleCase(org.industry)}
         </RField>
-        <RField label="Microsite URL"><ExtLink href={org.microsite_url}>{org.microsite_url}</ExtLink></RField>
+        <RField label="Microsite URL"><MicrositeField url={org.microsite_url} product={product} editing={e.editing} /></RField>
         <RField label="Org Type">
           {e.editing
             ? <select className={inputCls} defaultValue={org.org_type}>{ORG_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
