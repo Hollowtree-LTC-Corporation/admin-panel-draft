@@ -350,6 +350,7 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
   const premiumSum = i.std_premium_cents + i.ltd_premium_cents;
   const mismatch = !unfunded && premiumSum !== i.monthly_premium_cents;
   const DI_PLANS = ["Bronze DI", "Silver DI", "Gold DI"];
+  const DI_STAGES = ["not_started","quote_generated","link_sent","app_started","app_completed","payment_pending","enrolled","active"];
   return (
     <SectionCard title="Coverage & Plan · DI" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
@@ -366,6 +367,17 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
           )}
         </RField>
         <RField label="Weekly Covered Benefit" value={unfunded ? "—" : formatCents(i.weekly_covered_benefit_cents)} />
+        <RField label="Monthly Benefit" value={i.monthly_benefit_cents != null ? formatCents(i.monthly_benefit_cents) : "—"} />
+        <RField label="Current Stage" editing={editing}>
+          {editing
+            ? <select defaultValue={i.stage} className={inputCls}>{DI_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+            : <Badge map={STAGE_BADGE} value={i.stage} />}
+        </RField>
+        <RField label="Application Status">
+          {i.application_status
+            ? <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-sky-100 text-sky-700">{i.application_status}</span>
+            : <span className="text-gray-400">—</span>}
+        </RField>
         {i.canceled_date && <RField label="Canceled Date" value={fmtDate(i.canceled_date)} />}
       </Grid>
       {error && <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
