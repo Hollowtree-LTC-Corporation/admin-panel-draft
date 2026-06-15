@@ -693,10 +693,14 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
 }
 
 function LifecycleTab({
-  windows, orgName, onNew, onEdit, canEdit, canCreate, readOnly,
+  windows, orgName, orgId, orgStatus, product, isAdmin, onNew, onEdit, canEdit, canCreate, readOnly,
 }: {
   windows: typeof DUMMY_WINDOWS;
   orgName: string;
+  orgId: string;
+  orgStatus: string;
+  product: "DI" | "LTC";
+  isAdmin: boolean;
   onNew: () => void;
   onEdit: (w: typeof DUMMY_WINDOWS[number]) => void;
   canEdit: boolean;
