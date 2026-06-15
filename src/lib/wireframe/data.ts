@@ -114,7 +114,11 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     interested_spousal: n % 4 === 0,
     relationship_type: isSpouse ? "spouse" : (isLTC ? "primary" : "employee"),
     linked_individual_id: isSpouse ? `ind_${SPOUSE_PAIRS[n]}` : null,
-    employee_face_amount_cents: LTC_FACE_TIERS_CENTS[isSpouse ? (n % 3) : 2 + (n % 5)],
+    face_amount_cents: LTC_FACE_TIERS_CENTS[isSpouse ? (n % 3) : 2 + (n % 5)],
+    // v13: issue type (LTC). Spouses always SI; employees with higher face amounts SI.
+    issue_type: isLTC ? (isSpouse ? "SI" : (2 + (n % 5) >= 5 ? "SI" : "GI")) : null,
+    // v13: per-individual language preference (overrides org default)
+    preferred_language: n === 4 || n === 17 ? "es" : "en",
     // Employer contribution
     contribution_tier: ["100%", "75%", "50%", "0%"][n % 4],
     contribution_duration_months: [12, 24, 36][n % 3],

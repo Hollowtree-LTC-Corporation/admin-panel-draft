@@ -50,6 +50,30 @@ function Badge({ map, value }: { map: typeof COVERAGE_BADGE; value: string }) {
   return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${m.cls}`}>{m.label}</span>;
 }
 
+const LANGUAGE_OPTIONS: Array<{ code: string; label: string }> = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Spanish" },
+  { code: "zh", label: "Chinese" },
+];
+function languageLabel(code: string | null | undefined): string {
+  if (!code) return "—";
+  return LANGUAGE_OPTIONS.find((l) => l.code === code)?.label ?? code;
+}
+
+function IssueTypeBadge({ value }: { value: string | null | undefined }) {
+  if (!value) return <span className="text-black/40">—</span>;
+  const isGI = value === "GI";
+  const cls = isGI
+    ? "bg-emerald-100 text-emerald-800"
+    : "bg-sky-100 text-sky-800";
+  const tooltip = isGI
+    ? "Guaranteed Issue: base coverage, no medical questions."
+    : "Simplified Issue: buy-up coverage with medical underwriting.";
+  return (
+    <span title={tooltip} className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>{value}</span>
+  );
+}
+
 function paymentBadge(status: string | null | undefined, retry: number) {
   if (!status) return <span className="text-black/40">—</span>;
   const s = status.toLowerCase();
@@ -140,9 +164,7 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     were_they_client: !isLTC ? n % 3 === 0 : null,
     std_premium_cents: !isLTC && org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.4) : 0,
     ltd_premium_cents: !isLTC ? (org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.6) : base.monthly_premium_cents) : 0,
-    cca_portal_link: !isLTC && org?.cca_group ? `https://cca.example.org/portal/${base.id}` : null,
     // LTC-only extras
-    spouse_face_amount_cents: isLTC && relationship === "primary" && base.interested_spousal ? Math.round((base.employee_face_amount_cents ?? 0) * 0.6) : null,
     employee_upgrade_option: isLTC && base.upgrade_applied_for ? ["Silver→Gold","Gold→Platinum","Platinum→Diamond"][n % 3] : null,
     applied_for_upgrade: isLTC ? base.upgrade_applied_for : null,
     _org: org,
@@ -247,11 +269,12 @@ function IndividualDetail() {
             <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
             <ProfessionalClassificationSection i={i} readOnly={readOnly} />
             <EnrollmentSection i={i} />
-            {i._org?.cca_group && i.cca_portal_link && <CCAPortalSection link={i.cca_portal_link} />}
             <SystemRefsSection i={i} />
           </>
         )}
       </div>
+
+
 
       {/* Deactivate confirmation */}
       {deactivateOpen && (
@@ -372,8 +395,13 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
         <RField label="Purchased Plan" value={unfunded ? "—" : i.purchased_plan} editing={editing}>
           <select defaultValue={i.purchased_plan} className={inputCls}>{LTC_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
         </RField>
+        <RField label="Issue Type" editing={editing}>
+          {editing
+            ? <select defaultValue={i.issue_type ?? "GI"} className={inputCls}>{["GI","SI"].map((o) => <option key={o}>{o}</option>)}</select>
+            : <IssueTypeBadge value={i.issue_type} />}
+        </RField>
         <RField label="Employee Plan Selected" value={i.employee_plan_selected || "—"} />
-        <RField label="Face Amount" value={unfunded ? "—" : formatCents(i.employee_face_amount_cents)} />
+        <RField label="Face Amount" value={unfunded ? "—" : formatCents(i.face_amount_cents)} />
         <RField label="Monthly Premium" value={unfunded ? "—" : formatCents(i.monthly_premium_cents)} />
 
         <RField label="Tobacco Use">
@@ -514,6 +542,18 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
         <RField label="Email" value={i.email} editing={editing}><input type="email" defaultValue={i.email} className={inputCls} /></RField>
         <RField label="Phone" value={i.phone} editing={editing}><input defaultValue={i.phone} className={inputCls} /></RField>
         <RField label="Secondary Phone" value={i.secondary_phone ?? "—"} editing={editing}><input defaultValue={i.secondary_phone ?? ""} className={inputCls} /></RField>
+        <RField label="Language" editing={editing}>
+          {editing
+            ? (
+              <div>
+                <select defaultValue={i.preferred_language ?? "en"} className={inputCls}>
+                  {LANGUAGE_OPTIONS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+                </select>
+                <div className="text-[11px] text-stone-500 mt-1">Overrides org default for this individual's communications.</div>
+              </div>
+            )
+            : languageLabel(i.preferred_language)}
+        </RField>
         <RField label="Date of Birth" value={fmtDate(i.date_of_birth)} editing={editing}><input type="date" defaultValue={i.date_of_birth} className={inputCls} /></RField>
         <RField label="Organization">
           {editing ? (
@@ -643,7 +683,6 @@ function SpouseSection({ i, linked, linkedDetail, readOnly }: { i: Detail; linke
               <select defaultValue={i.interested_spousal_text} className={inputCls}>{["yes","no",""].map((o) => <option key={o} value={o}>{o || "—"}</option>)}</select>
             </RField>
             <RField label="Sent Spouse Invite" value={i.sent_spouse_invite || "—"} />
-            <RField label="Spouse Face Amount" value={i.spouse_face_amount_cents != null ? formatCents(i.spouse_face_amount_cents) : "—"} />
             <RField label="Spouse Authorization" value={i.spouse_authorization || "—"} />
             <RField label="Clicked Spouse Link" value={i.clicked_spouse_link || "—"} />
             <RField label="Why No Spouse" value={i.why_no_spouse ?? "—"} editing={editing}>
@@ -658,14 +697,14 @@ function SpouseSection({ i, linked, linkedDetail, readOnly }: { i: Detail; linke
 }
 
 function UpgradeSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
-  const hasActivity = i.interested_upgrading || i.applied_for_upgrade || i.upgrade_applied_for;
+  const hasActivity = i.interested_upgrading || i.applied_for_upgrade;
   if (!hasActivity) return null;
   const [editing, setEditing] = useState(false);
   return (
     <SectionCard title="Upgrade" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={3}>
         <RField label="Interested in Upgrading" value={i.interested_upgrading ? "yes" : "no"} />
-        <RField label="Applied for Upgrade" value={i.upgrade_applied_for ? "yes" : "no"} />
+        <RField label="Applied for Upgrade" value={i.applied_for_upgrade ? "yes" : "no"} />
         <RField label="Employee Upgrade Option" value={i.employee_upgrade_option ?? "—"} />
         <RField label="Pre-Upgrade Premium" value={i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"} />
         <RField label="Upgrade Submitted At" value={fmtDate(i.upgrade_submitted_at)} />
@@ -677,30 +716,6 @@ function UpgradeSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
   );
 }
 
-function CCAPortalSection({ link }: { link: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
-    }
-  };
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">CCA Portal</div>
-          <a href={link} target="_blank" rel="noreferrer" className="text-sm text-[#0a3d3e] hover:underline inline-flex items-center gap-1 break-all">
-            {link} <ExternalLink className="h-3 w-3 shrink-0" />
-          </a>
-        </div>
-        <button onClick={copy} className="text-black/50 hover:text-[#0a3d3e] p-1 shrink-0" title="Copy link">
-          <Copy className="h-4 w-4" />
-        </button>
-      </div>
-      {copied && <div className="text-[11px] text-emerald-700 mt-1">Copied</div>}
-    </div>
-  );
-}
 
 
 function EnrollmentSection({ i }: { i: Detail }) {

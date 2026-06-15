@@ -77,7 +77,7 @@ export const Route = createFileRoute("/individuals/")({
   }),
 });
 
-type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type" | "di_type" | "employee_face_amount_cents" | "last_payment_status";
+type SortKey = "full_name" | "org_name" | "coverage_status" | "stage" | "plan" | "effective_date" | "monthly_premium_cents" | "relationship_type" | "di_type" | "face_amount_cents" | "last_payment_status";
 
 const COVERAGE_OPTIONS = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"];
 
@@ -180,7 +180,7 @@ function IndividualsView() {
             { key: "coverage_status", label: "Coverage Status" },
             { key: "stage", label: "Stage" },
             { key: "plan", label: "Coverage Plan" },
-            ...(isLTC ? [{ key: "employee_face_amount_cents" as SortKey, label: "Face Amount" }, { key: null, label: "Riders" }] : []),
+            ...(isLTC ? [{ key: "face_amount_cents" as SortKey, label: "Face Amount" }, { key: null, label: "Riders" }] : []),
             { key: "effective_date", label: "Effective Date" },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
             { key: "last_payment_status", label: "Payment" },
@@ -219,7 +219,7 @@ function IndividualsView() {
                 <TCell>{unpurchased ? "—" : (isLTC ? i.purchased_plan : i.coverage_plan)}</TCell>
                 {isLTC && (
                   <>
-                    <TCell className="text-right">{unpurchased ? "—" : formatFaceAmount(i.employee_face_amount_cents)}</TCell>
+                    <TCell className="text-right">{unpurchased ? "—" : formatFaceAmount(i.face_amount_cents)}</TCell>
                     <TCell className="text-slate-500 text-[11px]">{ridersFor(i.org_id)}</TCell>
                   </>
                 )}
