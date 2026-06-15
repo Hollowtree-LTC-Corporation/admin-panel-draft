@@ -7,7 +7,23 @@ import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, FilterDate, Clea
 
 export const Route = createFileRoute("/payment-ledger")({ component: View });
 
-type SortKey = "date" | "individual_name" | "billing_group_id" | "charge_type" | "amount_cents" | "status" | "funding_source";
+type SortKey = "date" | "individual_name" | "billing_group_id" | "charge_type" | "amount_cents" | "status" | "funding_source" | "contribution_source" | "coverage_type";
+
+function ContributionSourceBadge({ value }: { value: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    voluntary: { label: "Voluntary", cls: "bg-black/5 text-black/70" },
+    employer_paid: { label: "Employer", cls: "bg-sky-100 text-sky-800" },
+    employee_buyup: { label: "Buy-up", cls: "bg-teal-100 text-teal-800" },
+  };
+  const m = map[value] ?? { label: value, cls: "bg-black/5 text-black/60" };
+  return <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${m.cls}`}>{m.label}</span>;
+}
+
+function CoverageTypeBadge({ value }: { value: string | null }) {
+  if (!value) return <span className="text-black/40">—</span>;
+  const label = value === "STDLTD" ? "STD+LTD" : value;
+  return <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-800">{label}</span>;
+}
 
 function View() {
   const { product } = useStore();
@@ -16,6 +32,8 @@ function View() {
   const [ind, setInd] = useState("all");
   const [status, setStatus] = useState("all");
   const [ctype, setCtype] = useState("all");
+  const [source, setSource] = useState("all");
+  const [coverage, setCoverage] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const sort = useSort<SortKey>("date", "desc");
@@ -35,15 +53,29 @@ function View() {
       if (ind !== "all" && p.individual_id !== ind) return false;
       if (status !== "all" && p.status !== status) return false;
       if (ctype !== "all" && p.charge_type !== ctype) return false;
+      if (source !== "all" && p.contribution_source !== source) return false;
+      if (product === "DI" && coverage !== "all" && p.coverage_type !== coverage) return false;
       if (from && p.date < from) return false;
       if (to && p.date > to) return false;
       return true;
     });
     return sort.applySort(filtered, (r, k) => (r as unknown as Record<string, string | number>)[k]);
-  }, [search, org, ind, status, ctype, from, to, sort, product]);
+  }, [search, org, ind, status, ctype, source, coverage, from, to, sort, product]);
 
-  const active = search !== "" || org !== "all" || ind !== "all" || status !== "all" || ctype !== "all" || from !== "" || to !== "" || !sort.isDefault;
-  const clearAll = () => { setSearch(""); setOrg("all"); setInd("all"); setStatus("all"); setCtype("all"); setFrom(""); setTo(""); sort.reset(); };
+  const active = search !== "" || org !== "all" || ind !== "all" || status !== "all" || ctype !== "all" || source !== "all" || coverage !== "all" || from !== "" || to !== "" || !sort.isDefault;
+  const clearAll = () => { setSearch(""); setOrg("all"); setInd("all"); setStatus("all"); setCtype("all"); setSource("all"); setCoverage("all"); setFrom(""); setTo(""); sort.reset(); };
+
+  const cols: { key: SortKey; label: string }[] = [
+    { key: "date", label: "Date" },
+    { key: "individual_name", label: "Individual" },
+    { key: "billing_group_id", label: "Group" },
+    { key: "charge_type", label: "Charge Type" },
+    { key: "amount_cents", label: "Amount" },
+    { key: "funding_source", label: "Funding" },
+    { key: "contribution_source", label: "Source" },
+    ...(product === "DI" ? [{ key: "coverage_type" as SortKey, label: "Coverage" }] : []),
+    { key: "status", label: "Status" },
+  ];
 
   return (
     <div>
@@ -57,6 +89,17 @@ function View() {
         <FilterCombobox value={ind} onChange={setInd} placeholder="All individuals" options={indOptions} />
         <FilterSelect value={status} onChange={setStatus} allLabel="All statuses" options={[{ value: "successful" }, { value: "failed" }, { value: "pending" }]} />
         <FilterSelect value={ctype} onChange={setCtype} allLabel="All charge types" options={chargeOptions} />
+        <FilterSelect value={source} onChange={setSource} allLabel="All sources" options={[
+          { value: "voluntary", label: "Voluntary" },
+          { value: "employer_paid", label: "Employer" },
+          { value: "employee_buyup", label: "Buy-up" },
+        ]} />
+        {product === "DI" && (
+          <FilterSelect value={coverage} onChange={setCoverage} allLabel="All coverage" options={[
+            { value: "STDLTD", label: "STD+LTD" },
+            { value: "LTD", label: "LTD" },
+          ]} />
+        )}
         <FilterDate value={from} onChange={setFrom} />
         <span className="text-[11px] text-black/40">to</span>
         <FilterDate value={to} onChange={setTo} />
@@ -64,15 +107,7 @@ function View() {
       </FilterRow>
       <TableShell>
         <SortableTHead<SortKey>
-          cols={[
-            { key: "date", label: "Date" },
-            { key: "individual_name", label: "Individual" },
-            { key: "billing_group_id", label: "Group" },
-            { key: "charge_type", label: "Charge Type" },
-            { key: "amount_cents", label: "Amount" },
-            { key: "status", label: "Status" },
-            { key: "funding_source", label: "Funding" },
-          ]}
+          cols={cols}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}
           onToggle={sort.toggle}
@@ -85,12 +120,14 @@ function View() {
               <TCell className="text-black/60">{p.billing_group_id}</TCell>
               <TCell className="capitalize">{p.charge_type.replace(/_/g, " ")}</TCell>
               <TCell>{formatCents(p.amount_cents)}</TCell>
-              <TCell><Pill tone={p.status === "successful" ? "ok" : p.status === "failed" ? "bad" : "info"}>{p.status}</Pill></TCell>
               <TCell className="capitalize">{p.funding_source}</TCell>
+              <TCell><ContributionSourceBadge value={p.contribution_source} /></TCell>
+              {product === "DI" && <TCell><CoverageTypeBadge value={p.coverage_type} /></TCell>}
+              <TCell><Pill tone={p.status === "successful" ? "ok" : p.status === "failed" ? "bad" : "info"}>{p.status}</Pill></TCell>
             </TRow>
           ))}
           {rows.length === 0 && (
-            <tr><td colSpan={7} className="px-3 py-8 text-center text-black/40 text-xs">No payments match the current filters.</td></tr>
+            <tr><td colSpan={cols.length} className="px-3 py-8 text-center text-black/40 text-xs">No payments match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
