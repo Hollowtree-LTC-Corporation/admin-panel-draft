@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ChevronLeft, Download, FileText, CalendarClock, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, FileText, CalendarClock, CheckCircle2 } from "lucide-react";
 import { PageHeader, Btn, TableShell, THead, TRow, TCell, Pill } from "@/components/wireframe/Bits";
 import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 import { useStore } from "@/lib/wireframe/store";
