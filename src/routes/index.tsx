@@ -117,34 +117,38 @@ function Dashboard() {
       {/* Coverage Status */}
       <div className="text-[11px] uppercase tracking-wider text-black/55 font-semibold mb-2">Coverage Status</div>
       <div className="grid grid-cols-3 gap-3 mb-5">
-        <Card className="col-span-2 p-3">
-          <div className="flex h-8 w-full rounded overflow-hidden border border-black/10">
-            {coverageCounts.map((c) => {
-              const pct = (c.n / totalCoverage) * 100;
-              if (c.n === 0) return null;
-              return (
-                <div
-                  key={c.status}
-                  className={`${COVERAGE_COLOR[c.status]} relative group`}
-                  style={{ width: `${pct}%` }}
-                  title={`${c.status.replace("_", " ")}: ${c.n} (${pct.toFixed(1)}%)`}
-                >
-                  <div className="opacity-0 group-hover:opacity-100 absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none z-10">
-                    {c.status.replace("_", " ")}: {c.n} ({pct.toFixed(0)}%)
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex flex-wrap gap-3 mt-3">
-            {coverageCounts.filter((c) => c.n > 0).map((c) => (
-              <div key={c.status} className="flex items-center gap-1.5 text-[11px] text-black/70">
-                <span className={`inline-block h-2.5 w-2.5 rounded-sm ${COVERAGE_COLOR[c.status]}`} />
-                <span>{c.status.replace("_", " ")}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
+        <div className="col-span-2 space-y-3">
+          <Card className="p-3 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-[#0a3d3e]/10 flex items-center justify-center text-[#0a3d3e]">
+              <Users size={20} />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-black/50">Enrolled Lives</div>
+              <div className="text-2xl font-semibold">{enrolledLives}</div>
+              <div className="text-[11px] text-black/40">across {numOrgs} organizations</div>
+            </div>
+          </Card>
+          <Card className="p-3 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
+              <DollarSign size={20} />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-black/50">Monthly Premium</div>
+              <div className="text-2xl font-semibold">{formatCents(activePremium)}</div>
+              <div className="text-[11px] text-black/40">active enrollees only</div>
+            </div>
+          </Card>
+          <Card className="p-3 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700">
+              <Percent size={20} />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-black/50">Monthly Net Commission</div>
+              <div className="text-2xl font-semibold">$4,812.00</div>
+              <div className="text-[11px] text-black/40">estimated, all payees</div>
+            </div>
+          </Card>
+        </div>
         <Card>
           <TableShell>
             <THead cols={["Status", "Count"]} />
