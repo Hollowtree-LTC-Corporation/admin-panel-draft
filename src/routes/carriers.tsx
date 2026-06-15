@@ -342,6 +342,7 @@ function View() {
           cols={[
             { key: "product_name", label: "Product Name" },
             { key: "product_type", label: "Product Type" },
+            { key: "cca_product" as ProdSortKey, label: "CCA" },
             ...(selectedCarrier ? [] : [{ key: "carrier_name" as ProdSortKey, label: "Carrier" }]),
             { key: "active" as ProdSortKey, label: "Active" },
             ...(product === "LTC"
