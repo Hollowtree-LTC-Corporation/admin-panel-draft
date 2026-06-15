@@ -1,3 +1,4 @@
+// Skipped per Export CSV prompt: this route is a redirect, not a list view.
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/rate-cells")({ component: Redirect });
