@@ -368,6 +368,7 @@ function View() {
                 </span>
               </TCell>
               <TCell className="text-black/70 text-xs">{p.product_type}</TCell>
+              <TCell>{p.cca_product ? <Pill tone="ok">CCA</Pill> : <span className="text-black/40">—</span>}</TCell>
               {!selectedCarrier ? <TCell>{p.carrier_name}</TCell> : null}
               <TCell>{p.active ? <Pill tone="ok">Active</Pill> : <Pill tone="neutral">Inactive</Pill>}</TCell>
               {product === "LTC" ? (
