@@ -328,6 +328,7 @@ function PolicyDrawer({
 
   const canSave =
     canEdit && draft.org_id && draft.carrier_product_id && draft.initial_effective_date &&
+    (mode !== "create" || (draft.policy_name && draft.policy_name.trim() !== "")) &&
     (product !== "DI" || draft.carrier_commission_pct != null) &&
     draftSplits.length > 0 && totalOk;
 
