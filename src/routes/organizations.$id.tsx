@@ -389,7 +389,7 @@ function OrgDetail() {
             sub={<span className="text-black/40 italic">None scheduled</span>}
           />
         )}
-        <AttioDealCard dealId={org.attio_deal_id} />
+        <QuickLinksCard org={org} />
       </div>
 
       <Tabs defaultValue="setup" className="w-full">
@@ -499,20 +499,53 @@ function SummaryChip({ label, value, onClick, tone, hint, sub }: { label: string
   );
 }
 
-function AttioDealCard({ dealId }: { dealId: string }) {
-  const url = `https://app.attio.com/deals/${dealId}`;
-  return (
-    <div className="bg-white border border-black/10 rounded-md p-2 flex flex-col justify-between">
-      <div className="text-[9px] uppercase tracking-wider text-black/50">Attio Deal</div>
+function QuickLinksCard({ org }: { org: OrgDetail }) {
+  const driveUrl = org.google_drive_folder;
+  const attioUrl = org.attio_deal_id ? `https://app.attio.com/deals/${org.attio_deal_id}` : null;
+  const klaviyoUrl = org.klaviyo_list_id ? `https://www.klaviyo.com/list/${org.klaviyo_list_id}/members` : null;
+
+  function LinkRow({
+    label,
+    href,
+  }: {
+    label: string;
+    href: string | null;
+  }) {
+    if (!href) {
+      return (
+        <span
+          className="flex items-center justify-between text-xs text-black/30 cursor-not-allowed"
+          title="Not configured"
+        >
+          {label} <span className="text-black/20">↗</span>
+        </span>
+      );
+    }
+    return (
       <a
-        href={url}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium border border-[#0a3d3e] text-[#0a3d3e] rounded hover:bg-[#0a3d3e] hover:text-white transition-colors"
+        className="flex items-center justify-between text-xs text-black/70 hover:text-black hover:underline transition-colors"
       >
-        Open in Attio <ExternalLink className="h-3 w-3" />
+        {label} <span>↗</span>
       </a>
-      <div className="text-[10px] text-black/40 font-mono mt-1 truncate" title={dealId}>{dealId}</div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-black/10 rounded-md p-2 flex flex-col justify-between">
+      <div className="text-[9px] uppercase tracking-wider text-black/50">Quick Links</div>
+      <div className="flex flex-col gap-1.5 mt-1.5">
+        <LinkRow label="Drive folder" href={driveUrl} />
+        <LinkRow label="Attio deal" href={attioUrl} />
+        <LinkRow label="Klaviyo list" href={klaviyoUrl} />
+      </div>
+      {org.attio_deal_id ? (
+        <div className="text-[10px] text-black/40 font-mono mt-1 truncate" title={org.attio_deal_id}>
+          {org.attio_deal_id}
+        </div>
+      ) : null}
     </div>
   );
 }
