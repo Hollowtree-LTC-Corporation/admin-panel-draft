@@ -178,54 +178,141 @@ export const ACCOUNT_ADJUSTMENTS = [
   { id: "aa_4", individual_id: "ind_7", individual_name: "Test Person 7", adjustment_type: "write_off", amount_cents: -4200, reason: "Uncollectible after 90 days", effective_date: "2025-06-01", approved_by: "Guy (admin)", approved_at: "2025-06-01T16:30Z" },
 ];
 
-export type CarrierStatus = "active" | "inactive";
+// Carriers — schema-aligned (DI v13 / LTC v3.13 `carriers` table).
+// `product` is a wireframe-only discriminator used to filter the list view by the
+// active product toggle; the production schema does not store this on `carriers`.
+export type CarrierType =
+  | "Group DI Carrier"
+  | "Group LTC Carrier"
+  | "Lloyds MGU"
+  | "Domestic Carrier";
+
 export type Carrier = {
   id: string;
-  name: string;
-  product: Product;
-  carrier_code: string;
-  contact_name: string;
-  contact_email: string;
-  contact_phone: string;
-  website: string;
-  status: CarrierStatus;
-  notes: string;
+  product: Product; // wireframe-only
+  attio_carrier_id: string | null;
+  carrier_name: string;
+  carrier_type: CarrierType;
+  am_best_rating: string;
+  cca_carrier: boolean;
+  billing_email: string;
+  primary_contact_name: string;
+  primary_contact_email: string;
+  attio_last_synced_at: string | null; // wireframe-only Sync section timestamp
 };
 
 export const CARRIERS: Carrier[] = [
-  // DI: Sun Life is the active carrier. Pacific Reserve kept inactive for legacy policy references.
-  { id: "car_1", name: "Sun Life", product: "DI", carrier_code: "SUNLIFE", contact_name: "Dana Whitmore", contact_email: "dana.whitmore@sunlife.example.com", contact_phone: "555-0201", website: "sunlife.com", status: "active", notes: "Primary DI carrier across all groups." },
-  { id: "car_2", name: "Pacific Reserve Life", product: "DI", carrier_code: "PACRES", contact_name: "Lin Park", contact_email: "lin.park@pacres.example.com", contact_phone: "555-0202", website: "pacificreserve.example.com", status: "inactive", notes: "Legacy. Used by older policies; no new business." },
-  // LTC: Trustmark and Transamerica are the active LTC carriers. Heritage/Sequoia kept inactive for legacy refs.
-  { id: "car_3", name: "Heritage LTC Group", product: "LTC", carrier_code: "HERITAGE", contact_name: "Owen Reyes", contact_email: "owen.reyes@heritageltc.example.com", contact_phone: "555-0203", website: "heritageltc.example.com", status: "inactive", notes: "Legacy. Replaced by Trustmark for new LTC business." },
-  { id: "car_4", name: "Sequoia Care Partners", product: "LTC", carrier_code: "SEQUOIA", contact_name: "Riley Chen", contact_email: "riley.chen@sequoiacare.example.com", contact_phone: "555-0204", website: "sequoiacare.example.com", status: "inactive", notes: "Legacy. No new policies." },
-  { id: "car_5", name: "Trustmark", product: "LTC", carrier_code: "TRUSTMARK", contact_name: "Avery Singh", contact_email: "avery.singh@trustmark.example.com", contact_phone: "555-0205", website: "trustmarkbenefits.com", status: "active", notes: "Primary LTC carrier. State variants for NY." },
-  { id: "car_6", name: "Transamerica", product: "LTC", carrier_code: "TRANSAM", contact_name: "Morgan Diaz", contact_email: "morgan.diaz@transamerica.example.com", contact_phone: "555-0206", website: "transamerica.com", status: "active", notes: "Secondary LTC carrier." },
+  {
+    id: "car_1", product: "DI",
+    attio_carrier_id: "att_car_sunlife",
+    carrier_name: "Sun Life",
+    carrier_type: "Group DI Carrier",
+    am_best_rating: "A+",
+    cca_carrier: true,
+    billing_email: "billing@sunlife.example.com",
+    primary_contact_name: "Dana Whitmore",
+    primary_contact_email: "dana.whitmore@sunlife.example.com",
+    attio_last_synced_at: "2025-06-12T09:15:00Z",
+  },
+  {
+    id: "car_5", product: "LTC",
+    attio_carrier_id: "att_car_trustmark",
+    carrier_name: "Trustmark",
+    carrier_type: "Group LTC Carrier",
+    am_best_rating: "A",
+    cca_carrier: false,
+    billing_email: "billing@trustmark.example.com",
+    primary_contact_name: "Marcus Reilly",
+    primary_contact_email: "marcus.reilly@trustmark.example.com",
+    attio_last_synced_at: "2025-06-11T14:02:00Z",
+  },
+  {
+    id: "car_6", product: "LTC",
+    attio_carrier_id: "att_car_transam",
+    carrier_name: "Transamerica",
+    carrier_type: "Group LTC Carrier",
+    am_best_rating: "A+",
+    cca_carrier: false,
+    billing_email: "billing@transamerica.example.com",
+    primary_contact_name: "Priya Shah",
+    primary_contact_email: "priya.shah@transamerica.example.com",
+    attio_last_synced_at: "2025-06-10T11:30:00Z",
+  },
 ];
 
-export type ProductType = "universal_life" | "group_life" | "term_life" | "disability" | "other";
+// Carrier Products — schema-aligned (`carrier_products` table).
 export type CarrierProduct = {
   id: string;
+  attio_product_id: string | null;
   carrier_id: string;
-  name: string;
-  product_code: string;
-  product_type: ProductType;
-  state_availability: string;
-  si_max_cents: number | null;
-  si_increment_cents: number | null;
-  status: CarrierStatus;
+  product_name: string;
+  product_type: string;
+  line_of_business: "DI" | "LTC";
+  cca_product: boolean;
+  payment_methods_allowed: string;
+  active: boolean;
+  attio_last_synced_at: string | null; // wireframe-only Sync section timestamp
 };
 
 export const CARRIER_PRODUCTS: CarrierProduct[] = [
-  { id: "cp_1", carrier_id: "car_1", name: "Group Disability Insurance", product_code: "GDI", product_type: "disability", state_availability: "All states", si_max_cents: null, si_increment_cents: null, status: "active" },
-  { id: "cp_2", carrier_id: "car_2", name: "Pacific DI Plus", product_code: "PAC-DI", product_type: "disability", state_availability: "All states", si_max_cents: null, si_increment_cents: null, status: "inactive" },
-  { id: "cp_3", carrier_id: "car_3", name: "Heritage LTC Standard", product_code: "HER-STD", product_type: "universal_life", state_availability: "All states except NY", si_max_cents: 25000000, si_increment_cents: 250000, status: "inactive" },
-  { id: "cp_4", carrier_id: "car_3", name: "Heritage LTC NY", product_code: "HER-NY", product_type: "universal_life", state_availability: "NY", si_max_cents: 15000000, si_increment_cents: 250000, status: "inactive" },
-  { id: "cp_5", carrier_id: "car_4", name: "Sequoia LTC Premier", product_code: "SEQ-PREM", product_type: "universal_life", state_availability: "All states", si_max_cents: 20000000, si_increment_cents: 250000, status: "inactive" },
-  { id: "cp_6", carrier_id: "car_5", name: "UL-205 Universal Life & LifeEvents", product_code: "UL-205", product_type: "universal_life", state_availability: "All states", si_max_cents: 25000000, si_increment_cents: 250000, status: "active" },
-  { id: "cp_7", carrier_id: "car_5", name: "GTL-121 Life + Care", product_code: "GTL-121", product_type: "group_life", state_availability: "All states except NY", si_max_cents: 15000000, si_increment_cents: 250000, status: "active" },
-  { id: "cp_8", carrier_id: "car_6", name: "TransElite", product_code: "TRANSELITE", product_type: "universal_life", state_availability: "All states", si_max_cents: 20000000, si_increment_cents: 250000, status: "active" },
-  { id: "cp_9", carrier_id: "car_6", name: "UL10", product_code: "UL10", product_type: "universal_life", state_availability: "All states", si_max_cents: 15000000, si_increment_cents: 250000, status: "active" },
+  { id: "cp_1", attio_product_id: "att_prod_sunlife_gdi", carrier_id: "car_1", product_name: "Group Disability Insurance", product_type: "Disability", line_of_business: "DI", cca_product: true, payment_methods_allowed: "ACH, Credit Card, Apple Pay", active: true, attio_last_synced_at: "2025-06-12T09:15:00Z" },
+  { id: "cp_6", attio_product_id: "att_prod_tm_ul205", carrier_id: "car_5", product_name: "UL-205 Universal Life & LifeEvents", product_type: "Universal Life", line_of_business: "LTC", cca_product: false, payment_methods_allowed: "ACH, Credit Card", active: true, attio_last_synced_at: "2025-06-11T14:02:00Z" },
+  { id: "cp_7", attio_product_id: "att_prod_tm_gtl121", carrier_id: "car_5", product_name: "GTL-121 Life + Care", product_type: "Group Term Life", line_of_business: "LTC", cca_product: false, payment_methods_allowed: "ACH, Credit Card", active: true, attio_last_synced_at: "2025-06-11T14:02:00Z" },
+  { id: "cp_8", attio_product_id: "att_prod_ta_transelite", carrier_id: "car_6", product_name: "TransElite", product_type: "Universal Life", line_of_business: "LTC", cca_product: false, payment_methods_allowed: "ACH", active: true, attio_last_synced_at: "2025-06-10T11:30:00Z" },
+  { id: "cp_9", attio_product_id: "att_prod_ta_ul10", carrier_id: "car_6", product_name: "UL10", product_type: "Universal Life", line_of_business: "LTC", cca_product: false, payment_methods_allowed: "ACH", active: true, attio_last_synced_at: "2025-06-10T11:30:00Z" },
+];
+
+// LTC Carrier Constraints (1:N with carrier_product, supports versioning by date).
+// Cent-denominated fields per schema.
+export type CarrierConstraint = {
+  id: string;
+  carrier_product_id: string;
+  si_max_cents: number;
+  increment: number;
+  tier_floor_cents: number;
+  round_preference_threshold_cents: number;
+  effective_from: string;
+  effective_to: string | null;
+  verified_by: string;
+  last_verified: string;
+  source: string;
+  notes: string;
+};
+
+export const CARRIER_CONSTRAINTS: CarrierConstraint[] = [
+  { id: "cc_1", carrier_product_id: "cp_6", si_max_cents: 50000000, increment: 2500000, tier_floor_cents: 10000000, round_preference_threshold_cents: 1000000, effective_from: "2024-01-01", effective_to: null, verified_by: "Guy Livingstone", last_verified: "2025-08-15", source: "Trustmark Producer Guide 2024", notes: "Placeholder values, not validated production rules." },
+  { id: "cc_2", carrier_product_id: "cp_7", si_max_cents: 30000000, increment: 1000000, tier_floor_cents: 5000000, round_preference_threshold_cents: 500000, effective_from: "2024-01-01", effective_to: null, verified_by: "Guy Livingstone", last_verified: "2025-08-15", source: "Trustmark GTL Producer Guide 2024", notes: "Placeholder values." },
+  { id: "cc_3", carrier_product_id: "cp_8", si_max_cents: 50000000, increment: 2500000, tier_floor_cents: 10000000, round_preference_threshold_cents: 1000000, effective_from: "2024-01-01", effective_to: null, verified_by: "Casey Rep", last_verified: "2025-07-20", source: "Transamerica TransElite Producer Manual", notes: "Placeholder values." },
+  { id: "cc_4", carrier_product_id: "cp_9", si_max_cents: 25000000, increment: 1000000, tier_floor_cents: 5000000, round_preference_threshold_cents: 500000, effective_from: "2024-01-01", effective_to: null, verified_by: "Casey Rep", last_verified: "2025-07-20", source: "Transamerica UL10 Producer Manual", notes: "Placeholder values." },
+];
+
+// LTC Rider Availability (per carrier_product, per state, per rider).
+export type RiderAvailability = "available" | "not_available" | "requires_state_proposal";
+export type CarrierRiderAvailability = {
+  id: string;
+  carrier_product_id: string;
+  state: string;
+  rider_code: string;
+  rider_full_name: string;
+  available: RiderAvailability;
+  effective_from: string | null;
+  effective_to: string | null;
+  last_verified: string | null;
+  verified_by: string;
+  source_document: string;
+  notes: string;
+};
+
+export const CARRIER_RIDER_AVAILABILITY: CarrierRiderAvailability[] = [
+  { id: "cra_1", carrier_product_id: "cp_6", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark NY Filing 2024", notes: "" },
+  { id: "cra_2", carrier_product_id: "cp_6", state: "CA", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark CA Filing 2024", notes: "" },
+  { id: "cra_3", carrier_product_id: "cp_6", state: "FL", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark FL Filing 2024", notes: "" },
+  { id: "cra_4", carrier_product_id: "cp_6", state: "NY", rider_code: "CI", rider_full_name: "Chronic Illness Rider", available: "requires_state_proposal", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark NY Filing 2024", notes: "Requires state proposal review before issue." },
+  { id: "cra_5", carrier_product_id: "cp_6", state: "CA", rider_code: "CI", rider_full_name: "Chronic Illness Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark CA Filing 2024", notes: "" },
+  { id: "cra_6", carrier_product_id: "cp_8", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "not_available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica NY Filing 2024", notes: "Not filed in NY." },
+  { id: "cra_7", carrier_product_id: "cp_8", state: "CA", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica CA Filing 2024", notes: "" },
+  { id: "cra_8", carrier_product_id: "cp_9", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "not_available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica NY Filing 2024", notes: "" },
+  { id: "cra_9", carrier_product_id: "cp_9", state: "TX", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica TX Filing 2024", notes: "" },
 ];
 
 export type PolicyStatus = "active" | "pending" | "terminated";
