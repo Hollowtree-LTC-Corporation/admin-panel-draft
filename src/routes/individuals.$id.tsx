@@ -140,9 +140,7 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     were_they_client: !isLTC ? n % 3 === 0 : null,
     std_premium_cents: !isLTC && org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.4) : 0,
     ltd_premium_cents: !isLTC ? (org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.6) : base.monthly_premium_cents) : 0,
-    cca_portal_link: !isLTC && org?.cca_group ? `https://cca.example.org/portal/${base.id}` : null,
     // LTC-only extras
-    spouse_face_amount_cents: isLTC && relationship === "primary" && base.interested_spousal ? Math.round((base.employee_face_amount_cents ?? 0) * 0.6) : null,
     employee_upgrade_option: isLTC && base.upgrade_applied_for ? ["Silver→Gold","Gold→Platinum","Platinum→Diamond"][n % 3] : null,
     applied_for_upgrade: isLTC ? base.upgrade_applied_for : null,
     _org: org,
