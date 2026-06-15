@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TokensRouteImport } from './routes/tokens'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RateConfigRouteImport } from './routes/rate-config'
 import { Route as RateCellsRouteImport } from './routes/rate-cells'
 import { Route as PoliciesRouteImport } from './routes/policies'
@@ -25,14 +26,21 @@ import { Route as AuditRouteImport } from './routes/audit'
 import { Route as AffiliatesRouteImport } from './routes/affiliates'
 import { Route as AccountAdjustmentsRouteImport } from './routes/account-adjustments'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReportsIndexRouteImport } from './routes/reports.index'
 import { Route as OrganizationsIndexRouteImport } from './routes/organizations.index'
 import { Route as IndividualsIndexRouteImport } from './routes/individuals.index'
+import { Route as ReportsSlugRouteImport } from './routes/reports.$slug'
 import { Route as OrganizationsIdRouteImport } from './routes/organizations.$id'
 import { Route as IndividualsIdRouteImport } from './routes/individuals.$id'
 
 const TokensRoute = TokensRouteImport.update({
   id: '/tokens',
   path: '/tokens',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RateConfigRoute = RateConfigRouteImport.update({
@@ -110,6 +118,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportsIndexRoute = ReportsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ReportsRoute,
+} as any)
 const OrganizationsIndexRoute = OrganizationsIndexRouteImport.update({
   id: '/organizations/',
   path: '/organizations/',
@@ -119,6 +132,11 @@ const IndividualsIndexRoute = IndividualsIndexRouteImport.update({
   id: '/individuals/',
   path: '/individuals/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsSlugRoute = ReportsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => ReportsRoute,
 } as any)
 const OrganizationsIdRoute = OrganizationsIdRouteImport.update({
   id: '/organizations/$id',
@@ -147,11 +165,14 @@ export interface FileRoutesByFullPath {
   '/policies': typeof PoliciesRoute
   '/rate-cells': typeof RateCellsRoute
   '/rate-config': typeof RateConfigRoute
+  '/reports': typeof ReportsRouteWithChildren
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
+  '/reports/$slug': typeof ReportsSlugRoute
   '/individuals/': typeof IndividualsIndexRoute
   '/organizations/': typeof OrganizationsIndexRoute
+  '/reports/': typeof ReportsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -172,8 +193,10 @@ export interface FileRoutesByTo {
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
+  '/reports/$slug': typeof ReportsSlugRoute
   '/individuals': typeof IndividualsIndexRoute
   '/organizations': typeof OrganizationsIndexRoute
+  '/reports': typeof ReportsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -192,11 +215,14 @@ export interface FileRoutesById {
   '/policies': typeof PoliciesRoute
   '/rate-cells': typeof RateCellsRoute
   '/rate-config': typeof RateConfigRoute
+  '/reports': typeof ReportsRouteWithChildren
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
+  '/reports/$slug': typeof ReportsSlugRoute
   '/individuals/': typeof IndividualsIndexRoute
   '/organizations/': typeof OrganizationsIndexRoute
+  '/reports/': typeof ReportsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -216,11 +242,14 @@ export interface FileRouteTypes {
     | '/policies'
     | '/rate-cells'
     | '/rate-config'
+    | '/reports'
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
+    | '/reports/$slug'
     | '/individuals/'
     | '/organizations/'
+    | '/reports/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -241,8 +270,10 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
+    | '/reports/$slug'
     | '/individuals'
     | '/organizations'
+    | '/reports'
   id:
     | '__root__'
     | '/'
@@ -260,11 +291,14 @@ export interface FileRouteTypes {
     | '/policies'
     | '/rate-cells'
     | '/rate-config'
+    | '/reports'
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
+    | '/reports/$slug'
     | '/individuals/'
     | '/organizations/'
+    | '/reports/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -283,6 +317,7 @@ export interface RootRouteChildren {
   PoliciesRoute: typeof PoliciesRoute
   RateCellsRoute: typeof RateCellsRoute
   RateConfigRoute: typeof RateConfigRoute
+  ReportsRoute: typeof ReportsRouteWithChildren
   TokensRoute: typeof TokensRoute
   IndividualsIdRoute: typeof IndividualsIdRoute
   OrganizationsIdRoute: typeof OrganizationsIdRoute
@@ -297,6 +332,13 @@ declare module '@tanstack/react-router' {
       path: '/tokens'
       fullPath: '/tokens'
       preLoaderRoute: typeof TokensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rate-config': {
@@ -404,6 +446,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports/': {
+      id: '/reports/'
+      path: '/'
+      fullPath: '/reports/'
+      preLoaderRoute: typeof ReportsIndexRouteImport
+      parentRoute: typeof ReportsRoute
+    }
     '/organizations/': {
       id: '/organizations/'
       path: '/organizations'
@@ -417,6 +466,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/individuals/'
       preLoaderRoute: typeof IndividualsIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/reports/$slug': {
+      id: '/reports/$slug'
+      path: '/$slug'
+      fullPath: '/reports/$slug'
+      preLoaderRoute: typeof ReportsSlugRouteImport
+      parentRoute: typeof ReportsRoute
     }
     '/organizations/$id': {
       id: '/organizations/$id'
@@ -435,6 +491,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ReportsRouteChildren {
+  ReportsSlugRoute: typeof ReportsSlugRoute
+  ReportsIndexRoute: typeof ReportsIndexRoute
+}
+
+const ReportsRouteChildren: ReportsRouteChildren = {
+  ReportsSlugRoute: ReportsSlugRoute,
+  ReportsIndexRoute: ReportsIndexRoute,
+}
+
+const ReportsRouteWithChildren =
+  ReportsRoute._addFileChildren(ReportsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountAdjustmentsRoute: AccountAdjustmentsRoute,
@@ -451,6 +520,7 @@ const rootRouteChildren: RootRouteChildren = {
   PoliciesRoute: PoliciesRoute,
   RateCellsRoute: RateCellsRoute,
   RateConfigRoute: RateConfigRoute,
+  ReportsRoute: ReportsRouteWithChildren,
   TokensRoute: TokensRoute,
   IndividualsIdRoute: IndividualsIdRoute,
   OrganizationsIdRoute: OrganizationsIdRoute,
