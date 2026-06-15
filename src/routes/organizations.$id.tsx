@@ -617,6 +617,7 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
         <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} variant="info" />
         <CarrierProductSection org={org} product={product} readOnly={readOnly} variant="info" />
         {product === "LTC" && <CarrierIdentifiersSection org={org} readOnly={readOnly} variant="info" />}
+        <ContactsSection org={org} readOnly={readOnly} variant="info" />
       </div>
 
       <BucketHeader
@@ -629,7 +630,6 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
           : <LTCProductPlanSection org={org} readOnly={readOnly} />}
         <PricingFeesSection org={org} readOnly={readOnly} />
         <BrokerSection org={org} product={product} readOnly={readOnly} />
-        <PeopleSection org={org} readOnly={readOnly} />
         {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
       </div>
 
