@@ -347,14 +347,40 @@ export const COMMISSION_STATEMENTS = [
   { id: "cs_4", payee: "Gallagher", period: "2025-05", amount_cents: 20000, payable: false },
 ];
 
-export const CARRIER_COMMISSION_SCHEDULES = [
-  { id: "ccs_1", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Heaped" },
-  { id: "ccs_2", carrier_product_id: "cp_4", carrier_product_name: "Heritage LTC NY", state_code: "NY", schedule_name: "Flat 22%" },
-  { id: "ccs_3", carrier_product_id: "cp_5", carrier_product_name: "Sequoia LTC Premier", state_code: null, schedule_name: "Level" },
-  { id: "ccs_4", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Default" },
+export type ScheduleType = "heaped" | "flat" | "level";
+export type CarrierCommissionSchedule = {
+  id: string;
+  carrier_product_id: string;
+  carrier_product_name: string;
+  state_code: string | null;
+  schedule_name: string;
+  schedule_type: ScheduleType;
+  is_default: boolean;
+  effective_from: string;
+  effective_to: string | null;
+};
+
+export const CARRIER_COMMISSION_SCHEDULES: CarrierCommissionSchedule[] = [
+  // Legacy (kept for back-compat with existing policies)
+  { id: "ccs_1", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2023-01-01", effective_to: null },
+  { id: "ccs_2", carrier_product_id: "cp_4", carrier_product_name: "Heritage LTC NY", state_code: "NY", schedule_name: "Flat 22%", schedule_type: "flat", is_default: true, effective_from: "2023-01-01", effective_to: null },
+  { id: "ccs_3", carrier_product_id: "cp_5", carrier_product_name: "Sequoia LTC Premier", state_code: null, schedule_name: "Level", schedule_type: "level", is_default: true, effective_from: "2023-01-01", effective_to: null },
+  { id: "ccs_4", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Default", schedule_type: "heaped", is_default: false, effective_from: "2022-01-01", effective_to: "2023-01-01" },
+  // Trustmark UL-205
+  { id: "ccs_5", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
+  { id: "ccs_6", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: "NY", schedule_name: "Heaped NY", schedule_type: "heaped", is_default: false, effective_from: "2024-01-01", effective_to: null },
+  { id: "ccs_7", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: null, schedule_name: "Flat", schedule_type: "flat", is_default: false, effective_from: "2024-01-01", effective_to: null },
+  // Trustmark GTL-121
+  { id: "ccs_8", carrier_product_id: "cp_7", carrier_product_name: "GTL-121 Life + Care", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
+  { id: "ccs_9", carrier_product_id: "cp_7", carrier_product_name: "GTL-121 Life + Care", state_code: null, schedule_name: "Flat", schedule_type: "flat", is_default: false, effective_from: "2024-01-01", effective_to: null },
+  // Transamerica TransElite
+  { id: "ccs_10", carrier_product_id: "cp_8", carrier_product_name: "TransElite", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
+  // Transamerica UL10
+  { id: "ccs_11", carrier_product_id: "cp_9", carrier_product_name: "UL10", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
 ];
 
 export const COMMISSION_RATE_TIERS = [
+  // Legacy tiers (back-compat)
   { id: "crt_1", schedule_id: "ccs_1", year_from: 1, year_to: 1, pct: 100 },
   { id: "crt_2", schedule_id: "ccs_1", year_from: 2, year_to: 5, pct: 4 },
   { id: "crt_3", schedule_id: "ccs_1", year_from: 6, year_to: 10, pct: 2 },
@@ -362,6 +388,33 @@ export const COMMISSION_RATE_TIERS = [
   { id: "crt_5", schedule_id: "ccs_2", year_from: 2, year_to: 5, pct: 3 },
   { id: "crt_6", schedule_id: "ccs_3", year_from: 1, year_to: 1, pct: 110 },
   { id: "crt_7", schedule_id: "ccs_3", year_from: 2, year_to: 5, pct: 5 },
+  // Trustmark UL-205 Heaped (standard)
+  { id: "crt_10", schedule_id: "ccs_5", year_from: 1, year_to: 1, pct: 100 },
+  { id: "crt_11", schedule_id: "ccs_5", year_from: 2, year_to: 10, pct: 5 },
+  { id: "crt_12", schedule_id: "ccs_5", year_from: 11, year_to: 99, pct: 0 },
+  // Trustmark UL-205 Heaped (NY)
+  { id: "crt_13", schedule_id: "ccs_6", year_from: 1, year_to: 1, pct: 90 },
+  { id: "crt_14", schedule_id: "ccs_6", year_from: 2, year_to: 3, pct: 10 },
+  { id: "crt_15", schedule_id: "ccs_6", year_from: 4, year_to: 10, pct: 5 },
+  { id: "crt_16", schedule_id: "ccs_6", year_from: 11, year_to: 99, pct: 0 },
+  // Trustmark UL-205 Flat
+  { id: "crt_17", schedule_id: "ccs_7", year_from: 1, year_to: 99, pct: 22 },
+  // Trustmark GTL-121 Heaped
+  { id: "crt_18", schedule_id: "ccs_8", year_from: 1, year_to: 1, pct: 100 },
+  { id: "crt_19", schedule_id: "ccs_8", year_from: 2, year_to: 10, pct: 5 },
+  { id: "crt_20", schedule_id: "ccs_8", year_from: 11, year_to: 99, pct: 0 },
+  // Trustmark GTL-121 Flat
+  { id: "crt_21", schedule_id: "ccs_9", year_from: 1, year_to: 99, pct: 22 },
+  // Transamerica TransElite
+  { id: "crt_22", schedule_id: "ccs_10", year_from: 1, year_to: 1, pct: 100 },
+  { id: "crt_23", schedule_id: "ccs_10", year_from: 2, year_to: 4, pct: 4 },
+  { id: "crt_24", schedule_id: "ccs_10", year_from: 5, year_to: 6, pct: 4 },
+  { id: "crt_25", schedule_id: "ccs_10", year_from: 7, year_to: 99, pct: 2 },
+  // Transamerica UL10
+  { id: "crt_26", schedule_id: "ccs_11", year_from: 1, year_to: 1, pct: 100 },
+  { id: "crt_27", schedule_id: "ccs_11", year_from: 2, year_to: 4, pct: 4 },
+  { id: "crt_28", schedule_id: "ccs_11", year_from: 5, year_to: 6, pct: 4 },
+  { id: "crt_29", schedule_id: "ccs_11", year_from: 7, year_to: 99, pct: 2 },
 ];
 
 export type AffiliateType = "cca" | "union" | "industry_association" | "employer_trust" | "other";
