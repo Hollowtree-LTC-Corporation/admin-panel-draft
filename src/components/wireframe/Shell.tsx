@@ -38,8 +38,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/carriers", label: "Carriers & Products", icon: Briefcase },
       { to: "/affiliates", label: "Affiliates", icon: Handshake },
-      { to: "/rate-config", label: "Rate Config", icon: FileBarChart, product: "DI" },
-      { to: "/rate-cells", label: "Rate Cells", icon: FileBarChart, product: "LTC" },
     ],
   },
   {
