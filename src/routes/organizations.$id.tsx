@@ -568,7 +568,9 @@ function DSelect({ defaultValue, options }: { defaultValue?: string; options: st
 
 function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
   const statusValue = org.enrollment_status === "active" ? "active" : org.enrollment_status === "closed" ? "closed" : "pending_review";
-  const identitySummary = `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible`;
+  const identitySummary = product === "LTC"
+    ? `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible · NAIC ${org.naic_code}`
+    : `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible`;
 
   return (
     <div className="mt-3">
@@ -579,6 +581,7 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
       <div className="space-y-3">
         <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} variant="info" />
         <CarrierProductSection org={org} product={product} readOnly={readOnly} variant="info" />
+        {product === "LTC" && <CarrierIdentifiersSection org={org} readOnly={readOnly} variant="info" />}
       </div>
 
       <BucketHeader
@@ -588,12 +591,10 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
       <div className="space-y-4">
         {product === "DI"
           ? <DIProductPlanSection org={org} readOnly={readOnly} />
-          : <LTCProductConfigSection org={org} readOnly={readOnly} />}
+          : <LTCProductPlanSection org={org} readOnly={readOnly} />}
         <PricingFeesSection org={org} readOnly={readOnly} />
         <BrokerSection org={org} product={product} readOnly={readOnly} />
         <PeopleSection org={org} readOnly={readOnly} />
-        {product === "LTC" && <PlanDetailsSection org={org} product={product} readOnly={readOnly} />}
-        {product === "LTC" && <CarrierOperationalSection org={org} readOnly={readOnly} />}
         {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
       </div>
 
