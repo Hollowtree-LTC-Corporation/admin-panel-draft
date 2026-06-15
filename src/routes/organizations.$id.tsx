@@ -894,34 +894,108 @@ function CoverageBillingSection({ org, readOnly }: { org: OrgDetail; readOnly: b
   );
 }
 
-function BrokerSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
+function BrokerSection({ org, product, readOnly }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean }) {
   const e = useSectionEdit();
+  const [brokers, setBrokers] = useState<string[]>(BROKERS);
+  const [primary, setPrimary] = useState<string>(org.primary_broker);
+  const [secondary, setSecondary] = useState<string>(org.secondary_broker ?? "");
+  const [creatingFor, setCreatingFor] = useState<"primary" | "secondary" | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState(BROKER_TYPES[0]);
+  const [newPct, setNewPct] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+
   function renderOverride(value: number | null, brokerName: string | null) {
     if (value !== null) return `${value}%`;
     const def = brokerDefaultPct(brokerName);
     if (def !== null) return <span>{def}% <span className="text-[11px] text-black/40">(default)</span></span>;
     return <Empty />;
   }
+
+  function handleSelectChange(slot: "primary" | "secondary", value: string) {
+    if (value === "__create__") {
+      setCreatingFor(slot);
+      return;
+    }
+    if (slot === "primary") setPrimary(value); else setSecondary(value);
+  }
+
+  function saveNewBroker() {
+    if (!newName.trim()) return;
+    const name = newName.trim();
+    setBrokers((prev) => prev.includes(name) ? prev : [...prev, name]);
+    if (creatingFor === "primary") setPrimary(name); else setSecondary(name);
+    setCreatingFor(null);
+    setNewName(""); setNewType(BROKER_TYPES[0]); setNewPct(""); setNewEmail("");
+  }
+
+  function BrokerSelect({ slot, value }: { slot: "primary" | "secondary"; value: string }) {
+    return (
+      <select
+        className={inputCls}
+        value={value}
+        onChange={(ev) => handleSelectChange(slot, ev.target.value)}
+      >
+        {slot === "secondary" && <option value="">— None —</option>}
+        {brokers.map((o) => <option key={o} value={o}>{o}</option>)}
+        <option value="__create__">+ Create new broker…</option>
+      </select>
+    );
+  }
+
   return (
     <SectionCard title="Broker" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
       <Grid2>
         <RField label="Primary Broker">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.primary_broker}>{BROKERS.map((o) => <option key={o}>{o}</option>)}</select>
-            : org.primary_broker}
+          {e.editing ? <BrokerSelect slot="primary" value={primary} /> : org.primary_broker}
         </RField>
-        <RField label="Secondary Broker">
-          {e.editing
-            ? <select className={inputCls} defaultValue={org.secondary_broker ?? ""}><option value="">— None —</option>{BROKERS.map((o) => <option key={o}>{o}</option>)}</select>
-            : val(org.secondary_broker)}
-        </RField>
+        {product === "DI" ? (
+          <RField label="Inbound Type">
+            {e.editing
+              ? <select className={inputCls} defaultValue={org.inbound_type}>{INBOUND_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
+              : org.inbound_type}
+          </RField>
+        ) : <div />}
         <RField label="Primary Override %">
           {e.editing ? <input className={inputCls} defaultValue={org.primary_override_pct ?? ""} placeholder="default" /> : renderOverride(org.primary_override_pct, org.primary_broker)}
         </RField>
+        <RField label="Secondary Broker">
+          {e.editing ? <BrokerSelect slot="secondary" value={secondary} /> : val(org.secondary_broker)}
+        </RField>
+        <div />
         <RField label="Secondary Override %">
           {e.editing ? <input className={inputCls} defaultValue={org.secondary_override_pct ?? ""} placeholder="default" /> : renderOverride(org.secondary_override_pct, org.secondary_broker)}
         </RField>
       </Grid2>
+
+      {e.editing && creatingFor && (
+        <div className="mt-4 p-3 border border-blue-300 bg-blue-50/40 rounded">
+          <div className="text-xs font-semibold text-[#0a3d3e] mb-2 uppercase tracking-wider">
+            New broker ({creatingFor})
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <RField label="Broker Name *">
+              <input className={inputCls} value={newName} onChange={(ev) => setNewName(ev.target.value)} placeholder="e.g. Pinnacle Benefits" />
+            </RField>
+            <RField label="Broker Type">
+              <select className={inputCls} value={newType} onChange={(ev) => setNewType(ev.target.value)}>
+                {BROKER_TYPES.map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </RField>
+            <RField label="Default Commission %">
+              <input className={inputCls} type="number" value={newPct} onChange={(ev) => setNewPct(ev.target.value)} placeholder="e.g. 15" />
+            </RField>
+            <RField label="Contact Email">
+              <input className={inputCls} type="email" value={newEmail} onChange={(ev) => setNewEmail(ev.target.value)} placeholder="optional" />
+            </RField>
+          </div>
+          <div className="mt-3 flex gap-2 justify-end">
+            <Btn onClick={() => setCreatingFor(null)}>Cancel</Btn>
+            <Btn variant="primary" onClick={saveNewBroker}>Save broker</Btn>
+          </div>
+        </div>
+      )}
+
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
   );
