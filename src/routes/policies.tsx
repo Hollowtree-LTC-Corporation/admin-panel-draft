@@ -387,12 +387,27 @@ function PolicyDrawer({
     .map((c) => ({ value: c.id, label: carrierProductLabel(c.id) }));
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
 
+  const brokerOptions = CHANNEL_PARTNERS.filter((c) => c.partner_type !== "Internal");
+  const selectedBroker = brokerOptions.find((b) => b.id === draft.channel_partner_id);
+  const brokerSplitMatch = selectedBroker
+    ? draftSplits.find((s) => s.payee_name === selectedBroker.name)
+    : null;
+
   return (
     <Drawer open={open} onClose={onClose} title={title}>
       {/* Section 1: Metadata */}
       <SectionHeader title="Policy Metadata" />
       <Field label="Organization *">
         <FilterCombobox value={draft.org_id || "all"} onChange={(v) => v !== "all" && setOrgId(v)} placeholder="Select organization…" options={orgOptions} width="w-full" />
+      </Field>
+      <Field label={mode === "create" ? "Policy Name *" : "Policy Name"}>
+        <input
+          type="text"
+          value={draft.policy_name ?? ""}
+          onChange={(e) => setDraft((d) => ({ ...d, policy_name: e.target.value === "" ? null : e.target.value }))}
+          placeholder="e.g. Acme Widgets Group DI 2025"
+          className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
+        />
       </Field>
       <Field label="Carrier Product *">
         <FilterCombobox value={draft.carrier_product_id || "all"} onChange={(v) => v !== "all" && setCarrierProduct(v)} placeholder="Select carrier product…" options={cpOptions} width="w-full" />
@@ -407,6 +422,26 @@ function PolicyDrawer({
           <option value="active">active</option>
           <option value="terminated">terminated</option>
         </select>
+      </Field>
+      <Field label="Policy Owner Type *">
+        <div className="inline-flex rounded border border-black/15 overflow-hidden text-xs">
+          {([
+            { v: "employer_group", label: "Employer Group" },
+            { v: "cca", label: "CCA" },
+          ] as { v: PolicyOwnerType; label: string }[]).map((opt) => (
+            <button
+              key={opt.v}
+              type="button"
+              onClick={() => setDraft((d) => ({ ...d, policy_owner_type: opt.v }))}
+              className={`px-3 py-1 ${draft.policy_owner_type === opt.v ? "bg-[#0a3d3e] text-white" : "bg-white text-black/70 hover:bg-black/5"}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {draft.policy_owner_type === "cca" && (
+          <div className="text-[11px] text-black/60 mt-1">CCA policy: $5 retained / $15 remitted per enrollee.</div>
+        )}
       </Field>
       <Field label="Effective Date *">
         <input
@@ -434,9 +469,28 @@ function PolicyDrawer({
               className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
             />
           </Field>
+          <Field label="Primary Broker">
+            <select
+              value={draft.channel_partner_id ?? ""}
+              onChange={(e) => setDraft((d) => ({ ...d, channel_partner_id: e.target.value || null }))}
+              className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
+            >
+              <option value="">— None —</option>
+              {brokerOptions.map((b) => (
+                <option key={b.id} value={b.id}>{b.name} ({b.partner_type})</option>
+              ))}
+            </select>
+            {brokerSplitMatch && (
+              <div className="text-[11px] text-black/60 mt-1">
+                Also in splits below as {brokerSplitMatch.payee_name} at {brokerSplitMatch.split_pct}%.
+              </div>
+            )}
+          </Field>
           <div className="text-[11px] text-black/50 -mt-1 mb-3">DI carrier commission is negotiated per case. These rates apply to this policy only.</div>
         </>
       )}
+
+
 
       {product === "LTC" && (
         <>
