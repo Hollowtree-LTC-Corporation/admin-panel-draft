@@ -2392,31 +2392,58 @@ function Ref({ label, value, muted }: { label: string; value: string; muted?: bo
 function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
   classes: typeof BENEFIT_CLASSES; onNew: () => void; onEdit: (c: typeof BENEFIT_CLASSES[number]) => void; canEdit: boolean; canCreate: boolean;
 }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <div className="mt-3">
       <div className="flex justify-end mb-2">
         <Btn variant="primary" disabled={!canCreate} onClick={onNew}>+ New Benefit Class</Btn>
       </div>
       <TableShell>
-        <THead cols={["Name", "GI Offer", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Default"]} />
+        <THead cols={["", "Name", "GI Offer", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "# Rate Cells", "Last Rate Update", "Default"]} />
         <tbody>
           {classes.map((c) => {
             const bronzeAbsent = c.gi_offer_cents <= 5000000;
+            const cells = LTC_RATE_CELLS.filter((r) => r.benefit_class_id === c.id);
+            const lastUpdate = cells.length > 0 ? cells.map((r) => r.effective_date).sort().slice(-1)[0] : null;
+            const isOpen = expanded === c.id;
+            const hasRates = cells.length > 0;
             return (
-              <TRow key={c.id} onClick={canEdit ? () => onEdit(c) : undefined}>
-                <TCell className="font-medium">{c.name}</TCell>
-                <TCell>{formatCents(c.gi_offer_cents)}</TCell>
-                <TCell>
-                  {bronzeAbsent
-                    ? <span className="text-black/30" title="Bronze tier absent because GI offer is $50K or below">—</span>
-                    : formatCents(c.bronze)}
-                </TCell>
-                <TCell>{formatCents(c.silver)}</TCell>
-                <TCell>{formatCents(c.gold)} <span className="text-[10px] text-black/40">(= GI)</span></TCell>
-                <TCell>{formatCents(c.platinum)}</TCell>
-                <TCell>{formatCents(c.diamond)}</TCell>
-                <TCell>{c.is_default ? <Pill tone="ok">Default</Pill> : null}</TCell>
-              </TRow>
+              <React.Fragment key={c.id}>
+                <TRow onClick={canEdit ? () => onEdit(c) : undefined}>
+                  <TCell className="w-6" onClick={(e) => { e.stopPropagation(); if (hasRates) setExpanded(isOpen ? null : c.id); }}>
+                    {hasRates ? (
+                      <button className="text-black/60 hover:text-black" title={isOpen ? "Collapse" : "Expand rates"}>
+                        {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                      </button>
+                    ) : (
+                      <span className="text-black/20" title="No rates configured for this benefit class. Click Add Rate to start.">
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </span>
+                    )}
+                  </TCell>
+                  <TCell className="font-medium">{c.name}</TCell>
+                  <TCell>{formatCents(c.gi_offer_cents)}</TCell>
+                  <TCell>
+                    {bronzeAbsent
+                      ? <span className="text-black/30" title="Bronze tier absent because GI offer is $50K or below">—</span>
+                      : formatCents(c.bronze)}
+                  </TCell>
+                  <TCell>{formatCents(c.silver)}</TCell>
+                  <TCell>{formatCents(c.gold)} <span className="text-[10px] text-black/40">(= GI)</span></TCell>
+                  <TCell>{formatCents(c.platinum)}</TCell>
+                  <TCell>{formatCents(c.diamond)}</TCell>
+                  <TCell>{cells.length}</TCell>
+                  <TCell>{lastUpdate ? fmtDate(lastUpdate) : <span className="text-black/30">—</span>}</TCell>
+                  <TCell>{c.is_default ? <Pill tone="ok">Default</Pill> : null}</TCell>
+                </TRow>
+                {isOpen ? (
+                  <tr className="bg-[#f7f3eb]/40 border-t border-black/5">
+                    <td colSpan={11} className="p-3">
+                      <LTCRatePanel benefitClassId={c.id} benefitClassName={c.name} />
+                    </td>
+                  </tr>
+                ) : null}
+              </React.Fragment>
             );
           })}
         </tbody>
@@ -2424,4 +2451,398 @@ function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
     </div>
   );
 }
+
+/* ---------- LTC Rate matrix panel (nested under benefit_class) ---------- */
+function LTCRatePanel({ benefitClassId, benefitClassName }: { benefitClassId: string; benefitClassName: string }) {
+  const [smoker, setSmoker] = useState<"non_tobacco" | "tobacco">("non_tobacco");
+  const [importOpen, setImportOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [cells, setCells] = useState<LTCRateCell[]>(() => LTC_RATE_CELLS.filter((r) => r.benefit_class_id === benefitClassId));
+  const [editing, setEditing] = useState<string | null>(null); // cell id being edited
+  const [editValue, setEditValue] = useState("");
+
+  const visible = cells.filter((r) => r.smoker_status === smoker);
+  const allTiers: Array<LTCRateCell["tier"]> = ["bronze","silver","gold","platinum","diamond"];
+  const presentTiers = allTiers.filter((t) => cells.some((r) => r.tier === t));
+  const ages = Array.from(new Set(visible.map((r) => r.issue_age))).sort((a, b) => a - b);
+  const cellMap = new Map<string, LTCRateCell>();
+  for (const r of visible) cellMap.set(`${r.issue_age}_${r.tier}`, r);
+
+  const carrierProductId = cells[0]?.carrier_product_id;
+  const carrierProduct = CARRIER_PRODUCTS.find((cp) => cp.id === carrierProductId);
+  const carrierName = carrierProduct ? CARRIERS.find((c) => c.id === carrierProduct.carrier_id)?.carrier_name ?? "" : "";
+  const lastEffective = cells.length ? cells.map((r) => r.effective_date).sort().slice(-1)[0] : null;
+  const sourceCounts = new Map<string, number>();
+  for (const r of cells) sourceCounts.set(r.source, (sourceCounts.get(r.source) ?? 0) + 1);
+  const topSource = [...sourceCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  const nominalRefBits = allTiers
+    .map((t) => {
+      const c = cells.find((r) => r.tier === t);
+      if (!c) return null;
+      return `${t[0].toUpperCase()}${t.slice(1)}: ${formatCents(c.nominal_death_benefit_cents)}`;
+    })
+    .filter(Boolean)
+    .join(" · ");
+
+  function startEdit(id: string, val: number) {
+    setEditing(id);
+    setEditValue((val / 100).toFixed(2));
+  }
+  function commitEdit(id: string) {
+    const cents = Math.round(Number(editValue) * 100);
+    if (!isNaN(cents)) {
+      setCells((prev) => prev.map((r) => (r.id === id ? { ...r, monthly_premium_cents: cents } : r)));
+    }
+    setEditing(null);
+  }
+
+  function addRate(form: { issue_age: number; tier: LTCRateCell["tier"]; nominal: number; death: number; premium: number; effective: string }) {
+    const newCell: LTCRateCell = {
+      id: `lrc_${benefitClassId}_${Date.now()}`,
+      benefit_class_id: benefitClassId,
+      carrier_product_id: carrierProductId ?? "cp_6",
+      smoker_status: smoker,
+      issue_age: form.issue_age,
+      tier: form.tier,
+      nominal_death_benefit_cents: Math.round(form.nominal * 100),
+      death_benefit_cents: Math.round(form.death * 100),
+      monthly_premium_cents: Math.round(form.premium * 100),
+      effective_date: form.effective,
+      source: "manual_entry",
+    };
+    setCells((prev) => [...prev, newCell]);
+    setAdding(false);
+  }
+
+  return (
+    <div className="bg-white border border-black/10 rounded">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-black/10">
+        <div className="text-xs font-semibold">Rates for {benefitClassName}</div>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-md border border-black/15 overflow-hidden text-[11px]">
+            {(["non_tobacco","tobacco"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSmoker(s)}
+                className={`px-2 py-1 ${smoker === s ? "bg-[#0a3d3e] text-white" : "bg-white text-[#0a3d3e] hover:bg-black/5"}`}
+              >{s === "non_tobacco" ? "Non-Tobacco" : "Tobacco"}</button>
+            ))}
+          </div>
+          <Btn onClick={() => setAdding((v) => !v)} variant="primary">+ Add Rate</Btn>
+          <Btn onClick={() => setImportOpen(true)}>Import from Carrier Proposal</Btn>
+        </div>
+      </div>
+
+      {adding ? (
+        <AddRateForm onCancel={() => setAdding(false)} onSubmit={addRate} smoker={smoker} tiers={presentTiers.length ? presentTiers : allTiers} defaultEffective={lastEffective ?? "2025-01-01"} />
+      ) : null}
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
+            <tr>
+              <th className="text-left font-medium px-3 py-2">Issue Age</th>
+              {presentTiers.map((t) => (
+                <th key={t} className="text-right font-medium px-3 py-2 capitalize">{t}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {ages.map((age) => (
+              <tr key={age} className="border-t border-black/5">
+                <td className="px-3 py-1.5 font-medium">{age}</td>
+                {presentTiers.map((t) => {
+                  const c = cellMap.get(`${age}_${t}`);
+                  if (!c) return <td key={t} className="px-3 py-1.5 text-right text-black/25">—</td>;
+                  const isEdit = editing === c.id;
+                  return (
+                    <td key={t} className="px-3 py-1.5 text-right font-mono">
+                      {isEdit ? (
+                        <input
+                          autoFocus
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => commitEdit(c.id)}
+                          onKeyDown={(e) => { if (e.key === "Enter") commitEdit(c.id); if (e.key === "Escape") setEditing(null); }}
+                          className="w-20 px-1 py-0.5 text-xs border border-black/30 rounded text-right"
+                        />
+                      ) : (
+                        <button onClick={() => startEdit(c.id, c.monthly_premium_cents)} className="hover:bg-black/5 rounded px-1">
+                          {formatCents(c.monthly_premium_cents)}
+                        </button>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+            {ages.length === 0 ? (
+              <tr><td colSpan={presentTiers.length + 1} className="px-3 py-4 text-center text-black/40">No rates for this smoker status. Use Add Rate to start.</td></tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="px-3 py-2 border-t border-black/10 text-[10px] text-black/55 flex flex-wrap gap-x-4 gap-y-1">
+        <span>Carrier product: <span className="text-black/75">{carrierName ? `${carrierName} - ${carrierProduct?.product_name}` : "—"}</span></span>
+        <span>Effective date: <span className="text-black/75">{lastEffective ? fmtDate(lastEffective) : "—"}</span></span>
+        <span>Source: <span className="text-black/75">{topSource ?? "—"}</span></span>
+        {nominalRefBits ? <span>Nominal: <span className="text-black/75">{nominalRefBits}</span></span> : null}
+      </div>
+
+      <Drawer open={importOpen} onClose={() => setImportOpen(false)} title="Import from Carrier Proposal">
+        <div className="text-xs text-black/60 mb-3">
+          Standard format: carrier rate sheets are pasted as Age x Tier matrices per smoker status.
+          The import deactivates prior rates for the same benefit_class + smoker_status + age + tier combinations.
+        </div>
+        <div className="border-2 border-dashed border-black/20 rounded p-6 text-center text-xs text-black/40 mb-3">
+          Drop carrier proposal here, or click to browse
+        </div>
+        <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">Preview</div>
+        <div className="border border-black/10 rounded p-2 text-xs text-black/60 mb-3">
+          25 cells would be imported across ages 25-65, tiers bronze-platinum, smoker status non_tobacco.
+        </div>
+        <div className="flex gap-2">
+          <Btn variant="primary" onClick={() => setImportOpen(false)}>Confirm Import</Btn>
+          <Btn onClick={() => setImportOpen(false)}>Cancel</Btn>
+        </div>
+      </Drawer>
+    </div>
+  );
+}
+
+function AddRateForm({ onCancel, onSubmit, smoker, tiers, defaultEffective }: {
+  onCancel: () => void;
+  onSubmit: (form: { issue_age: number; tier: LTCRateCell["tier"]; nominal: number; death: number; premium: number; effective: string }) => void;
+  smoker: "non_tobacco" | "tobacco";
+  tiers: Array<LTCRateCell["tier"]>;
+  defaultEffective: string;
+}) {
+  const [age, setAge] = useState("45");
+  const [tier, setTier] = useState<LTCRateCell["tier"]>(tiers[0] ?? "bronze");
+  const [nominal, setNominal] = useState("25000");
+  const [death, setDeath] = useState("25000");
+  const [premium, setPremium] = useState("50.00");
+  const [effective, setEffective] = useState(defaultEffective);
+  return (
+    <div className="px-3 py-2 bg-[#f7f3eb]/60 border-b border-black/10">
+      <div className="grid grid-cols-7 gap-2 items-end text-xs">
+        <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Issue Age</span>
+          <input value={age} onChange={(e) => setAge(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
+        <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Smoker</span>
+          <input value={smoker} disabled className="px-1.5 py-1 border border-black/10 bg-black/5 rounded text-black/50" /></label>
+        <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Tier</span>
+          <select value={tier} onChange={(e) => setTier(e.target.value as LTCRateCell["tier"])} className="px-1.5 py-1 border border-black/15 rounded">
+            {(["bronze","silver","gold","platinum","diamond"] as const).map((t) => <option key={t} value={t}>{t}</option>)}
+          </select></label>
+        <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Nominal $</span>
+          <input value={nominal} onChange={(e) => setNominal(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
+        <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Death $</span>
+          <input value={death} onChange={(e) => setDeath(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
+        <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Premium $/mo</span>
+          <input value={premium} onChange={(e) => setPremium(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
+        <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Effective</span>
+          <input value={effective} onChange={(e) => setEffective(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
+      </div>
+      <div className="flex gap-2 mt-2">
+        <Btn variant="primary" onClick={() => onSubmit({ issue_age: Number(age) || 0, tier, nominal: Number(nominal) || 0, death: Number(death) || 0, premium: Number(premium) || 0, effective })}>Save</Btn>
+        <Btn onClick={onCancel}>Cancel</Btn>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- DI Rates tab ---------- */
+function DIRatesTab({ orgId, canEdit, canCreate }: { orgId: string; canEdit: boolean; canCreate: boolean }) {
+  const [rows, setRows] = useState<DIRateRow[]>(() => DI_RATE_CONFIG.filter((r) => r.organization_id === orgId));
+  const [classFilter, setClassFilter] = useState("all");
+  const [productFilter, setProductFilter] = useState("all");
+  const [currentOnly, setCurrentOnly] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [draft, setDraft] = useState<Partial<DIRateRow>>({});
+
+  const today = "2026-06-15";
+  const classOptions = Array.from(new Set(rows.map((r) => r.employee_class)));
+  const productOptions = Array.from(new Set(rows.map((r) => r.product)));
+
+  const visible = rows.filter((r) => {
+    if (classFilter !== "all" && r.employee_class !== classFilter) return false;
+    if (productFilter !== "all" && r.product !== productFilter) return false;
+    if (currentOnly && r.effective_to && r.effective_to < today) return false;
+    return true;
+  });
+
+  function startEdit(r: DIRateRow) {
+    setEditing(r.id);
+    setDraft({ ...r });
+  }
+  function saveEdit() {
+    if (!editing) return;
+    setRows((prev) => prev.map((r) => (r.id === editing ? { ...r, ...draft } as DIRateRow : r)));
+    setEditing(null);
+    setDraft({});
+  }
+  function deactivate(id: string) {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, effective_to: today } : r)));
+  }
+  function createRow() {
+    const id = `dir_new_${Date.now()}`;
+    const r: DIRateRow = {
+      id,
+      organization_id: orgId,
+      employee_class: String(draft.employee_class ?? "Standard"),
+      age_band: String(draft.age_band ?? "30-39"),
+      product: String(draft.product ?? "Group LTD"),
+      rate_per_unit: Number(draft.rate_per_unit ?? 0),
+      benefit_percentage: Number(draft.benefit_percentage ?? 60),
+      effective_from: String(draft.effective_from ?? today),
+      effective_to: null,
+      source: "manual_entry",
+    };
+    setRows((prev) => [r, ...prev]);
+    setAdding(false);
+    setDraft({});
+  }
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-end justify-between mb-2">
+        <div>
+          <h2 className="text-sm font-semibold">Rates</h2>
+          <div className="text-xs text-black/55">Sun Life rate schedule for this organization. Rates per $1,000 of coverage per month.</div>
+        </div>
+        <div className="flex gap-2">
+          <Btn variant="primary" disabled={!canCreate} onClick={() => { setAdding(true); setDraft({ effective_from: today, benefit_percentage: 60, product: productOptions[0] ?? "Group LTD" }); }}>+ Add Rate Row</Btn>
+          <Btn onClick={() => setImportOpen(true)}>Import from CSV</Btn>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 mb-2 text-xs">
+        <label className="flex items-center gap-1">
+          <span className="text-black/55">Class:</span>
+          <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} className="px-1.5 py-0.5 border border-black/15 rounded bg-white">
+            <option value="all">All</option>
+            {classOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+        <label className="flex items-center gap-1">
+          <span className="text-black/55">Product:</span>
+          <select value={productFilter} onChange={(e) => setProductFilter(e.target.value)} className="px-1.5 py-0.5 border border-black/15 rounded bg-white">
+            <option value="all">All</option>
+            {productOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </label>
+        <label className="flex items-center gap-1 ml-2">
+          <input type="checkbox" checked={currentOnly} onChange={(e) => setCurrentOnly(e.target.checked)} />
+          <span className="text-black/70">Show current only</span>
+        </label>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="bg-white border border-dashed border-black/15 rounded p-6 text-center text-sm text-black/55">
+          No rates configured. Add a rate row or import from CSV.
+        </div>
+      ) : (
+        <TableShell>
+          <THead cols={["Employee Class","Age Band","Product","Rate / $1,000","Benefit %","Effective From","Effective To","Source","Actions"]} />
+          <tbody>
+            {adding ? (
+              <tr className="border-t border-black/5 bg-[#f7f3eb]/60">
+                <td className="px-2 py-1"><input value={String(draft.employee_class ?? "")} onChange={(e) => setDraft({ ...draft, employee_class: e.target.value })} className="w-full px-1 py-0.5 border border-black/15 rounded text-xs" placeholder="Class" /></td>
+                <td className="px-2 py-1"><input value={String(draft.age_band ?? "")} onChange={(e) => setDraft({ ...draft, age_band: e.target.value })} className="w-full px-1 py-0.5 border border-black/15 rounded text-xs" placeholder="30-39" /></td>
+                <td className="px-2 py-1"><input value={String(draft.product ?? "")} onChange={(e) => setDraft({ ...draft, product: e.target.value })} className="w-full px-1 py-0.5 border border-black/15 rounded text-xs" /></td>
+                <td className="px-2 py-1"><input value={String(draft.rate_per_unit ?? "")} onChange={(e) => setDraft({ ...draft, rate_per_unit: Number(e.target.value) })} className="w-20 px-1 py-0.5 border border-black/15 rounded text-xs font-mono" placeholder="0.50" /></td>
+                <td className="px-2 py-1"><input value={String(draft.benefit_percentage ?? "")} onChange={(e) => setDraft({ ...draft, benefit_percentage: Number(e.target.value) })} className="w-16 px-1 py-0.5 border border-black/15 rounded text-xs" /></td>
+                <td className="px-2 py-1"><input value={String(draft.effective_from ?? "")} onChange={(e) => setDraft({ ...draft, effective_from: e.target.value })} className="w-28 px-1 py-0.5 border border-black/15 rounded text-xs" /></td>
+                <td className="px-2 py-1 text-black/40">Current</td>
+                <td className="px-2 py-1 text-black/40">manual_entry</td>
+                <td className="px-2 py-1">
+                  <div className="flex gap-1">
+                    <Btn variant="primary" onClick={createRow}>Save</Btn>
+                    <Btn onClick={() => { setAdding(false); setDraft({}); }}>Cancel</Btn>
+                  </div>
+                </td>
+              </tr>
+            ) : null}
+            {visible.map((r) => {
+              const isEdit = editing === r.id;
+              const current = !r.effective_to || r.effective_to >= today;
+              return (
+                <TRow key={r.id}>
+                  <TCell>{isEdit ? <input value={String(draft.employee_class ?? "")} onChange={(e) => setDraft({ ...draft, employee_class: e.target.value })} className="px-1 py-0.5 border border-black/15 rounded text-xs" /> : r.employee_class}</TCell>
+                  <TCell>{isEdit ? <input value={String(draft.age_band ?? "")} onChange={(e) => setDraft({ ...draft, age_band: e.target.value })} className="w-16 px-1 py-0.5 border border-black/15 rounded text-xs" /> : r.age_band}</TCell>
+                  <TCell>{isEdit ? <input value={String(draft.product ?? "")} onChange={(e) => setDraft({ ...draft, product: e.target.value })} className="px-1 py-0.5 border border-black/15 rounded text-xs" /> : r.product}</TCell>
+                  <TCell className="font-mono">{isEdit
+                    ? <input value={String(draft.rate_per_unit ?? "")} onChange={(e) => setDraft({ ...draft, rate_per_unit: Number(e.target.value) })} className="w-20 px-1 py-0.5 border border-black/15 rounded text-xs font-mono" />
+                    : `$${r.rate_per_unit.toFixed(2)}`}</TCell>
+                  <TCell>{isEdit
+                    ? <input value={String(draft.benefit_percentage ?? "")} onChange={(e) => setDraft({ ...draft, benefit_percentage: Number(e.target.value) })} className="w-14 px-1 py-0.5 border border-black/15 rounded text-xs" />
+                    : `${r.benefit_percentage}%`}</TCell>
+                  <TCell>{fmtDate(r.effective_from)}</TCell>
+                  <TCell>{r.effective_to ? fmtDate(r.effective_to) : <Pill tone="ok">Current</Pill>}</TCell>
+                  <TCell>
+                    <Pill tone={r.source === "sun_life_rate_sheet" ? "info" : "neutral"}>
+                      {r.source === "sun_life_rate_sheet" ? "Sun Life sheet" : r.source === "manual_entry" ? "Manual" : r.source}
+                    </Pill>
+                  </TCell>
+                  <TCell>
+                    {isEdit ? (
+                      <div className="flex gap-1">
+                        <Btn variant="primary" onClick={saveEdit}>Save</Btn>
+                        <Btn onClick={() => { setEditing(null); setDraft({}); }}>Cancel</Btn>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1">
+                        <button disabled={!canEdit} onClick={() => startEdit(r)} className="p-1 hover:bg-black/5 rounded disabled:opacity-30" title="Edit">
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button disabled={!canEdit || !current} onClick={() => deactivate(r.id)} className="p-1 hover:bg-black/5 rounded disabled:opacity-30" title="Deactivate (sets Effective To = today)">
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                  </TCell>
+                </TRow>
+              );
+            })}
+            {visible.length === 0 && !adding ? (
+              <tr><td colSpan={9} className="px-3 py-4 text-center text-black/40">No rate rows match the current filters.</td></tr>
+            ) : null}
+          </tbody>
+        </TableShell>
+      )}
+
+      <Drawer open={importOpen} onClose={() => setImportOpen(false)} title="Import Rates from CSV">
+        <div className="text-xs text-black/60 mb-3">
+          CSV format: employee_class, age_band, product, rate_per_unit, benefit_percentage, effective_from.
+          Existing rows with the same (class, age_band, product) and overlapping effective dates will be deactivated.
+        </div>
+        <div className="border-2 border-dashed border-black/20 rounded p-6 text-center text-xs text-black/40 mb-3">
+          Drop CSV here, or click to browse
+        </div>
+        <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">Preview</div>
+        <TableShell>
+          <THead cols={["Class","Age Band","Product","Rate","Benefit %","Effective"]} />
+          <tbody>
+            {[
+              ["Standard","18-29","Group LTD","$0.34","60%","2026-07-01"],
+              ["Standard","30-39","Group LTD","$0.51","60%","2026-07-01"],
+              ["Standard","40-49","Group LTD","$0.78","60%","2026-07-01"],
+            ].map((row, i) => (
+              <TRow key={i}>{row.map((c, j) => <TCell key={j} className={j === 3 ? "font-mono" : ""}>{c}</TCell>)}</TRow>
+            ))}
+          </tbody>
+        </TableShell>
+        <div className="flex gap-2 mt-3">
+          <Btn variant="primary" onClick={() => setImportOpen(false)}>Confirm Import</Btn>
+          <Btn onClick={() => setImportOpen(false)}>Cancel</Btn>
+        </div>
+      </Drawer>
+    </div>
+  );
+}
+
 
