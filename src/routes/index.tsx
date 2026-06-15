@@ -57,7 +57,7 @@ function Dashboard() {
                 <TRow key={o.id}>
                   <TCell className="font-medium">{o.name}</TCell>
                   <TCell>{o.situs_state}</TCell>
-                  <TCell><Pill tone={o.enrollment_status === "active" ? "ok" : "neutral"}>{o.enrollment_status}</Pill></TCell>
+                  <TCell><Pill tone={o.status === "active" ? "ok" : "neutral"}>{o.status}</Pill></TCell>
                   <TCell>{o.individuals_count}</TCell>
                 </TRow>
               ))}

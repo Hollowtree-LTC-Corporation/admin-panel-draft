@@ -22,7 +22,7 @@ export const Route = createFileRoute("/organizations/$id")({ component: OrgDetai
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const INDUSTRIES = ["education","healthcare","government","manufacturing","professional_services","transportation","hospitality","other"];
 const ORG_TYPES = ["Employer Group","Association","Union","PEO","CPA Firm","P&C Firm"];
-const ORG_STATUSES = ["active","pending_review","closed","suspended"];
+const ORG_STATUSES = ["not_started","onboarding","active","closed","suspended"];
 const DI_HC_TYPES = ["MSO","Healthcare Practice","Medical Group","Dental","Other","General"];
 const WINDOW_TYPES = ["initial","annual","new_joiner","special"];
 const SPONSOR_TYPES = ["employer","affiliate"];
@@ -642,7 +642,7 @@ function DSelect({ defaultValue, options }: { defaultValue?: string; options: st
 ============================================================= */
 
 function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
-  const statusValue = org.enrollment_status === "active" ? "active" : org.enrollment_status === "closed" ? "closed" : "pending_review";
+  const statusValue = org.status;
   const identitySummary = product === "LTC"
     ? `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible · NAIC ${org.naic_code}`
     : `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible`;

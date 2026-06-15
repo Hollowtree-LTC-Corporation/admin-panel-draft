@@ -7,7 +7,7 @@ import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink
 
 export const Route = createFileRoute("/organizations/")({ component: OrgsView });
 
-type SortKey = "name" | "product" | "situs_state" | "enrollment_status" | "individuals_count" | "policy_owner_type";
+type SortKey = "name" | "product" | "situs_state" | "status" | "individuals_count" | "policy_owner_type";
 
 function OrgsView() {
   const { product } = useStore();
@@ -27,7 +27,7 @@ function OrgsView() {
     const s = search.trim().toLowerCase();
     const rows = productRows.filter((o) => {
       if (s && !o.name.toLowerCase().includes(s)) return false;
-      if (status !== "all" && o.enrollment_status !== status) return false;
+      if (status !== "all" && o.status !== status) return false;
       if (situs !== "all" && o.situs_state !== situs) return false;
       if (owner !== "all" && o.policy_owner_type !== owner) return false;
       return true;
@@ -52,7 +52,7 @@ function OrgsView() {
       <FilterRow>
         <FilterSearch value={search} onChange={setSearch} placeholder="Search name or domain…" />
         <FilterSelect value={status} onChange={setStatus} allLabel="All statuses" options={[
-          { value: "active" }, { value: "pending_review", label: "pending_review" }, { value: "pending", label: "pending" }, { value: "closed" }, { value: "suspended" },
+          { value: "not_started", label: "not_started" }, { value: "onboarding", label: "onboarding" }, { value: "active" }, { value: "closed" }, { value: "suspended" },
         ]} />
         <FilterCombobox value={situs} onChange={setSitus} placeholder="All states" options={US_STATE_OPTIONS()} />
         <FilterSelect value={owner} onChange={setOwner} allLabel="All owner types" options={[
@@ -66,7 +66,7 @@ function OrgsView() {
             { key: "name", label: "Name" },
             { key: "product", label: "Product" },
             { key: "situs_state", label: "Situs" },
-            { key: "enrollment_status", label: "Status" },
+            { key: "status", label: "Status" },
             { key: "individuals_count", label: "# Individuals" },
             { key: "policy_owner_type", label: "Owner Type" },
             { key: null, label: "" },
@@ -81,7 +81,7 @@ function OrgsView() {
               <TCell className="font-medium">{o.name}</TCell>
               <TCell><ProductBadge product={o.product} /></TCell>
               <TCell>{o.situs_state}</TCell>
-              <TCell><Pill tone={o.enrollment_status === "active" ? "ok" : o.enrollment_status === "closed" ? "bad" : "info"}>{o.enrollment_status}</Pill></TCell>
+              <TCell><Pill tone={o.status === "active" ? "ok" : o.status === "closed" || o.status === "suspended" ? "bad" : "info"}>{o.status}</Pill></TCell>
               <TCell>{o.individuals_count}</TCell>
               <TCell className="capitalize">{o.policy_owner_type}</TCell>
               <TCell onClick={(e) => e.stopPropagation()}>
