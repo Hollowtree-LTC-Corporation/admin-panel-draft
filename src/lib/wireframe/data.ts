@@ -178,19 +178,54 @@ export const ACCOUNT_ADJUSTMENTS = [
   { id: "aa_4", individual_id: "ind_7", individual_name: "Test Person 7", adjustment_type: "write_off", amount_cents: -4200, reason: "Uncollectible after 90 days", effective_date: "2025-06-01", approved_by: "Guy (admin)", approved_at: "2025-06-01T16:30Z" },
 ];
 
-export const CARRIERS = [
-  { id: "car_1", name: "Northstar Mutual", product: "DI" },
-  { id: "car_2", name: "Pacific Reserve Life", product: "DI" },
-  { id: "car_3", name: "Heritage LTC Group", product: "LTC" },
-  { id: "car_4", name: "Sequoia Care Partners", product: "LTC" },
+export type CarrierStatus = "active" | "inactive";
+export type Carrier = {
+  id: string;
+  name: string;
+  product: Product;
+  carrier_code: string;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string;
+  website: string;
+  status: CarrierStatus;
+  notes: string;
+};
+
+export const CARRIERS: Carrier[] = [
+  // DI: Sun Life is the active carrier. Pacific Reserve kept inactive for legacy policy references.
+  { id: "car_1", name: "Sun Life", product: "DI", carrier_code: "SUNLIFE", contact_name: "Dana Whitmore", contact_email: "dana.whitmore@sunlife.example.com", contact_phone: "555-0201", website: "sunlife.com", status: "active", notes: "Primary DI carrier across all groups." },
+  { id: "car_2", name: "Pacific Reserve Life", product: "DI", carrier_code: "PACRES", contact_name: "Lin Park", contact_email: "lin.park@pacres.example.com", contact_phone: "555-0202", website: "pacificreserve.example.com", status: "inactive", notes: "Legacy. Used by older policies; no new business." },
+  // LTC: Trustmark and Transamerica are the active LTC carriers. Heritage/Sequoia kept inactive for legacy refs.
+  { id: "car_3", name: "Heritage LTC Group", product: "LTC", carrier_code: "HERITAGE", contact_name: "Owen Reyes", contact_email: "owen.reyes@heritageltc.example.com", contact_phone: "555-0203", website: "heritageltc.example.com", status: "inactive", notes: "Legacy. Replaced by Trustmark for new LTC business." },
+  { id: "car_4", name: "Sequoia Care Partners", product: "LTC", carrier_code: "SEQUOIA", contact_name: "Riley Chen", contact_email: "riley.chen@sequoiacare.example.com", contact_phone: "555-0204", website: "sequoiacare.example.com", status: "inactive", notes: "Legacy. No new policies." },
+  { id: "car_5", name: "Trustmark", product: "LTC", carrier_code: "TRUSTMARK", contact_name: "Avery Singh", contact_email: "avery.singh@trustmark.example.com", contact_phone: "555-0205", website: "trustmarkbenefits.com", status: "active", notes: "Primary LTC carrier. State variants for NY." },
+  { id: "car_6", name: "Transamerica", product: "LTC", carrier_code: "TRANSAM", contact_name: "Morgan Diaz", contact_email: "morgan.diaz@transamerica.example.com", contact_phone: "555-0206", website: "transamerica.com", status: "active", notes: "Secondary LTC carrier." },
 ];
 
-export const CARRIER_PRODUCTS = [
-  { id: "cp_1", carrier_id: "car_1", name: "Northstar DI Core" },
-  { id: "cp_2", carrier_id: "car_2", name: "Pacific DI Plus" },
-  { id: "cp_3", carrier_id: "car_3", name: "Heritage LTC Standard" },
-  { id: "cp_4", carrier_id: "car_3", name: "Heritage LTC NY" },
-  { id: "cp_5", carrier_id: "car_4", name: "Sequoia LTC Premier" },
+export type ProductType = "universal_life" | "group_life" | "term_life" | "disability" | "other";
+export type CarrierProduct = {
+  id: string;
+  carrier_id: string;
+  name: string;
+  product_code: string;
+  product_type: ProductType;
+  state_availability: string;
+  si_max_cents: number | null;
+  si_increment_cents: number | null;
+  status: CarrierStatus;
+};
+
+export const CARRIER_PRODUCTS: CarrierProduct[] = [
+  { id: "cp_1", carrier_id: "car_1", name: "Group Disability Insurance", product_code: "GDI", product_type: "disability", state_availability: "All states", si_max_cents: null, si_increment_cents: null, status: "active" },
+  { id: "cp_2", carrier_id: "car_2", name: "Pacific DI Plus", product_code: "PAC-DI", product_type: "disability", state_availability: "All states", si_max_cents: null, si_increment_cents: null, status: "inactive" },
+  { id: "cp_3", carrier_id: "car_3", name: "Heritage LTC Standard", product_code: "HER-STD", product_type: "universal_life", state_availability: "All states except NY", si_max_cents: 25000000, si_increment_cents: 250000, status: "inactive" },
+  { id: "cp_4", carrier_id: "car_3", name: "Heritage LTC NY", product_code: "HER-NY", product_type: "universal_life", state_availability: "NY", si_max_cents: 15000000, si_increment_cents: 250000, status: "inactive" },
+  { id: "cp_5", carrier_id: "car_4", name: "Sequoia LTC Premier", product_code: "SEQ-PREM", product_type: "universal_life", state_availability: "All states", si_max_cents: 20000000, si_increment_cents: 250000, status: "inactive" },
+  { id: "cp_6", carrier_id: "car_5", name: "UL-205 Universal Life & LifeEvents", product_code: "UL-205", product_type: "universal_life", state_availability: "All states", si_max_cents: 25000000, si_increment_cents: 250000, status: "active" },
+  { id: "cp_7", carrier_id: "car_5", name: "GTL-121 Life + Care", product_code: "GTL-121", product_type: "group_life", state_availability: "All states except NY", si_max_cents: 15000000, si_increment_cents: 250000, status: "active" },
+  { id: "cp_8", carrier_id: "car_6", name: "TransElite", product_code: "TRANSELITE", product_type: "universal_life", state_availability: "All states", si_max_cents: 20000000, si_increment_cents: 250000, status: "active" },
+  { id: "cp_9", carrier_id: "car_6", name: "UL10", product_code: "UL10", product_type: "universal_life", state_availability: "All states", si_max_cents: 15000000, si_increment_cents: 250000, status: "active" },
 ];
 
 export type PolicyStatus = "active" | "pending" | "terminated";
@@ -312,14 +347,40 @@ export const COMMISSION_STATEMENTS = [
   { id: "cs_4", payee: "Gallagher", period: "2025-05", amount_cents: 20000, payable: false },
 ];
 
-export const CARRIER_COMMISSION_SCHEDULES = [
-  { id: "ccs_1", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Heaped" },
-  { id: "ccs_2", carrier_product_id: "cp_4", carrier_product_name: "Heritage LTC NY", state_code: "NY", schedule_name: "Flat 22%" },
-  { id: "ccs_3", carrier_product_id: "cp_5", carrier_product_name: "Sequoia LTC Premier", state_code: null, schedule_name: "Level" },
-  { id: "ccs_4", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Default" },
+export type ScheduleType = "heaped" | "flat" | "level";
+export type CarrierCommissionSchedule = {
+  id: string;
+  carrier_product_id: string;
+  carrier_product_name: string;
+  state_code: string | null;
+  schedule_name: string;
+  schedule_type: ScheduleType;
+  is_default: boolean;
+  effective_from: string;
+  effective_to: string | null;
+};
+
+export const CARRIER_COMMISSION_SCHEDULES: CarrierCommissionSchedule[] = [
+  // Legacy (kept for back-compat with existing policies)
+  { id: "ccs_1", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2023-01-01", effective_to: null },
+  { id: "ccs_2", carrier_product_id: "cp_4", carrier_product_name: "Heritage LTC NY", state_code: "NY", schedule_name: "Flat 22%", schedule_type: "flat", is_default: true, effective_from: "2023-01-01", effective_to: null },
+  { id: "ccs_3", carrier_product_id: "cp_5", carrier_product_name: "Sequoia LTC Premier", state_code: null, schedule_name: "Level", schedule_type: "level", is_default: true, effective_from: "2023-01-01", effective_to: null },
+  { id: "ccs_4", carrier_product_id: "cp_3", carrier_product_name: "Heritage LTC Standard", state_code: null, schedule_name: "Default", schedule_type: "heaped", is_default: false, effective_from: "2022-01-01", effective_to: "2023-01-01" },
+  // Trustmark UL-205
+  { id: "ccs_5", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
+  { id: "ccs_6", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: "NY", schedule_name: "Heaped NY", schedule_type: "heaped", is_default: false, effective_from: "2024-01-01", effective_to: null },
+  { id: "ccs_7", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: null, schedule_name: "Flat", schedule_type: "flat", is_default: false, effective_from: "2024-01-01", effective_to: null },
+  // Trustmark GTL-121
+  { id: "ccs_8", carrier_product_id: "cp_7", carrier_product_name: "GTL-121 Life + Care", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
+  { id: "ccs_9", carrier_product_id: "cp_7", carrier_product_name: "GTL-121 Life + Care", state_code: null, schedule_name: "Flat", schedule_type: "flat", is_default: false, effective_from: "2024-01-01", effective_to: null },
+  // Transamerica TransElite
+  { id: "ccs_10", carrier_product_id: "cp_8", carrier_product_name: "TransElite", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
+  // Transamerica UL10
+  { id: "ccs_11", carrier_product_id: "cp_9", carrier_product_name: "UL10", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
 ];
 
 export const COMMISSION_RATE_TIERS = [
+  // Legacy tiers (back-compat)
   { id: "crt_1", schedule_id: "ccs_1", year_from: 1, year_to: 1, pct: 100 },
   { id: "crt_2", schedule_id: "ccs_1", year_from: 2, year_to: 5, pct: 4 },
   { id: "crt_3", schedule_id: "ccs_1", year_from: 6, year_to: 10, pct: 2 },
@@ -327,6 +388,33 @@ export const COMMISSION_RATE_TIERS = [
   { id: "crt_5", schedule_id: "ccs_2", year_from: 2, year_to: 5, pct: 3 },
   { id: "crt_6", schedule_id: "ccs_3", year_from: 1, year_to: 1, pct: 110 },
   { id: "crt_7", schedule_id: "ccs_3", year_from: 2, year_to: 5, pct: 5 },
+  // Trustmark UL-205 Heaped (standard)
+  { id: "crt_10", schedule_id: "ccs_5", year_from: 1, year_to: 1, pct: 100 },
+  { id: "crt_11", schedule_id: "ccs_5", year_from: 2, year_to: 10, pct: 5 },
+  { id: "crt_12", schedule_id: "ccs_5", year_from: 11, year_to: 99, pct: 0 },
+  // Trustmark UL-205 Heaped (NY)
+  { id: "crt_13", schedule_id: "ccs_6", year_from: 1, year_to: 1, pct: 90 },
+  { id: "crt_14", schedule_id: "ccs_6", year_from: 2, year_to: 3, pct: 10 },
+  { id: "crt_15", schedule_id: "ccs_6", year_from: 4, year_to: 10, pct: 5 },
+  { id: "crt_16", schedule_id: "ccs_6", year_from: 11, year_to: 99, pct: 0 },
+  // Trustmark UL-205 Flat
+  { id: "crt_17", schedule_id: "ccs_7", year_from: 1, year_to: 99, pct: 22 },
+  // Trustmark GTL-121 Heaped
+  { id: "crt_18", schedule_id: "ccs_8", year_from: 1, year_to: 1, pct: 100 },
+  { id: "crt_19", schedule_id: "ccs_8", year_from: 2, year_to: 10, pct: 5 },
+  { id: "crt_20", schedule_id: "ccs_8", year_from: 11, year_to: 99, pct: 0 },
+  // Trustmark GTL-121 Flat
+  { id: "crt_21", schedule_id: "ccs_9", year_from: 1, year_to: 99, pct: 22 },
+  // Transamerica TransElite
+  { id: "crt_22", schedule_id: "ccs_10", year_from: 1, year_to: 1, pct: 100 },
+  { id: "crt_23", schedule_id: "ccs_10", year_from: 2, year_to: 4, pct: 4 },
+  { id: "crt_24", schedule_id: "ccs_10", year_from: 5, year_to: 6, pct: 4 },
+  { id: "crt_25", schedule_id: "ccs_10", year_from: 7, year_to: 99, pct: 2 },
+  // Transamerica UL10
+  { id: "crt_26", schedule_id: "ccs_11", year_from: 1, year_to: 1, pct: 100 },
+  { id: "crt_27", schedule_id: "ccs_11", year_from: 2, year_to: 4, pct: 4 },
+  { id: "crt_28", schedule_id: "ccs_11", year_from: 5, year_to: 6, pct: 4 },
+  { id: "crt_29", schedule_id: "ccs_11", year_from: 7, year_to: 99, pct: 2 },
 ];
 
 export type AffiliateType = "cca" | "union" | "industry_association" | "employer_trust" | "other";
