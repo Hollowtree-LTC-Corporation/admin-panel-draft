@@ -1194,7 +1194,7 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
     </RField>
   );
   const MicrositeFieldRow = (
-    <RField label="Microsite URL"><MicrositeField url={org.microsite_url} product={product} editing={e.editing} /></RField>
+    <RField label="Microsite URL"><MicrositeField url={org.microsite_url} product={product} editing={e.editing} currentOrgId={org.id} /></RField>
   );
   const ContributionTypeField = (
     <div className="col-span-2">
