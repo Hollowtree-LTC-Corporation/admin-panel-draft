@@ -83,10 +83,12 @@ function QueueTab() {
   const [resp, setResp] = useState("all");
   const [dir, setDir] = useState("all");
   const [tier, setTier] = useState("all");
+  const [rep, setRep] = useState("all");
   const sort = useSort<SortKey>("upgrade_submitted_at", "asc");
 
   const carrierOptions = CARRIERS.filter((c) => c.product === "LTC").map((c) => ({ value: c.id, label: c.carrier_name }));
   const orgOptions = ORGS.filter((o) => o.product === "LTC").map((o) => ({ value: o.id, label: o.name }));
+  const repOptions = Array.from(new Set(SI_APPLICATIONS.map((a) => a.assigned_rep).filter(Boolean))) as string[];
 
   const rows = useMemo(() => {
     const s = search.trim().toLowerCase();
