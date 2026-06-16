@@ -20,7 +20,7 @@ export const Route = createFileRoute("/si-applications")({ component: View });
 
 type SortKey =
   | "individual_name" | "org_name" | "plan_applied_for" | "face_amount_cents"
-  | "carrier_name" | "upgrade_submitted_at" | "days_in_review" | "upgrade_carrier_decision";
+  | "carrier_name" | "upgrade_submitted_at" | "days_in_review" | "upgrade_carrier_decision" | "assigned_rep";
 
 const SESSION_MS = 5 * 60 * 1000;
 
