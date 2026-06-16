@@ -167,6 +167,14 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     // LTC-only extras
     employee_upgrade_option: isLTC && base.upgrade_applied_for ? ["Silver→Gold","Gold→Platinum","Platinum→Diamond"][n % 3] : null,
     applied_for_upgrade: isLTC ? base.upgrade_applied_for : null,
+    // v14: individuals.premium_structure — TODO: confirm column migrated; default 'lifetime'
+    premium_structure: isLTC ? (n % 4 === 0 ? "ten_pay" : "lifetime") : null,
+    // Mocked from organizations.available_premium_structures
+    org_available_premium_structures: isLTC ? (n % 3 === 0 ? ["lifetime", "ten_pay"] : ["lifetime"]) : ["lifetime"],
+    // Mocked from enrollment_windows.affiliate_organization_id
+    enrollment_window_affiliate: isLTC && (n === 5 || n === 11)
+      ? { id: n === 5 ? "org_aff_seiu" : "org_aff_teamsters", name: n === 5 ? "SEIU Affiliate Org" : "Teamsters Affiliate Org" }
+      : null,
     _org: org,
     _riders: org ? [org.extension_of_benefits_rider && "EOB", org.benefit_restoration_rider && "BR"].filter(Boolean).join(" + ") || "—" : "—",
   };
