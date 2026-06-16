@@ -63,7 +63,11 @@ function useBrokers(): BrokerRecord[] {
 const INBOUND_TYPES = ["Broker Referral","Direct","Partner Referral","Inbound"];
 const PRODUCT_TEMPLATE_VARIANTS = ["base","eob_only","restoration_only","eob_and_restoration"];
 const CONTRIBUTION_TYPES = ["voluntary","buy_up","employer_paid"];
-const PAY_MODES = ["Monthly","10-Pay"];
+const PREMIUM_STRUCTURES = ["lifetime","10_pay"] as const;
+type PremiumStructure = typeof PREMIUM_STRUCTURES[number];
+function premiumStructureLabel(s: PremiumStructure): string {
+  return s === "lifetime" ? "Lifetime" : "10-Pay";
+}
 
 function defaultMicrositeSuffix(product: "DI" | "LTC"): string {
   return product === "DI" ? ".hollowtree.co" : ".hollowtreeltc.com";
