@@ -45,12 +45,27 @@ const SPONSOR_TYPES: Array<{ value: string; label: string }> = [
   { value: "employer", label: "Employer" },
   { value: "affiliate", label: "Affiliate" },
 ];
+// Sponsor Shape is a derived UI concept — it's NOT a column on enrollment_windows.
+// It's computed from (sponsor_type, affiliate_organization_id) and persisted by
+// writing both fields together. These labels are the canonical user-facing strings.
+type SponsorShape = "employer" | "employer_affiliate" | "affiliate_only";
+const SPONSOR_SHAPES: Array<{ value: SponsorShape; label: string }> = [
+  { value: "employer", label: "Employer" },
+  { value: "employer_affiliate", label: "Employer + Affiliate" },
+  { value: "affiliate_only", label: "Affiliate Only" },
+];
+function sponsorShapeLabel(s: SponsorShape): string {
+  return SPONSOR_SHAPES.find((o) => o.value === s)?.label ?? s;
+}
+function getSponsorShape(w: { sponsor_type: string; affiliate: string | null }): SponsorShape {
+  if (w.sponsor_type === "affiliate") return "affiliate_only";
+  return w.affiliate ? "employer_affiliate" : "employer";
+}
 const WINDOW_STATUSES: Array<{ value: string; label: string }> = [
   { value: "upcoming", label: "Upcoming" },
   { value: "open", label: "Open" },
   { value: "closed", label: "Closed" },
 ];
-const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.carrier_name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
 // v14 schema follow-up: confirm canonical enum w/ ops, then add CHECK
 const BENEFIT_SYSTEMS: Array<{ value: string; label: string }> = [
   { value: "heritage_online", label: "Heritage Online" },
@@ -67,6 +82,37 @@ const AFFILIATE_ORG_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "aff_foxtail", label: "Foxtail Alumni Assoc" },
   { value: "aff_member_foundation", label: "CCA Member Foundation" },
 ];
+// Relational carrier options — sourced from carriers table, filtered by product.
+// In prod this is a SELECT from carriers WHERE product = ?; here we extend the
+// dummy CARRIERS list with the additional LTC carriers referenced in windows.
+const EXTRA_LTC_CARRIERS: Array<{ value: string; label: string }> = [
+  { value: "car_northstar", label: "Northstar Mutual" },
+  { value: "car_pacific_reserve", label: "Pacific Reserve Life" },
+  { value: "car_heritage_ltc", label: "Heritage LTC Group" },
+  { value: "car_sequoia", label: "Sequoia Care Partners" },
+];
+function carrierOptionsForProduct(
+  product: "DI" | "LTC",
+  recentlyUsedNames: string[] = [],
+): Array<{ value: string; label: string }> {
+  const fromTable = CARRIERS
+    .filter((c) => c.product === product)
+    .map((c) => ({ value: c.id, label: c.carrier_name }));
+  const all = product === "LTC" ? [...fromTable, ...EXTRA_LTC_CARRIERS] : fromTable;
+  const dedup = Array.from(new Map(all.map((o) => [o.value, o])).values());
+  const recentSet = new Set(recentlyUsedNames);
+  const recent = dedup
+    .filter((o) => recentSet.has(o.label))
+    .sort((a, b) => recentlyUsedNames.indexOf(a.label) - recentlyUsedNames.indexOf(b.label));
+  const rest = dedup
+    .filter((o) => !recentSet.has(o.label))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  return [...recent, ...rest];
+}
+function carrierIdFromName(name: string | null | undefined, product: "DI" | "LTC"): string | null {
+  if (!name) return null;
+  return carrierOptionsForProduct(product).find((o) => o.label === name)?.value ?? null;
+}
 const BROKER_TYPES = ["Broker","IMO","Internal"] as const;
 type BrokerType = typeof BROKER_TYPES[number];
 type BrokerRecord = {
