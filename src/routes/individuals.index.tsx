@@ -183,6 +183,7 @@ function IndividualsView() {
           <>
             <FilterSelect value={issueFilter} onChange={setIssueFilter} allLabel="All issue types" options={[{ value: "GI" }, { value: "SI" }]} />
             <FilterSelect value={bclassFilter} onChange={setBclassFilter} allLabel="All benefit classes" options={benefitClassOptions.map((v) => ({ value: v }))} />
+            <FilterSelect value={repFilter} onChange={setRepFilter} allLabel="All reps" options={[...repOptions.map((v) => ({ value: v })), { value: "__unassigned__", label: "Unassigned" }]} />
           </>
         )}
         {!isLTC && (
