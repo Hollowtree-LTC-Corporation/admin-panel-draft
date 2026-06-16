@@ -397,6 +397,7 @@ function OrgDetail() {
     .sort()[0] ?? null;
   const daysToClose = daysUntil(nextOpenEnd);
   const showCcaBadge = product === "DI" && org.cca_group;
+  const showEmployerContributionBadge = product === "LTC" && (org.contribution_type === "buy_up" || org.contribution_type === "employer_paid");
 
   return (
     <div>
@@ -407,13 +408,21 @@ function OrgDetail() {
         title={
           <span className="inline-flex items-center gap-2">
             {org.name}
-            <ProductBadge product={org.product} />
+            {product === "DI" && <ProductBadge product={org.product} />}
             {showCcaBadge && (
               <span
                 className="border border-emerald-500 text-emerald-700 bg-emerald-50 rounded px-2 py-0.5 text-xs font-medium"
                 title="CCA-affiliated organization. Uses CCA portal link and CCA-specific policy emails."
               >
                 CCA
+              </span>
+            )}
+            {showEmployerContributionBadge && (
+              <span
+                className="border border-amber-500 text-amber-800 bg-amber-50 rounded px-2 py-0.5 text-xs font-medium uppercase tracking-wider"
+                title={`Employer contributes to premium (${org.contribution_type === "buy_up" ? "Buy-Up" : "Employer Paid"})`}
+              >
+                Employer Contribution
               </span>
             )}
           </span>
