@@ -141,7 +141,7 @@ function IndividualsView() {
       }
       if (!isLTC && diTypeFilter !== "all" && i.di_type !== diTypeFilter) return false;
       if (paymentFilter !== "all" && i.last_payment_status !== paymentFilter) return false;
-      if (!isLTC && repFilter !== "all") {
+      if (repFilter !== "all") {
         if (repFilter === "__unassigned__") { if (i.assigned_rep) return false; }
         else if (i.assigned_rep !== repFilter) return false;
       }
@@ -183,6 +183,7 @@ function IndividualsView() {
           <>
             <FilterSelect value={issueFilter} onChange={setIssueFilter} allLabel="All issue types" options={[{ value: "GI" }, { value: "SI" }]} />
             <FilterSelect value={bclassFilter} onChange={setBclassFilter} allLabel="All benefit classes" options={benefitClassOptions.map((v) => ({ value: v }))} />
+            <FilterSelect value={repFilter} onChange={setRepFilter} allLabel="All reps" options={[...repOptions.map((v) => ({ value: v })), { value: "__unassigned__", label: "Unassigned" }]} />
           </>
         )}
         {!isLTC && (
@@ -208,6 +209,7 @@ function IndividualsView() {
             { key: null, label: "Premium Structure" },
             { key: "face_amount_cents", label: "Face Amount" },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
+            { key: "assigned_rep", label: "Assigned Rep" },
             { key: "last_payment_status", label: "Payment" },
           ] : [
             { key: "full_name", label: "Name" },
@@ -251,6 +253,8 @@ function IndividualsView() {
                   <TCell className="text-[12px]">{premiumStructureLabel(ps)}</TCell>
                   <TCell className="text-right">{unpurchased ? "—" : formatFaceAmount(i.face_amount_cents)}</TCell>
                   <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>
+                  {/* TODO: v14 schema add individuals.assigned_rep TEXT for LTC (parity with DI). Currently sourced from DI-shared dummy data. */}
+                  <TCell>{i.assigned_rep ?? <span className="text-black/40">—</span>}</TCell>
                   <TCell>{unpurchased ? <span className="text-black/40">—</span> : paymentBadge(i.last_payment_status, i.retry_count)}</TCell>
                 </TRow>
               );

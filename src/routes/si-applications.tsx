@@ -20,7 +20,7 @@ export const Route = createFileRoute("/si-applications")({ component: View });
 
 type SortKey =
   | "individual_name" | "org_name" | "plan_applied_for" | "face_amount_cents"
-  | "carrier_name" | "upgrade_submitted_at" | "days_in_review" | "upgrade_carrier_decision";
+  | "carrier_name" | "upgrade_submitted_at" | "days_in_review" | "upgrade_carrier_decision" | "assigned_rep";
 
 const SESSION_MS = 5 * 60 * 1000;
 
@@ -83,10 +83,12 @@ function QueueTab() {
   const [resp, setResp] = useState("all");
   const [dir, setDir] = useState("all");
   const [tier, setTier] = useState("all");
+  const [rep, setRep] = useState("all");
   const sort = useSort<SortKey>("upgrade_submitted_at", "asc");
 
   const carrierOptions = CARRIERS.filter((c) => c.product === "LTC").map((c) => ({ value: c.id, label: c.carrier_name }));
   const orgOptions = ORGS.filter((o) => o.product === "LTC").map((o) => ({ value: o.id, label: o.name }));
+  const repOptions = Array.from(new Set(SI_APPLICATIONS.map((a) => a.assigned_rep).filter(Boolean))) as string[];
 
   const rows = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -97,6 +99,10 @@ function QueueTab() {
       if (org !== "all" && a.org_id !== org) return false;
       if (resp !== "all" && a.respondent_type !== resp) return false;
       if (tier !== "all" && a.plan_tier !== tier) return false;
+      if (rep !== "all") {
+        if (rep === "__unassigned__") { if (a.assigned_rep) return false; }
+        else if (a.assigned_rep !== rep) return false;
+      }
       if (dir !== "all") {
         const d = daysBetween(a.upgrade_submitted_at, a.upgrade_carrier_decision_at ?? undefined);
         if (dir === "lt7" && !(d < 7)) return false;
@@ -125,10 +131,10 @@ function QueueTab() {
       if (k === "days_in_review") return daysBetween(a.upgrade_submitted_at, a.upgrade_carrier_decision_at ?? undefined);
       return (a as unknown as Record<string, string | number>)[k];
     });
-  }, [search, status, carrier, org, resp, dir, tier, sort]);
+  }, [search, status, carrier, org, resp, dir, tier, rep, sort]);
 
-  const active = search !== "" || status !== "all" || carrier !== "all" || org !== "all" || resp !== "all" || dir !== "all" || tier !== "all" || !sort.isDefault;
-  const clearAll = () => { setSearch(""); setStatus("all"); setCarrier("all"); setOrg("all"); setResp("all"); setDir("all"); setTier("all"); sort.reset(); };
+  const active = search !== "" || status !== "all" || carrier !== "all" || org !== "all" || resp !== "all" || dir !== "all" || tier !== "all" || rep !== "all" || !sort.isDefault;
+  const clearAll = () => { setSearch(""); setStatus("all"); setCarrier("all"); setOrg("all"); setResp("all"); setDir("all"); setTier("all"); setRep("all"); sort.reset(); };
 
   const counts = useMemo(() => {
     const now = Date.now();
@@ -198,6 +204,10 @@ function QueueTab() {
           { value: "Platinum", label: "Platinum" },
           { value: "Diamond", label: "Diamond" },
         ]} />
+        <FilterCombobox value={rep} onChange={setRep} placeholder="All reps" options={[
+          ...repOptions.map((v) => ({ value: v, label: v })),
+          { value: "__unassigned__", label: "Unassigned" },
+        ]} />
         <ClearFiltersLink show={active} onClick={clearAll} />
         <div className="ml-auto flex items-center gap-2 text-[11px] text-black/50">
           <button disabled className="px-2 py-1 rounded border border-black/15 bg-stone-100 text-black/40 cursor-not-allowed">
@@ -218,6 +228,7 @@ function QueueTab() {
             { key: "upgrade_submitted_at", label: "Submitted" },
             { key: "days_in_review", label: "Days in Review" },
             { key: "upgrade_carrier_decision", label: "Status" },
+            { key: "assigned_rep", label: "Assigned Rep" },
             { key: null, label: "Action" },
           ]}
           sortKey={sort.sortKey}
@@ -232,7 +243,7 @@ function QueueTab() {
               </TCell>
               <TCell><span /></TCell><TCell><span /></TCell><TCell><span /></TCell>
               <TCell><span /></TCell><TCell><span /></TCell><TCell><span /></TCell>
-              <TCell><span /></TCell><TCell><span /></TCell>
+              <TCell><span /></TCell><TCell><span /></TCell><TCell><span /></TCell>
             </TRow>
           ) : rows.map((a) => {
             const d = daysBetween(a.upgrade_submitted_at, a.upgrade_carrier_decision_at ?? undefined);
@@ -253,6 +264,7 @@ function QueueTab() {
                   {d} days
                 </TCell>
                 <TCell>{decisionPill(a.upgrade_carrier_decision)}</TCell>
+                <TCell>{a.assigned_rep ?? <span className="text-black/40">—</span>}</TCell>
                 <TCell>
                   <Btn variant="secondary" size="sm" onClick={() => setGate(a)}>
                     <Lock className="inline h-3 w-3 mr-1" /> Review
