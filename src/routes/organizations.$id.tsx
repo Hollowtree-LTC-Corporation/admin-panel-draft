@@ -582,7 +582,7 @@ function OrgDetail() {
         </TabsList>
 
         <TabsContent value="setup">
-          <SetupTab org={org} product={product} readOnly={readOnly} isAdmin={role === "admin"} />
+          <SetupTab org={org} product={product} readOnly={readOnly} isAdmin={role === "admin"} checks={onboardingChecks} setChecks={setOnboardingChecks} />
         </TabsContent>
         <TabsContent value="lifecycle">
           <LifecycleTab
