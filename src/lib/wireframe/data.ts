@@ -246,26 +246,6 @@ function _buildBillingGroups(): BillingGroup[] {
 
 export const BILLING_GROUPS: BillingGroup[] = _buildBillingGroups();
 
-// Magic tokens — used here for spouse-separation portal links (token_class='portal').
-export type MagicToken = {
-  id: string;
-  individual_id: string;
-  token_class: "enrollment" | "portal";
-  status: "active" | "revoked" | "expired";
-  expires_at: string;
-  created_at: string;
-};
-export const MAGIC_TOKENS: MagicToken[] = [
-  {
-    id: "tok_sep_ind_11",
-    individual_id: "ind_11",
-    token_class: "portal",
-    status: "active",
-    expires_at: "2025-10-15T14:30:00Z",
-    created_at: "2025-09-15T14:30:00Z",
-  },
-];
-
 export const PAYMENT_LEDGER = Array.from({ length: 60 }, (_, i) => {
   const ind = INDIVIDUALS[i % INDIVIDUALS.length];
   const org = ORGS.find((o) => o.id === ind.org_id);
