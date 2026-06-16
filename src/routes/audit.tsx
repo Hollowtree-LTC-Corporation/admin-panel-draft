@@ -421,15 +421,15 @@ function RowAndDiff({
         <td className="px-3 py-2 font-mono text-[11px]">
           <span className="inline-flex items-center gap-1">
             {navHref ? (
-              <Link
-                to={navHref}
+              <a
+                href={navHref}
                 onClick={(e) => e.stopPropagation()}
                 className="text-[#0a3d3e] hover:underline inline-flex items-center gap-0.5"
                 title={row.record_id}
               >
                 {truncatedId}
                 <ExternalLink className="h-2.5 w-2.5" />
-              </Link>
+              </a>
             ) : (
               <span title={row.record_id}>{truncatedId}</span>
             )}
