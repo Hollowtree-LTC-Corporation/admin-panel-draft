@@ -21,13 +21,52 @@ export const Route = createFileRoute("/organizations/$id")({ component: OrgDetai
 // Enum vocabularies (mirror prod CHECK constraints)
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const INDUSTRIES = ["education","healthcare","government","manufacturing","professional_services","transportation","hospitality","other"];
-const ORG_TYPES = ["Employer Group","Association","Union","PEO","CPA Firm","P&C Firm"];
+// v14 schema follow-up: add CHECK constraint for org_type
+const ORG_TYPES: Array<{ value: string; label: string }> = [
+  { value: "employer_group", label: "Employer Group" },
+  { value: "association", label: "Association" },
+  { value: "union", label: "Union" },
+  { value: "peo", label: "PEO" },
+  { value: "cpa_firm", label: "CPA Firm" },
+  { value: "pc_firm", label: "P&C Firm" },
+];
+function orgTypeLabel(v: string | null | undefined): string {
+  return ORG_TYPES.find((o) => o.value === v)?.label ?? (v ?? "—");
+}
 const ORG_STATUSES = ["not_started","onboarding","active","closed","suspended"];
 const DI_HC_TYPES = ["MSO","Healthcare Practice","Medical Group","Dental","Other","General"];
-const WINDOW_TYPES = ["initial","annual","new_joiner","special"];
-const SPONSOR_TYPES = ["employer","affiliate"];
-const WINDOW_STATUSES = ["upcoming","open","closed"];
+const WINDOW_TYPES: Array<{ value: string; label: string }> = [
+  { value: "initial", label: "Initial" },
+  { value: "annual", label: "Annual" },
+  { value: "new_joiner", label: "New Joiner" },
+  { value: "special", label: "Special" },
+];
+const SPONSOR_TYPES: Array<{ value: string; label: string }> = [
+  { value: "employer", label: "Employer" },
+  { value: "affiliate", label: "Affiliate" },
+];
+const WINDOW_STATUSES: Array<{ value: string; label: string }> = [
+  { value: "upcoming", label: "Upcoming" },
+  { value: "open", label: "Open" },
+  { value: "closed", label: "Closed" },
+];
 const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.carrier_name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
+// v14 schema follow-up: confirm canonical enum w/ ops, then add CHECK
+const BENEFIT_SYSTEMS: Array<{ value: string; label: string }> = [
+  { value: "heritage_online", label: "Heritage Online" },
+  { value: "selerix", label: "Selerix" },
+  { value: "benefitfocus", label: "BenefitFocus" },
+  { value: "other", label: "Other" },
+];
+function benefitSystemLabel(v: string | null | undefined): string {
+  return BENEFIT_SYSTEMS.find((o) => o.value === v)?.label ?? (v ?? "—");
+}
+// v14 schema follow-up: relational dropdown from affiliate_organizations
+const AFFILIATE_ORG_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "aff_cca", label: "CCA" },
+  { value: "aff_foxtail", label: "Foxtail Alumni Assoc" },
+  { value: "aff_member_foundation", label: "CCA Member Foundation" },
+];
 const BROKER_TYPES = ["Broker","IMO","Internal"] as const;
 type BrokerType = typeof BROKER_TYPES[number];
 type BrokerRecord = {
@@ -63,6 +102,12 @@ function useBrokers(): BrokerRecord[] {
 const INBOUND_TYPES = ["Broker Referral","Direct","Partner Referral","Inbound"];
 const PRODUCT_TEMPLATE_VARIANTS = ["base","eob_only","restoration_only","eob_and_restoration"];
 const CONTRIBUTION_TYPES = ["voluntary","buy_up","employer_paid"];
+function contributionTypeLabel(v: string | null | undefined): string {
+  if (v === "voluntary") return "Voluntary";
+  if (v === "buy_up") return "Buy-Up";
+  if (v === "employer_paid") return "Employer Paid";
+  return v ?? "—";
+}
 const PREMIUM_STRUCTURES = ["lifetime","10_pay"] as const;
 type PremiumStructure = typeof PREMIUM_STRUCTURES[number];
 function premiumStructureLabel(s: PremiumStructure): string {
@@ -237,7 +282,7 @@ function synthesize(org: typeof ORGS[number]) {
     ...org,
     domain: `${slug}.example.com`,
     industry: ["professional_services","healthcare","manufacturing","transportation","education","hospitality"][idx % 6],
-    org_type: cca ? "CPA Firm" : (idx % 3 === 0 ? "Association" : "Employer Group"),
+    org_type: cca ? "cpa_firm" : (idx % 3 === 0 ? "association" : "employer_group"),
     situs_city: ["Austin","Portland","Boston","Miami","Seattle","Chicago","Denver","Atlanta"][idx % 8],
     eligible_lives: org.individuals_count * 3,
     // DI
@@ -286,7 +331,7 @@ function synthesize(org: typeof ORGS[number]) {
     ach_first_fee_cents: 100,
     ach_subsequent_fee_cents: 50,
     failed_ach_penalty_cents: 1500,
-    failed_card_penalty_mode: "flat" as "flat" | "percentage",
+    failed_card_penalty_mode: "flat" as "flat" | "percent",
     failed_card_penalty_value_cents: 1000 as number | null,
     failed_card_penalty_pct_bps: null as number | null,
     free_retry_count: idx === 2 ? 1 : 2,
@@ -319,9 +364,9 @@ function synthesize(org: typeof ORGS[number]) {
     naic_code: "61271",
     org_website: `https://www.${slug}.example.com`,
     product_template_variant: "eob_and_restoration",
-    healthcare_company: idx % 2 === 0 ? "yes" : "no",
+    healthcare_company: idx % 2 === 0,
     benefit_duration: 6,
-    duration: "6 years",
+    benefit_system: "heritage_online",
     min_age: 18,
     max_age: 75,
     // LTC carrier/operational
@@ -329,7 +374,7 @@ function synthesize(org: typeof ORGS[number]) {
     enrollment_id_carrier: `ENR-${50000 + idx}`,
     form_number: "LTC-2024-A",
     agent_number: `AGT-${1000 + idx}`,
-    benefit_system: "Heritage Online",
+    // benefit_system set above with snake_case canonical value
     rider_codes: ["EOB-100","BR-50","WAIVER"],
     application_questions: [
       "Have you used tobacco in the past 12 months?",
@@ -537,7 +582,9 @@ function OrgDetail() {
       <Drawer open={windowDrawer.state.open} onClose={windowDrawer.close} title={windowDrawer.state.mode === "create" ? "New Enrollment Window" : "Edit Window"}>
         <Field label="Window Type"><DSelect defaultValue={windowDrawer.state.data?.window_type ?? "initial"} options={WINDOW_TYPES} /></Field>
         <Field label="Sponsor Type"><DSelect defaultValue={windowDrawer.state.data?.sponsor_type ?? "employer"} options={SPONSOR_TYPES} /></Field>
-        <Field label="Affiliate Org (if any)"><Input defaultValue={windowDrawer.state.data?.affiliate ?? ""} placeholder="e.g. CCA Member Foundation" /></Field>
+        {(windowDrawer.state.data?.sponsor_type === "affiliate" || windowDrawer.state.data?.affiliate) && (
+          <Field label="Affiliate Org"><DSelect defaultValue={windowDrawer.state.data?.affiliate ?? AFFILIATE_ORG_OPTIONS[0].value} options={AFFILIATE_ORG_OPTIONS} /></Field>
+        )}
         <Field label="Start Date"><Input defaultValue={windowDrawer.state.data?.start ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" /></Field>
         <Field label="End Date"><Input defaultValue={windowDrawer.state.data?.end ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" /></Field>
         <Field label="Default Effective Date"><Input defaultValue={windowDrawer.state.data?.effective ?? ""} /></Field>
@@ -650,10 +697,14 @@ function QuickLinksCard({ org }: { org: OrgDetail }) {
 
 /* ---------- Drawer Select ---------- */
 
-function DSelect({ defaultValue, options }: { defaultValue?: string; options: string[] }) {
+function DSelect({ defaultValue, options }: { defaultValue?: string; options: Array<string | { value: string; label: string }> }) {
   return (
     <select defaultValue={defaultValue} className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
-      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      {options.map((o) => {
+        const value = typeof o === "string" ? o : o.value;
+        const label = typeof o === "string" ? o : o.label;
+        return <option key={value} value={value}>{label}</option>;
+      })}
     </select>
   );
 }
@@ -1070,8 +1121,8 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
   const OrgTypeField = (
     <RField label="Org Type">
       {e.editing
-        ? <select className={inputCls} defaultValue={org.org_type}>{ORG_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
-        : org.org_type}
+        ? <select className={inputCls} defaultValue={org.org_type}>{ORG_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+        : orgTypeLabel(org.org_type)}
     </RField>
   );
   const StatusField = (
@@ -1115,8 +1166,8 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
     <div className="col-span-2">
       <RField label="Contribution Type">
         {e.editing
-          ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o} value={o}>{titleCase(o)}</option>)}</select>
-          : titleCase(org.contribution_type)}
+          ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o} value={o}>{contributionTypeLabel(o)}</option>)}</select>
+          : contributionTypeLabel(org.contribution_type)}
         <div className="text-[11px] text-black/55 italic mt-1">
           How premium is funded. Buy-Up and Employer Paid require census-level contribution data per individual.
         </div>
@@ -1375,12 +1426,15 @@ function LTCProductPlanSection({ org, readOnly }: { org: OrgDetail; readOnly: bo
               : productTemplateVariantLabel(org.product_template_variant)}
           </RField>
           <RField label="Extension of Benefits Rider">{e.editing ? <Switch defaultChecked={org.extension_of_benefits_rider} /> : <YesNo b={org.extension_of_benefits_rider} />}</RField>
-          <RField label="Healthcare Company">{e.editing ? <input className={inputCls} defaultValue={org.healthcare_company} /> : titleCase(org.healthcare_company)}</RField>
+          <RField label="Healthcare Company">{e.editing ? <Switch defaultChecked={org.healthcare_company} /> : <YesNo b={org.healthcare_company} />}</RField>
           <RField label="Benefit Restoration Rider">{e.editing ? <Switch defaultChecked={org.benefit_restoration_rider} /> : <YesNo b={org.benefit_restoration_rider} />}</RField>
         </Grid2>
         <div className="grid grid-cols-4 gap-x-6 gap-y-4 mt-4">
-          <RField label="Benefit Duration">{e.editing ? <input className={inputCls} defaultValue={String(org.benefit_duration)} /> : org.benefit_duration}</RField>
-          <RField label="Duration">{e.editing ? <input className={inputCls} defaultValue={org.duration} /> : org.duration}</RField>
+          <RField label="Benefit Duration (years)">
+            {e.editing
+              ? <input className={inputCls} type="number" min={1} defaultValue={String(org.benefit_duration)} />
+              : <span>{org.benefit_duration} <span className="text-stone-400 text-xs">years</span></span>}
+          </RField>
           <RField label="Min Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.min_age} /> : org.min_age}</RField>
           <RField label="Max Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.max_age} /> : org.max_age}</RField>
         </div>
@@ -1768,7 +1822,7 @@ function PaymentProcessingSection({ org, readOnly }: { org: OrgDetail; readOnly:
   const [achFirst, setAchFirst] = useState(String(org.ach_first_fee_cents));
   const [achSub, setAchSub] = useState(String(org.ach_subsequent_fee_cents));
   const [achPenalty, setAchPenalty] = useState(String(org.failed_ach_penalty_cents));
-  const [penaltyMode, setPenaltyMode] = useState<"flat" | "percentage">(org.failed_card_penalty_mode);
+  const [penaltyMode, setPenaltyMode] = useState<"flat" | "percent">(org.failed_card_penalty_mode);
   const [penaltyFlat, setPenaltyFlat] = useState(String(org.failed_card_penalty_value_cents ?? ""));
   const [penaltyBps, setPenaltyBps] = useState(String(org.failed_card_penalty_pct_bps ?? ""));
   const [retry, setRetry] = useState(String(org.free_retry_count));
@@ -1837,12 +1891,12 @@ function PaymentProcessingSection({ org, readOnly }: { org: OrgDetail; readOnly:
         <RField label="Failed Card Penalty Mode">
           {e.editing
             ? (
-              <select className={inputCls} value={penaltyMode} onChange={(ev) => setPenaltyMode(ev.target.value as "flat" | "percentage")}>
+              <select className={inputCls} value={penaltyMode} onChange={(ev) => setPenaltyMode(ev.target.value as "flat" | "percent")}>
                 <option value="flat">Flat</option>
-                <option value="percentage">Percentage</option>
+                <option value="percent">Percent</option>
               </select>
             )
-            : (org.failed_card_penalty_mode === "flat" ? "Flat" : "Percentage")}
+            : (org.failed_card_penalty_mode === "flat" ? "Flat" : "Percent")}
         </RField>
         {(e.editing ? penaltyMode : org.failed_card_penalty_mode) === "flat"
           ? (
@@ -2551,7 +2605,11 @@ function CarrierIdentifiersSection({ org, readOnly, variant }: { org: OrgDetail;
     >
       <Grid2>
         <RField label="Case ID">{e.editing ? <input className={inputCls} defaultValue={org.case_id} /> : <span className="font-mono text-xs">{org.case_id}</span>}</RField>
-        <RField label="Benefit System">{e.editing ? <input className={inputCls} defaultValue={org.benefit_system} /> : org.benefit_system}</RField>
+        <RField label="Benefit System">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.benefit_system}>{BENEFIT_SYSTEMS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+            : benefitSystemLabel(org.benefit_system)}
+        </RField>
         <RField label="Enrollment ID (Carrier)">{e.editing ? <input className={inputCls} defaultValue={org.enrollment_id_carrier} /> : <span className="font-mono text-xs">{org.enrollment_id_carrier}</span>}</RField>
         <RField label="Rider Codes">
           {e.editing
