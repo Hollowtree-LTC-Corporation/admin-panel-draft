@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TokensRouteImport } from './routes/tokens'
+import { Route as SiApplicationsRouteImport } from './routes/si-applications'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RateConfigRouteImport } from './routes/rate-config'
 import { Route as RateCellsRouteImport } from './routes/rate-cells'
@@ -36,6 +37,11 @@ import { Route as IndividualsIdRouteImport } from './routes/individuals.$id'
 const TokensRoute = TokensRouteImport.update({
   id: '/tokens',
   path: '/tokens',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SiApplicationsRoute = SiApplicationsRouteImport.update({
+  id: '/si-applications',
+  path: '/si-applications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportsRoute = ReportsRouteImport.update({
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/rate-cells': typeof RateCellsRoute
   '/rate-config': typeof RateConfigRoute
   '/reports': typeof ReportsRouteWithChildren
+  '/si-applications': typeof SiApplicationsRoute
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/policies': typeof PoliciesRoute
   '/rate-cells': typeof RateCellsRoute
   '/rate-config': typeof RateConfigRoute
+  '/si-applications': typeof SiApplicationsRoute
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/rate-cells': typeof RateCellsRoute
   '/rate-config': typeof RateConfigRoute
   '/reports': typeof ReportsRouteWithChildren
+  '/si-applications': typeof SiApplicationsRoute
   '/tokens': typeof TokensRoute
   '/individuals/$id': typeof IndividualsIdRoute
   '/organizations/$id': typeof OrganizationsIdRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/rate-cells'
     | '/rate-config'
     | '/reports'
+    | '/si-applications'
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/policies'
     | '/rate-cells'
     | '/rate-config'
+    | '/si-applications'
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/rate-cells'
     | '/rate-config'
     | '/reports'
+    | '/si-applications'
     | '/tokens'
     | '/individuals/$id'
     | '/organizations/$id'
@@ -318,6 +330,7 @@ export interface RootRouteChildren {
   RateCellsRoute: typeof RateCellsRoute
   RateConfigRoute: typeof RateConfigRoute
   ReportsRoute: typeof ReportsRouteWithChildren
+  SiApplicationsRoute: typeof SiApplicationsRoute
   TokensRoute: typeof TokensRoute
   IndividualsIdRoute: typeof IndividualsIdRoute
   OrganizationsIdRoute: typeof OrganizationsIdRoute
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       path: '/tokens'
       fullPath: '/tokens'
       preLoaderRoute: typeof TokensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/si-applications': {
+      id: '/si-applications'
+      path: '/si-applications'
+      fullPath: '/si-applications'
+      preLoaderRoute: typeof SiApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reports': {
@@ -521,6 +541,7 @@ const rootRouteChildren: RootRouteChildren = {
   RateCellsRoute: RateCellsRoute,
   RateConfigRoute: RateConfigRoute,
   ReportsRoute: ReportsRouteWithChildren,
+  SiApplicationsRoute: SiApplicationsRoute,
   TokensRoute: TokensRoute,
   IndividualsIdRoute: IndividualsIdRoute,
   OrganizationsIdRoute: OrganizationsIdRoute,
