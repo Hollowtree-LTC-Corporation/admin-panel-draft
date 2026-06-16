@@ -1113,8 +1113,8 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
   const OrgTypeField = (
     <RField label="Org Type">
       {e.editing
-        ? <select className={inputCls} defaultValue={org.org_type}>{ORG_TYPES.map((o) => <option key={o}>{o}</option>)}</select>
-        : org.org_type}
+        ? <select className={inputCls} defaultValue={org.org_type}>{ORG_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+        : orgTypeLabel(org.org_type)}
     </RField>
   );
   const StatusField = (
