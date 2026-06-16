@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { ChevronRight, ChevronDown, Copy, ExternalLink, ShieldAlert, Lock, Shield, Eye, EyeOff, FileSearch, Download, X } from "lucide-react";
 import { PageHeader, Pill, Btn } from "@/components/wireframe/Bits";
 import { AUDIT_LOG, type AuditEntry, type AuditAction } from "@/lib/wireframe/data";
