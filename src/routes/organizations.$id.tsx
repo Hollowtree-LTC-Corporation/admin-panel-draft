@@ -1350,26 +1350,56 @@ function DIPlanBlock({
   );
 }
 
-function MicrositeField({ url, product, editing }: { url: string; product: "DI" | "LTC"; editing: boolean }) {
+const SLUG_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+function validateMicrositeSlug(slug: string, existing: string[]): string | null {
+  if (!slug) return "Microsite slug required";
+  if (!/^[a-z0-9-]+$/.test(slug)) return "Use lowercase letters, numbers, and hyphens only";
+  if (slug.length < 3 || slug.length > 63) return "Slug must be 3-63 characters";
+  if (slug.startsWith("-") || slug.endsWith("-") || !SLUG_RE.test(slug)) return "Use lowercase letters, numbers, and hyphens only";
+  if (existing.includes(slug)) return "This subdomain is taken — choose another";
+  return null;
+}
+
+export function MicrositeSlugInput({
+  initialSlug, suffix, existingSlugs,
+}: { initialSlug: string; suffix: string; existingSlugs: string[] }) {
+  const [slug, setSlug] = useState(initialSlug);
+  const error = validateMicrositeSlug(slug, existingSlugs);
+  const fullUrl = `https://${slug || "your-org"}${suffix}`;
+  return (
+    <div>
+      <div className={`flex items-stretch border rounded overflow-hidden bg-white focus-within:ring-1 focus-within:ring-blue-400 ${error ? "border-red-400" : "border-gray-300"}`}>
+        <input
+          className="flex-1 min-w-0 px-2 py-1 text-sm bg-white focus:outline-none"
+          value={slug}
+          onChange={(ev) => setSlug(ev.target.value)}
+          placeholder="subdomain"
+          maxLength={63}
+          aria-invalid={!!error}
+        />
+        <div className="px-2 py-1 text-sm text-black/60 bg-gray-100 border-l border-gray-300 select-none">{suffix}</div>
+      </div>
+      {error ? (
+        <div className="text-[11px] text-red-600 mt-1">{error}</div>
+      ) : (
+        <a href={fullUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-sky-700 hover:underline mt-1">
+          → {fullUrl} <ExternalLink className="h-3 w-3" />
+        </a>
+      )}
+    </div>
+  );
+}
+
+function MicrositeField({ url, product, editing, currentOrgId }: { url: string; product: "DI" | "LTC"; editing: boolean; currentOrgId: string }) {
   const suffix = defaultMicrositeSuffix(product);
   const parsed = parseMicrositeSubdomain(url, suffix);
   if (!editing) {
     return <ExtLink href={url}>{url}</ExtLink>;
   }
-  if (!parsed.matches) {
-    return (
-      <div>
-        <input className={inputCls} defaultValue={url} />
-        <div className="text-[11px] text-amber-700 mt-1 italic">Non-standard domain — contact engineering.</div>
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-stretch border border-gray-300 rounded overflow-hidden bg-white focus-within:ring-1 focus-within:ring-blue-400">
-      <input className="flex-1 min-w-0 px-2 py-1 text-sm bg-white focus:outline-none" defaultValue={parsed.subdomain} placeholder="subdomain" />
-      <div className="px-2 py-1 text-sm text-black/60 bg-gray-50 border-l border-gray-300 select-none">{suffix}</div>
-    </div>
-  );
+  const existingSlugs = ORGS
+    .filter((o) => o.product === product && o.id !== currentOrgId)
+    .map((o) => o.name.toLowerCase().replace(/[^a-z]/g, ""));
+  return <MicrositeSlugInput initialSlug={parsed.subdomain} suffix={suffix} existingSlugs={existingSlugs} />;
 }
 
 function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; variant?: "info" | "config" | "integration" }) {
