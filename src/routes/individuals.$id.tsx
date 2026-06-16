@@ -551,6 +551,10 @@ function paymentMethodLabel(bg: ReturnType<typeof BILLING_GROUPS.find>): React.R
 
 function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof BILLING_GROUPS.find>; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideDate, setOverrideDate] = useState(i.next_charge_date ?? "");
+  const [nextCharge, setNextCharge] = useState(i.next_charge_date);
   return (
     <SectionCard title="Payment & Billing" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
@@ -576,8 +580,19 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
         <div />
 
         <RField label="Last Charge Date" value={fmtDate(i.last_charge_date)} locked={editing} />
-        <RField label="Next Charge Date" value={fmtDate(i.next_charge_date)} editing={editing}>
-          <input type="date" defaultValue={i.next_charge_date ?? ""} className={inputCls} />
+        <RField label="Next Charge Date" locked>
+          <span className="inline-flex items-center gap-2">
+            <span>{fmtDate(nextCharge)}</span>
+            {!readOnly && (
+              <button
+                onClick={() => { setOverrideDate(nextCharge ?? ""); setOverrideReason(""); setOverrideOpen(true); }}
+                className="text-[10px] px-2 py-0.5 rounded border border-amber-300 text-amber-700 hover:bg-amber-50"
+                title="Override the standard billing schedule"
+              >
+                Override
+              </button>
+            )}
+          </span>
         </RField>
         <RField label="Failed Attempt Date" value={fmtDate(i.failed_attempt_date)} locked={editing} />
         <RField label="Next Retry Date" value={fmtDate(i.next_retry_date)} locked={editing} />
@@ -595,6 +610,51 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
         </Link>
       </div>
       {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
+
+      {overrideOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setOverrideOpen(false)} />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-amber-50 text-amber-600"><AlertTriangle className="h-5 w-5" /></div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-gray-900">Override Next Charge Date</h3>
+                <p className="text-sm text-gray-600 mt-1">This skips the standard schedule. Reason required.</p>
+              </div>
+            </div>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-black/50">New Next Charge Date</label>
+                <input type="date" value={overrideDate} onChange={(e) => setOverrideDate(e.target.value)} className={`${inputCls} mt-1`} />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-black/50">Reason <span className="text-red-600">*</span></label>
+                <textarea
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  rows={3}
+                  className={`${inputCls} mt-1`}
+                  placeholder="e.g. enrollee paid out of band on 6/14"
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <Btn onClick={() => setOverrideOpen(false)}>Cancel</Btn>
+              <Btn
+                variant="primary"
+                disabled={!overrideReason.trim() || !overrideDate}
+                onClick={() => {
+                  // TODO: write audit_log entry { action:'update', old_values:{next_charge_date}, new_values:{next_charge_date, override_reason} }
+                  setNextCharge(overrideDate);
+                  setOverrideOpen(false);
+                }}
+              >
+                Save Override
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </SectionCard>
   );
 }
