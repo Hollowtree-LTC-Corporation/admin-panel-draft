@@ -405,7 +405,7 @@ function CoverageStatusField({ editing, status, setStatus, allowed, current }: {
       {editing ? (
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
           {COVERAGE_STATUSES.map((s) => (
-            <option key={s} value={s} disabled={!allowed.includes(s)}>{s}{allowed.includes(s) ? "" : " (invalid)"}</option>
+            <option key={s} value={s} disabled={!allowed.includes(s)}>{titleCase(s)}{allowed.includes(s) ? "" : " (invalid)"}</option>
           ))}
         </select>
       ) : <Badge map={COVERAGE_BADGE} value={current} />}
