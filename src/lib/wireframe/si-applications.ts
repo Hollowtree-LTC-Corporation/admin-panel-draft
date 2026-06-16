@@ -27,6 +27,7 @@ export type SiApplication = {
   pre_buyup_premium_cents: number | null;
   issue_type: "SI";
   plan_tier: "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond";
+  assigned_rep: string | null;
   responses: SiResponse[];
 };
 
