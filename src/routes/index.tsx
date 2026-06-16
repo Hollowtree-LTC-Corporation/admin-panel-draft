@@ -91,6 +91,79 @@ function Dashboard() {
     : STAGES.map((s) => ({ stage: s, n: inds.filter((i) => i.stage === s).length }));
   const maxStage = Math.max(...stageCounts.map((c) => c.n), 1);
 
+  // ===== LTC three-funnel buckets =====
+  const isLTC = product === "LTC";
+  const LTC_MAIN_STAGES = [
+    "Logged in",
+    "Starting Application",
+    "Selecting Plan",
+    "Beneficiary Form",
+    "At CheckOut",
+    "Adding Payment Method",
+    "Coverage Approved",
+  ] as const;
+  const LTC_UPGRADE_STAGES = [
+    "Upsell Survey",
+    "Interested in Personal Upgrade",
+    "At More Coverage",
+    "Choosing Upgrade Option",
+    "Answering Medical Questions For Upgrade",
+    "Upgrade Checkout",
+    "Applied For Upgrade",
+  ] as const;
+  const LTC_SPOUSAL_STAGES = [
+    "Interested in Spouse Coverage",
+    "Choosing Spousal Pricing",
+    "Spousal Coverage - Eligibility Questions",
+    "Spousal Coverage - Confirming Details, Health Questions",
+    "Spousal Coverage - Designee, Ben and other info",
+    "Spousal Coverage - Checkout",
+  ] as const;
+
+  const mapMainStage = (s: string, idx: number): (typeof LTC_MAIN_STAGES)[number] => {
+    switch (s) {
+      case "invited": return "Logged in";
+      case "education": return "Starting Application";
+      case "selecting_plan": return "Selecting Plan";
+      case "medical_questions": return "Beneficiary Form";
+      case "checkout": return idx % 2 === 0 ? "At CheckOut" : "Adding Payment Method";
+      case "completed": return "Coverage Approved";
+      default: return "Logged in";
+    }
+  };
+
+  const ltcSpouseInds = isLTC ? inds.filter((i) => i.relationship_type === "spouse") : [];
+  const ltcBuyupInds = isLTC ? inds.filter((i) => i.issue_type === "SI" && i.relationship_type !== "spouse") : [];
+  const ltcMainInds = isLTC
+    ? inds.filter((i) => i.relationship_type !== "spouse" && i.issue_type !== "SI")
+    : [];
+
+  const ltcMainCounts = LTC_MAIN_STAGES.map((s) => ({
+    stage: s,
+    n: ltcMainInds.filter((ind, idx) => mapMainStage(ind.stage, idx) === s).length,
+  }));
+  const ltcUpgradeCounts = LTC_UPGRADE_STAGES.map((s, sIdx) => ({
+    stage: s,
+    n: ltcBuyupInds.filter((_, idx) => idx % LTC_UPGRADE_STAGES.length === sIdx).length,
+  }));
+  const ltcSpousalCounts = LTC_SPOUSAL_STAGES.map((s, sIdx) => ({
+    stage: s,
+    n: ltcSpouseInds.filter((_, idx) => idx % LTC_SPOUSAL_STAGES.length === sIdx).length,
+  }));
+  const upsellNotInterested = Math.max(1, Math.floor(ltcBuyupInds.length * 0.3));
+  const multiInterest = Math.min(ltcSpouseInds.length, Math.max(1, Math.floor(ltcBuyupInds.length * 0.25)));
+
+  const ltcMaxMain = Math.max(...ltcMainCounts.map((c) => c.n), 1);
+  const ltcMaxUpgrade = Math.max(...ltcUpgradeCounts.map((c) => c.n), 1);
+  const ltcMaxSpousal = Math.max(...ltcSpousalCounts.map((c) => c.n), 1);
+
+  // Enrolled Lives breakdown (LTC)
+  const enrolledForBreakdown = inds.filter((i) => ["active", "purchased", "in_progress"].includes(i.coverage_status));
+  const ltcEmployees = enrolledForBreakdown.filter((i) => i.relationship_type !== "spouse").length;
+  const ltcSpouses = enrolledForBreakdown.filter((i) => i.relationship_type === "spouse").length;
+  const ltcGI = enrolledForBreakdown.filter((i) => i.issue_type === "GI").length;
+  const ltcSI = enrolledForBreakdown.filter((i) => i.issue_type === "SI").length;
+
   const collected = inds.reduce((sum, i) => sum + i.monthly_premium_cents, 0);
   const expected = Math.round(collected * 1.08);
   const delta = collected - expected;
