@@ -625,49 +625,20 @@ function OrgDetail() {
       </Drawer>
 
       <Drawer open={windowDrawer.state.open} onClose={windowDrawer.close} title={windowDrawer.state.mode === "create" ? "New Enrollment Window" : "Edit Window"}>
-        {(() => {
-          const wd = windowDrawer.state.data;
-          const isEdit = windowDrawer.state.mode === "edit";
-          const wStatus = wd?.status;
-          const locked = isEdit && (wStatus === "open" || wStatus === "closed");
-          return (
-            <>
-              {locked && wStatus === "open" && (
-                <div className="mb-3 px-3 py-2 rounded border border-amber-300 bg-amber-50 text-[12px] text-amber-900">
-                  This window is currently <strong>open</strong>. Sponsor configuration, dates, and carrier are locked while enrollment is active. Changes here would affect enrollees already in flight.
-                </div>
-              )}
-              {locked && wStatus === "closed" && (
-                <div className="mb-3 px-3 py-2 rounded border border-stone-300 bg-stone-50 text-[12px] text-stone-700">
-                  This window is <strong>closed</strong>. Historical record — fields are read-only for audit integrity.
-                </div>
-              )}
-              <Field label="Window Type"><DSelect defaultValue={wd?.window_type ?? "initial"} options={WINDOW_TYPES} disabled={locked} /></Field>
-              <Field label="Sponsor Type"><DSelect defaultValue={wd?.sponsor_type ?? "employer"} options={SPONSOR_TYPES} disabled={locked} /></Field>
-              {(wd?.sponsor_type === "affiliate" || wd?.affiliate) && (
-                <Field label="Affiliate Org"><DSelect defaultValue={wd?.affiliate ?? AFFILIATE_ORG_OPTIONS[0].value} options={AFFILIATE_ORG_OPTIONS} disabled={locked} /></Field>
-              )}
-              <Field label="Start Date"><Input defaultValue={wd?.start ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" disabled={locked} /></Field>
-              <Field label="End Date"><Input defaultValue={wd?.end ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" disabled={locked} /></Field>
-              <Field label="Default Effective Date"><Input defaultValue={wd?.effective ?? ""} disabled={locked} /></Field>
-              <Field label="Carrier"><DSelect defaultValue={wd?.carrier ?? CARRIER_NAMES[0]} options={CARRIER_NAMES} disabled={locked} /></Field>
-              <Field label="Status"><DSelect defaultValue={wd?.status ?? "upcoming"} options={WINDOW_STATUSES} disabled={locked} /></Field>
-              <div className="mb-3">
-                <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">GI Eligible</div>
-                <div className="flex items-center gap-2">
-                  <Switch defaultChecked={wd?.gi_eligible ?? true} disabled={locked} />
-                  <span className="text-xs text-black/60">Guaranteed-issue pricing (no medical underwriting)</span>
-                </div>
-              </div>
-              <Field label="Notes"><Input defaultValue={wd?.notes ?? ""} disabled={locked} /></Field>
-              <div className="flex gap-2 mt-4">
-                {!locked && <Btn variant="primary" disabled={!can("enrollment_windows", "update")}>Save</Btn>}
-                <Btn onClick={windowDrawer.close}>{locked ? "Close" : "Cancel"}</Btn>
-              </div>
-            </>
-          );
-        })()}
+        {windowDrawer.state.open && (
+          <WindowDrawerBody
+            wd={windowDrawer.state.data}
+            isEdit={windowDrawer.state.mode === "edit"}
+            currentOrgId={org.id}
+            product={product}
+            allWindows={DUMMY_WINDOWS}
+            canSave={can("enrollment_windows", "update")}
+            onClose={windowDrawer.close}
+          />
+        )}
       </Drawer>
+
+
 
 
       <Drawer open={bcDrawer.state.open} onClose={bcDrawer.close} title={bcDrawer.state.mode === "create" ? "New Benefit Class" : "Edit Benefit Class"}>
