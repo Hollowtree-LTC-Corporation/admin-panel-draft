@@ -930,13 +930,26 @@ function EnrollmentSection({ i }: { i: Detail }) {
         </RField>
         <RField label="Enrollment Deadline" value={fmtDate(i.enrollment_deadline)} />
         <RField label="Affiliations">
-          {i.affiliations.length === 0 ? <span className="text-sm text-black/50">None</span> : (
-            <div className="flex flex-wrap gap-1">
-              {i.affiliations.map((a) => (
-                <span key={a.id} className="px-1.5 py-0.5 rounded text-[11px] bg-[#d4b87a]/40 text-[#0a3d3e]">{a.name}</span>
-              ))}
-            </div>
-          )}
+          {(() => {
+            const fromWindow = i.enrollment_window_affiliate
+              ? [{ id: i.enrollment_window_affiliate.id, name: i.enrollment_window_affiliate.name }]
+              : [];
+            const all = [...fromWindow, ...i.affiliations];
+            if (all.length === 0) return <span className="text-sm text-black/50">None</span>;
+            return (
+              <div className="flex flex-wrap gap-1">
+                {all.map((a) => (
+                  <Link
+                    key={a.id}
+                    to="/affiliates"
+                    className="px-1.5 py-0.5 rounded text-[11px] bg-[#d4b87a]/40 text-[#0a3d3e] hover:bg-[#d4b87a]/60"
+                  >
+                    {a.name}
+                  </Link>
+                ))}
+              </div>
+            );
+          })()}
         </RField>
       </Grid>
     </SectionCard>
