@@ -689,10 +689,14 @@ function QuickLinksCard({ org }: { org: OrgDetail }) {
 
 /* ---------- Drawer Select ---------- */
 
-function DSelect({ defaultValue, options }: { defaultValue?: string; options: string[] }) {
+function DSelect({ defaultValue, options }: { defaultValue?: string; options: Array<string | { value: string; label: string }> }) {
   return (
     <select defaultValue={defaultValue} className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
-      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      {options.map((o) => {
+        const value = typeof o === "string" ? o : o.value;
+        const label = typeof o === "string" ? o : o.label;
+        return <option key={value} value={value}>{label}</option>;
+      })}
     </select>
   );
 }
