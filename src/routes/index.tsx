@@ -237,6 +237,12 @@ function Dashboard() {
               <div className="text-[10px] uppercase tracking-wider text-black/50">Enrolled Lives</div>
               <div className="text-2xl font-semibold">{enrolledLives}</div>
               <div className="text-[11px] text-black/40">across {numOrgs} organizations</div>
+              {isLTC ? (
+                <>
+                  <div className="text-[11px] text-black/55 mt-0.5">{ltcEmployees} employees · {ltcSpouses} spouses</div>
+                  <div className="text-[11px] text-black/55">{ltcGI} GI · {ltcSI} SI</div>
+                </>
+              ) : null}
             </div>
           </Card>
           <Card className="p-3 flex items-center gap-3">
