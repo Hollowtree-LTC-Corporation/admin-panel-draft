@@ -205,6 +205,7 @@ export const SI_APPLICATIONS: SiApplication[] = INDIVIDUALS
       pre_buyup_premium_cents: i.upgrade_applied_for ? i.monthly_premium_cents - 800 : null,
       issue_type: "SI",
       plan_tier: planTierFromName(planName),
+      assigned_rep: i.assigned_rep ?? null,
       responses: buildResponses(idx + 1),
     };
   });
