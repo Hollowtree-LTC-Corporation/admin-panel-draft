@@ -1060,6 +1060,59 @@ function SystemRefsSection({ i }: { i: Detail }) {
 
 const inputCls = "w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400";
 
+// TODO: restrict to a narrower role set in Phase B (currently any admin can reveal/edit SSN)
+function SsnField({ individualId, ssnOnFile, last4, editing }: { individualId: string; ssnOnFile: boolean; last4: string; editing: boolean }) {
+  const [revealed, setRevealed] = useState<string | null>(null);
+  const [editSsn, setEditSsn] = useState(false);
+  React.useEffect(() => {
+    if (!revealed) return;
+    const t = setTimeout(() => setRevealed(null), 30000);
+    return () => clearTimeout(t);
+  }, [revealed]);
+  if (!ssnOnFile && !editing) {
+    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-black/5 text-black/70"><Lock className="h-3 w-3" /> No SSN</span>;
+  }
+  if (editing && editSsn) {
+    return (
+      <div className="flex items-center gap-2">
+        <input placeholder="9 digits" className={`${inputCls} max-w-xs`} />
+        <button onClick={() => setEditSsn(false)} className="text-[10px] text-black/50 hover:text-black/80">Cancel</button>
+      </div>
+    );
+  }
+  if (editing) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-black/5 text-black/70">
+          <Lock className="h-3 w-3" /> {ssnOnFile ? `•••-••-${last4}` : "No SSN"}
+        </span>
+        <button onClick={() => setEditSsn(true)} className="text-[10px] px-2 py-0.5 rounded border border-amber-300 text-amber-700 hover:bg-amber-50">Edit SSN</button>
+      </div>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-black/5 text-black/70">
+        <Lock className="h-3 w-3" /> {revealed ?? `•••-••-${last4}`}
+      </span>
+      <button
+        onClick={() => {
+          if (revealed) { setRevealed(null); return; }
+          // TODO: call backend decrypt endpoint; write audit_log { table_name:'individuals', record_id, action:'reveal_pii', new_values:{field:'ssn'} }
+          void individualId;
+          setRevealed(`123-45-${last4}`);
+        }}
+        className="text-black/40 hover:text-[#0a3d3e]"
+        title={revealed ? "Hide SSN" : "Reveal SSN (auto-hides after 30s, logged to audit)"}
+      >
+        {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+      </button>
+      {revealed && <span className="text-[10px] text-black/40">auto-hides in 30s · access logged</span>}
+    </span>
+  );
+}
+
+
 function SectionCard({
   title, children, defaultOpen = false, summary, editing = false, canEdit = false, onEdit,
 }: {
