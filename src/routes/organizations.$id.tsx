@@ -1885,10 +1885,10 @@ function PaymentProcessingSection({ org, readOnly }: { org: OrgDetail; readOnly:
             ? (
               <select className={inputCls} value={penaltyMode} onChange={(ev) => setPenaltyMode(ev.target.value as "flat" | "percent")}>
                 <option value="flat">Flat</option>
-                <option value="percent">Percentage</option>
+                <option value="percent">Percent</option>
               </select>
             )
-            : (org.failed_card_penalty_mode === "flat" ? "Flat" : "Percentage")}
+            : (org.failed_card_penalty_mode === "flat" ? "Flat" : "Percent")}
         </RField>
         {(e.editing ? penaltyMode : org.failed_card_penalty_mode) === "flat"
           ? (
