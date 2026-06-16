@@ -328,7 +328,7 @@ function carrierProductLabel(cpId: string): string {
   const cp = CARRIER_PRODUCTS.find((p) => p.id === cpId);
   if (!cp) return cpId;
   const c = CARRIERS.find((x) => x.id === cp.carrier_id);
-  return `${c?.name ?? "—"} — ${cp.product_name}`;
+  return `${c?.carrier_name ?? "—"} — ${cp.product_name}`;
 }
 function deriveScheduleForPolicy(policyId: string): CarrierCommissionSchedule | null {
   const pol = POLICIES.find((p) => p.id === policyId);
