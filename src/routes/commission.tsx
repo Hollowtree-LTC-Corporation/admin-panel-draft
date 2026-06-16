@@ -811,7 +811,10 @@ function View() {
                   }
                 }} />
             </th>
-            {["Period","Policy","Payee","Payee Type","Premium Base","Rate %","Commission Owed","Status","Payable","PDF","Actions"].map((c) => (
+            {(product === "LTC"
+              ? ["Period","Policy Year","Policy","Payee","Payee Type","Premium Base","Rate %","Schedule","Commission Owed","Status","Payable","PDF","Actions"]
+              : ["Period","Policy","Payee","Payee Type","Premium Base","Rate %","Commission Owed","Status","Payable","PDF","Actions"]
+            ).map((c) => (
               <th key={c} className="text-left font-medium px-3 py-2">{c}</th>))}
           </tr>
         </thead>
