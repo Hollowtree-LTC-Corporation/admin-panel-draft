@@ -129,30 +129,142 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
   };
 });
 
-const PM_TYPES = ["ach", "card-payment", "ach", "apple-pay", "ach", "card-payment", null, "ach"] as const;
-const PM_INSTITUTIONS = ["Chase", null, "Wells Fargo", null, "Bank of America", null, null, "Citibank"];
-const PM_LAST4 = [null, "4242", null, null, null, "1881", null, null];
-const PM_DISPLAY_LABELS: (string | null)[] = [
-  "Chase ACH ··7890",
-  "Visa ending 4242",
-  "Wells Fargo ACH ··3344",
-  null,
-  "Bank of America ACH ··2211",
-  "Mastercard ending 1881",
-  null,
-  "Citibank ACH ··5566",
+// v14 billing_groups — payment aggregation unit, 1-2 members (solo enrollee or
+// employee+spouse sharing payment method). Created via enrollment microsite or
+// spouse separation flow. Not creatable from admin panel.
+export type BillingGroupStatus = "pending" | "active" | "suspended" | "terminated";
+export type BillingGroupPMType = "ach" | "card" | "card-payment" | "apple_pay" | "apple-pay" | null;
+
+export type BillingGroup = {
+  id: string;
+  name: string;
+  organization_id: string;
+  primary_individual_id: string;
+  status: BillingGroupStatus;
+  moov_account_id: string | null;
+  payment_method_id: string | null;
+  payment_method_type: BillingGroupPMType;
+  payment_method_display_label: string | null;
+  // legacy / display helpers retained for backwards-compat with other screens
+  payment_method: string;
+  plaid_institution: string | null;
+  card_last4: string | null;
+  created_at: string;
+  updated_at: string;
+  individuals_count: number;
+};
+
+// Spouses in this set have been "separated" — they have their own pending
+// billing_group instead of sharing with the primary.
+const SEPARATED_SPOUSES = new Set<string>(["ind_11"]);
+
+const _PM_SAMPLES: Array<{
+  v14: "ach" | "card" | "apple_pay";
+  legacy: "ach" | "card-payment" | "apple-pay";
+  label: string;
+  institution: string | null;
+  last4: string | null;
+  display: string;
+}> = [
+  { v14: "ach",       legacy: "ach",          label: "ACH", institution: "Chase",            last4: null,   display: "Chase ACH ··7890" },
+  { v14: "card",      legacy: "card-payment", label: "Card", institution: null,              last4: "4242", display: "Visa ending 4242" },
+  { v14: "ach",       legacy: "ach",          label: "ACH", institution: "Wells Fargo",      last4: null,   display: "Wells Fargo ACH ··3344" },
+  { v14: "apple_pay", legacy: "apple-pay",    label: "Apple Pay", institution: null,         last4: null,   display: "Apple Pay" },
+  { v14: "ach",       legacy: "ach",          label: "ACH", institution: "Bank of America",  last4: null,   display: "Bank of America ACH ··2211" },
+  { v14: "card",      legacy: "card-payment", label: "Card", institution: null,              last4: "1881", display: "Mastercard ending 1881" },
+  { v14: "ach",       legacy: "ach",          label: "ACH", institution: "Citibank",         last4: null,   display: "Citibank ACH ··5566" },
 ];
-export const BILLING_GROUPS = Array.from({ length: 8 }, (_, i) => ({
-  id: `bg_${i + 1}`,
-  name: `Billing Group ${i + 1}`,
-  individuals_count: INDIVIDUALS.filter((x) => x.billing_group_id === `bg_${i + 1}`).length,
-  payment_method: ["ACH", "Card", "ACH", "Card"][i % 4],
-  payment_method_type: PM_TYPES[i] as "ach" | "card-payment" | "apple-pay" | null,
-  payment_method_display_label: PM_DISPLAY_LABELS[i],
-  plaid_institution: PM_INSTITUTIONS[i],
-  card_last4: PM_LAST4[i],
-  moov_account_id: `moov_${1000 + i}`,
-}));
+
+function _buildBillingGroups(): BillingGroup[] {
+  const list: BillingGroup[] = [];
+  const indToBg: Record<string, string> = {};
+  let n = 0;
+
+  // First pass: shared spouses ride along on their primary's group; separated
+  // spouses + everyone else gets their own group.
+  for (const ind of INDIVIDUALS) {
+    if (
+      ind.relationship_type === "spouse" &&
+      ind.linked_individual_id &&
+      !SEPARATED_SPOUSES.has(ind.id) &&
+      indToBg[ind.linked_individual_id]
+    ) {
+      indToBg[ind.id] = indToBg[ind.linked_individual_id];
+      continue;
+    }
+    n += 1;
+    const id = `bg_${n}`;
+    const isSeparatedSpouse = SEPARATED_SPOUSES.has(ind.id);
+    const status: BillingGroupStatus = isSeparatedSpouse
+      ? "pending"
+      : n === 7
+        ? "suspended"
+        : n === 21
+          ? "terminated"
+          : "active";
+    const s = _PM_SAMPLES[n % _PM_SAMPLES.length];
+    const blank = isSeparatedSpouse || status === "terminated";
+    indToBg[ind.id] = id;
+    const created = isSeparatedSpouse
+      ? "2025-09-15T14:30:00Z"
+      : `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-${String(((n * 5) % 27) + 1).padStart(2, "0")}T10:00:00Z`;
+    list.push({
+      id,
+      name: `Billing Group ${n}`,
+      organization_id: ind.org_id,
+      primary_individual_id: ind.id,
+      status,
+      moov_account_id: blank ? null : `moov_${1000 + n}`,
+      payment_method_id: blank ? null : `pm_${2000 + n}`,
+      payment_method_type: blank ? null : s.v14,
+      payment_method_display_label: blank ? null : s.display,
+      plaid_institution: blank ? null : s.institution,
+      card_last4: blank ? null : s.last4,
+      payment_method: blank ? "—" : s.label,
+      created_at: created,
+      updated_at: created,
+      individuals_count: 0,
+    });
+  }
+
+  // Re-resolve any spouse whose primary hadn't been seen yet (defensive).
+  for (const ind of INDIVIDUALS) {
+    if (ind.relationship_type === "spouse" && ind.linked_individual_id && !indToBg[ind.id]) {
+      const primaryBg = indToBg[ind.linked_individual_id];
+      if (primaryBg) indToBg[ind.id] = primaryBg;
+    }
+  }
+
+  for (const g of list) {
+    g.individuals_count = Object.values(indToBg).filter((b) => b === g.id).length;
+  }
+  for (const ind of INDIVIDUALS) {
+    (ind as { billing_group_id: string }).billing_group_id = indToBg[ind.id] ?? ind.billing_group_id;
+  }
+  return list;
+}
+
+export const BILLING_GROUPS: BillingGroup[] = _buildBillingGroups();
+
+// Magic tokens — used here for spouse-separation portal links (token_class='portal').
+export type MagicToken = {
+  id: string;
+  individual_id: string;
+  token_class: "enrollment" | "portal";
+  status: "active" | "revoked" | "expired";
+  expires_at: string;
+  created_at: string;
+};
+export const MAGIC_TOKENS: MagicToken[] = [
+  {
+    id: "tok_sep_ind_11",
+    individual_id: "ind_11",
+    token_class: "portal",
+    status: "active",
+    expires_at: "2025-10-15T14:30:00Z",
+    created_at: "2025-09-15T14:30:00Z",
+  },
+];
 
 export const PAYMENT_LEDGER = Array.from({ length: 60 }, (_, i) => {
   const ind = INDIVIDUALS[i % INDIVIDUALS.length];
