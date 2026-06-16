@@ -764,7 +764,10 @@ function View() {
         )}
       </div>
 
-      {/* ============================ SECTION 4 ============================ */}
+      {/* ===================== SECTION 4 (LTC ONLY) ===================== */}
+      {product === "LTC" && <LtcSchedulesSection />}
+
+      {/* ============================ SECTION 5 ============================ */}
       <SectionTitle>Commission Statements</SectionTitle>
       <div className="text-xs text-black/50 mb-2">
         Generated per period per payee. Statements drive payment instructions and broker reporting.
