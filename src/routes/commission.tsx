@@ -822,6 +822,12 @@ function View() {
           {filteredStatements.map((s) => {
             const pol = POLICIES.find((p) => p.id === s.policy_id);
             const checkable = s.status === "draft";
+            const sched = product === "LTC" ? deriveScheduleForPolicy(s.policy_id) : null;
+            const polYear = product === "LTC" && pol ? policyYearFor(pol.initial_effective_date, s.period_start) : null;
+            const matched = sched && polYear ? matchTier(sched.id, polYear) : null;
+            const rateTooltip = sched && matched
+              ? `Rate derived from ${sched.schedule_name}, Year ${polYear} tier (${matched.year_from}–${matched.year_to === 99 ? "perpetual" : matched.year_to})`
+              : undefined;
             return (
               <TRow key={s.id} onClick={() => setStmtDrawer({ open: true, id: s.id })}>
                 <TCell onClick={(e) => e.stopPropagation()}>
@@ -839,6 +845,9 @@ function View() {
                     }} />
                 </TCell>
                 <TCell>{fmtPeriod(s.period_start, s.period_end)}</TCell>
+                {product === "LTC" && (
+                  <TCell><span className="font-mono text-[11px]">Y{polYear ?? "?"}</span></TCell>
+                )}
                 <TCell>
                   <Link to="/policies" className="text-[#0a3d3e] underline">{s.policy_id}</Link>
                   <span className="text-black/50"> ({pol?.org_name ?? "—"})</span>
@@ -846,7 +855,17 @@ function View() {
                 <TCell className="font-medium">{s.payee_name}</TCell>
                 <TCell><PayeeTypeBadge t={s.payee_type} /></TCell>
                 <TCell>{formatCents(s.total_premium_cents)}</TCell>
-                <TCell>{s.commission_pct.toFixed(2)}%</TCell>
+                <TCell title={rateTooltip}>
+                  {s.commission_pct.toFixed(2)}%
+                  {product === "LTC" && <Info className="h-3 w-3 inline ml-1 text-black/30" />}
+                </TCell>
+                {product === "LTC" && (
+                  <TCell>
+                    {sched
+                      ? <button className="text-[11px] text-[#0a3d3e] underline" onClick={(e) => { e.stopPropagation(); document.getElementById(`sched-${sched.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>{sched.schedule_name}</button>
+                      : <span className="text-rose-700 text-[11px]">no schedule</span>}
+                  </TCell>
+                )}
                 <TCell className="font-semibold">{formatCents(s.commission_owed_cents)}</TCell>
                 <TCell><StatusBadge s={s.status} /></TCell>
                 <TCell>
@@ -869,7 +888,7 @@ function View() {
             );
           })}
           {filteredStatements.length === 0 && (
-            <tr><td colSpan={12} className="px-3 py-6 text-center text-black/40">No statements match the current filters.</td></tr>
+            <tr><td colSpan={product === "LTC" ? 14 : 12} className="px-3 py-6 text-center text-black/40">No statements match the current filters.</td></tr>
           )}
         </tbody>
         {filteredStatements.length > 0 && (
