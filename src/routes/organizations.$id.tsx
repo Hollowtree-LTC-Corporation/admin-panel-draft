@@ -339,6 +339,10 @@ function synthesize(org: typeof ORGS[number]) {
     // LTC system
     ltc_enrollment_phase: "open_enrollment",
     ltc_one_week_to_go: "2025-08-24",
+    // New joiner policy (LTC)
+    new_joiner_enrollment_period_days: 30,
+    new_joiner_waiting_period_days: 90,
+    new_joiner_effective_date_rule: "first_of_next_month" as "first_of_next_month" | "hire_date" | "first_of_month_after_waiting",
   };
 }
 
@@ -393,6 +397,7 @@ function OrgDetail() {
     .sort()[0] ?? null;
   const daysToClose = daysUntil(nextOpenEnd);
   const showCcaBadge = product === "DI" && org.cca_group;
+  const showEmployerContributionBadge = product === "LTC" && (org.contribution_type === "buy_up" || org.contribution_type === "employer_paid");
 
   return (
     <div>
@@ -403,13 +408,21 @@ function OrgDetail() {
         title={
           <span className="inline-flex items-center gap-2">
             {org.name}
-            <ProductBadge product={org.product} />
+            {product === "DI" && <ProductBadge product={org.product} />}
             {showCcaBadge && (
               <span
                 className="border border-emerald-500 text-emerald-700 bg-emerald-50 rounded px-2 py-0.5 text-xs font-medium"
                 title="CCA-affiliated organization. Uses CCA portal link and CCA-specific policy emails."
               >
                 CCA
+              </span>
+            )}
+            {showEmployerContributionBadge && (
+              <span
+                className="border border-amber-500 text-amber-800 bg-amber-50 rounded px-2 py-0.5 text-xs font-medium uppercase tracking-wider"
+                title={`Employer contributes to premium (${org.contribution_type === "buy_up" ? "Buy-Up" : "Employer Paid"})`}
+              >
+                Employer Contribution
               </span>
             )}
           </span>
@@ -663,6 +676,7 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
       />
       <div className="space-y-3">
         <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} variant="info" />
+        {product === "LTC" && <NewJoinerPolicySection org={org} readOnly={readOnly} variant="info" />}
         <CarrierProductSection org={org} product={product} readOnly={readOnly} variant="info" />
         {product === "LTC" && <CarrierIdentifiersSection org={org} readOnly={readOnly} variant="info" />}
         <ContactsSection org={org} readOnly={readOnly} variant="info" />
@@ -681,7 +695,7 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
         <LocalizationSection org={org} readOnly={readOnly} />
         <BrokerSection org={org} product={product} readOnly={readOnly} />
         {product === "DI" && <GroupPolicySection org={org} readOnly={readOnly} />}
-        {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
+        {(org.employer_moov_account_id || org.contribution_type !== "voluntary") && <EmployerBillingSection org={org} readOnly={readOnly} />}
       </div>
 
       <BucketHeader
@@ -1097,6 +1111,18 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
   const MicrositeFieldRow = (
     <RField label="Microsite URL"><MicrositeField url={org.microsite_url} product={product} editing={e.editing} /></RField>
   );
+  const ContributionTypeField = (
+    <div className="col-span-2">
+      <RField label="Contribution Type">
+        {e.editing
+          ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o} value={o}>{titleCase(o)}</option>)}</select>
+          : titleCase(org.contribution_type)}
+        <div className="text-[11px] text-black/55 italic mt-1">
+          How premium is funded. Buy-Up and Employer Paid require census-level contribution data per individual.
+        </div>
+      </RField>
+    </div>
+  );
 
   return (
     <SectionCard title="Identity" defaultOpen summary={summary} editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} variant={variant}>
@@ -1121,6 +1147,7 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
             {SitusCityField}
             {EligibleLivesField}
             {!org.cca_group && PolicyOwnerField}
+            {ContributionTypeField}
           </>
         ) : (
           <>
@@ -1140,6 +1167,7 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
             {EligibleLivesField}
             {PolicyOwnerField}
             {MicrositeFieldRow}
+            {ContributionTypeField}
           </>
         )}
       </Grid2>
@@ -1277,13 +1305,38 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
       note={note}
     >
       <Grid2>
-        <RField label="Carrier">{selected ? selected.carrier : <Empty />}</RField>
+        <div className="col-span-2">
+          <RField label="Carrier & Product">
+            {e.editing
+              ? (
+                  <select
+                    className={inputCls}
+                    value={carrierProductId ?? ""}
+                    onChange={(ev) => setCarrierProductId(ev.target.value || null)}
+                  >
+                    <option value="">— Not set —</option>
+                    {options.map((o) => (
+                      <option key={o.id} value={o.id}>{o.label}</option>
+                    ))}
+                  </select>
+                )
+              : (selected
+                  ? <span className="text-sm">{selected.label}</span>
+                  : <Empty />)}
+            {selected && (
+              <div className="mt-1 text-[11px] text-black/55">
+                <span className="font-medium text-black/70">Carrier:</span> {selected.carrier}
+                <span className="mx-2 text-black/30">·</span>
+                <span className="font-medium text-black/70">Product:</span> {selected.product}
+              </div>
+            )}
+          </RField>
+        </div>
         <RField label="Effective Date">
           {e.editing
             ? <input className={inputCls} type="date" defaultValue={org.policy_effective_date} />
             : fmtDate(org.policy_effective_date)}
         </RField>
-        <RField label="Product">{selected ? selected.product : <Empty />}</RField>
         {product === "LTC" ? (
           <RField label="Carrier Commission Schedule">
             <Link to="/carriers" className="text-sky-700 hover:underline inline-flex items-center gap-1">View schedule <ExternalLink className="h-3 w-3" /></Link>
@@ -1293,24 +1346,6 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
             <span className="text-xs text-black/60 italic">Per-policy commission rates</span>
           </RField>
         )}
-        <RField label="Carrier Product">
-          {e.editing
-            ? (
-                <select
-                  className={inputCls}
-                  value={carrierProductId ?? ""}
-                  onChange={(ev) => setCarrierProductId(ev.target.value || null)}
-                >
-                  <option value="">— Not set —</option>
-                  {options.map((o) => (
-                    <option key={o.id} value={o.id}>{o.label}</option>
-                  ))}
-                </select>
-              )
-            : (selected
-                ? <span className="text-sm">{selected.label}</span>
-                : <Empty />)}
-        </RField>
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
@@ -2546,17 +2581,92 @@ function CarrierIdentifiersSection({ org, readOnly, variant }: { org: OrgDetail;
 
 function EmployerBillingSection({ org, readOnly }: { org: OrgDetail; readOnly: boolean }) {
   const e = useSectionEdit();
+  const showContribution = org.contribution_type === "buy_up" || org.contribution_type === "employer_paid";
+  const contributionLabel = org.contribution_type === "buy_up" ? "Buy-Up" : "Employer Paid";
   return (
     <SectionCard title="Employer Billing" editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit}>
-      <Grid2>
-        <RField label="Employer Moov Account ID"><span className="font-mono text-xs">{org.employer_moov_account_id}</span></RField>
-        <RField label="Payment Method Type">{val(org.employer_payment_method_type)}</RField>
-        <RField label="Payment Method ID"><span className="font-mono text-xs">{org.employer_payment_method_id}</span></RField>
-      </Grid2>
+      {org.employer_moov_account_id && (
+        <>
+          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2 font-semibold">Employer Payment Method</div>
+          <Grid2>
+            <RField label="Employer Moov Account ID"><span className="font-mono text-xs">{org.employer_moov_account_id}</span></RField>
+            <RField label="Payment Method Type">{val(org.employer_payment_method_type)}</RField>
+            <RField label="Payment Method ID"><span className="font-mono text-xs">{org.employer_payment_method_id}</span></RField>
+          </Grid2>
+        </>
+      )}
+      {showContribution && (
+        <div className={org.employer_moov_account_id ? "mt-5 pt-4 border-t border-black/10" : ""}>
+          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2 font-semibold">Contribution Summary</div>
+          <div className="bg-amber-50/60 border border-amber-200 rounded-md p-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+              <div><span className="text-black/55">Type:</span> <span className="font-medium">{contributionLabel}</span></div>
+              <div><span className="text-black/55">Active enrollees covered:</span> <span className="font-medium">12 of 27</span></div>
+              <div className="col-span-2"><span className="text-black/55">Monthly employer contribution:</span> <span className="font-semibold text-black/85">$4,820</span> <span className="text-black/40 italic">(computed)</span></div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-amber-200">
+              <div className="text-[10px] uppercase tracking-wider text-black/55 mb-1.5">Tier breakdown (active contributions only)</div>
+              <ul className="text-xs space-y-1 font-mono">
+                <li><span className="inline-block w-16">Bronze:</span> 8 individuals  ·  indefinite</li>
+                <li><span className="inline-block w-16">Silver:</span> 3 individuals  ·  avg 12 months</li>
+                <li><span className="inline-block w-16">Gold:</span>   1 individual   ·  6 months remaining</li>
+              </ul>
+            </div>
+            <div className="mt-3">
+              <Link to="/individuals" search={{ org: org.id }} className="text-sky-700 hover:underline text-xs inline-flex items-center gap-1">
+                View contribution roster →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
   );
 }
+
+const NEW_JOINER_RULES: Array<{ value: "first_of_next_month" | "hire_date" | "first_of_month_after_waiting"; label: string }> = [
+  { value: "first_of_next_month", label: "First of next month" },
+  { value: "hire_date", label: "Hire date" },
+  { value: "first_of_month_after_waiting", label: "First of month after waiting period" },
+];
+function newJoinerRuleLabel(v: string): string {
+  return NEW_JOINER_RULES.find((r) => r.value === v)?.label ?? v;
+}
+
+function NewJoinerPolicySection({ org, readOnly, variant }: { org: OrgDetail; readOnly: boolean; variant?: "info" | "config" | "integration" }) {
+  const e = useSectionEdit();
+  return (
+    <SectionCard
+      title="New Joiner Policy"
+      editing={e.editing}
+      canEdit={!readOnly}
+      onEdit={e.onEdit}
+      variant={variant}
+      note="Rules for employees hired during the policy period. Defaults set by ops."
+    >
+      <div className="grid grid-cols-3 gap-x-6 gap-y-3">
+        <RField label="Enrollment Window (days)">
+          {e.editing
+            ? <input className={inputCls} type="number" min={0} defaultValue={org.new_joiner_enrollment_period_days} />
+            : org.new_joiner_enrollment_period_days}
+        </RField>
+        <RField label="Waiting Period (days)">
+          {e.editing
+            ? <input className={inputCls} type="number" min={0} defaultValue={org.new_joiner_waiting_period_days} />
+            : org.new_joiner_waiting_period_days}
+        </RField>
+        <RField label="Effective Date Rule">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.new_joiner_effective_date_rule}>{NEW_JOINER_RULES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</select>
+            : newJoinerRuleLabel(org.new_joiner_effective_date_rule)}
+        </RField>
+      </div>
+      {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
+    </SectionCard>
+  );
+}
+
 
 function SystemRefsSection({ org, product, variant }: { org: OrgDetail; product: "DI" | "LTC"; variant?: "info" | "config" | "integration" }) {
   return (
