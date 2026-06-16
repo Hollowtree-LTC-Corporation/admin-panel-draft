@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader, TableShell, TRow, TCell, Pill, Btn, Drawer, useDrawer, Field, Input } from "@/components/wireframe/Bits";
+import { MicrositeSlugInput } from "./organizations.$id";
 import { ORGS, POLICIES, CARRIER_PRODUCTS, CARRIERS } from "@/lib/wireframe/data";
 import { INDIVIDUALS } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
@@ -185,6 +186,13 @@ function OrgsView() {
           </select>
         </Field>
         <Field label="Domain"><Input placeholder="acme.com" /></Field>
+        <Field label="Microsite URL">
+          <MicrositeSlugInput
+            initialSlug=""
+            suffix={product === "DI" ? ".hollowtree.co" : ".hollowtreeltc.com"}
+            existingSlugs={ORGS.filter((o) => o.product === product).map((o) => o.name.toLowerCase().replace(/[^a-z]/g, ""))}
+          />
+        </Field>
         <Field label="Eligible Lives">
           <input type="number" min={0} placeholder="50" className="w-full px-2 py-1 text-sm border border-black/15 rounded" />
         </Field>
