@@ -228,6 +228,7 @@ function QueueTab() {
             { key: "upgrade_submitted_at", label: "Submitted" },
             { key: "days_in_review", label: "Days in Review" },
             { key: "upgrade_carrier_decision", label: "Status" },
+            { key: "assigned_rep", label: "Assigned Rep" },
             { key: null, label: "Action" },
           ]}
           sortKey={sort.sortKey}
