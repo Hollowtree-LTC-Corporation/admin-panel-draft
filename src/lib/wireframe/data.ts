@@ -678,6 +678,7 @@ export const MAGIC_TOKENS = [
   { id: "mt_2", individual_id: "ind_5", individual_name: "Test Person 5", token_class: "portal", status: "active", expires_at: "2026-01-15", use_count: 3, last_used_at: "2025-06-01" },
   { id: "mt_3", individual_id: "ind_9", individual_name: "Test Person 9", token_class: "enrollment", status: "expired", expires_at: "2025-04-01", use_count: 1, last_used_at: "2025-03-22" },
   { id: "mt_4", individual_id: "ind_12", individual_name: "Test Person 12", token_class: "portal", status: "active", expires_at: "2026-02-10", use_count: 7, last_used_at: "2025-06-05" },
+  { id: "mt_sep_ind_11", individual_id: "ind_11", individual_name: "Test Person 11", token_class: "portal", status: "active", expires_at: "2025-10-15", use_count: 0, last_used_at: null },
 ];
 
 export const TOKEN_AUDIT_LOG = Array.from({ length: 12 }, (_, i) => ({
