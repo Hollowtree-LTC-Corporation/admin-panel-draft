@@ -997,6 +997,25 @@ function SystemRefsSection({ i }: { i: Detail }) {
         )}
       </div>
 
+      {(() => {
+        const enrollment = tokens.find((t) => t.type === "enrollment");
+        const deadline = i.enrollment_deadline;
+        if (!enrollment || !deadline) return null;
+        const [ey, em, ed] = enrollment.expires.split("-").map(Number);
+        const [dy, dm, dd] = deadline.split("-").map(Number);
+        const eDt = new Date(ey, (em ?? 1) - 1, ed ?? 1).getTime();
+        const dDt = new Date(dy, (dm ?? 1) - 1, dd ?? 1).getTime();
+        const diffDays = Math.round((eDt - dDt) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 14) return null;
+        return (
+          <div className="mt-4 text-xs bg-amber-50 border border-amber-200 text-amber-900 rounded p-2 leading-relaxed">
+            <AlertTriangle className="inline h-3 w-3 mr-1" />
+            Enrollment token expires <b>{diffDays} days</b> after the enrollment deadline ({fmtDate(deadline)}).
+            Per spec, tokens should expire at <code>enrollment_close_date + 7 days</code>.
+            Flagging for schema review — not silently patching dummy data.
+          </div>
+        );
+      })()}
       <div className="mt-5 pt-4 border-t border-black/10">
         <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2 font-sans">Magic Tokens</div>
         <table className="w-full text-[11px] font-sans">
