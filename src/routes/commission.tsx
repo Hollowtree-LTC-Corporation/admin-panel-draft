@@ -894,7 +894,7 @@ function View() {
         {filteredStatements.length > 0 && (
           <tfoot className="bg-[#f7f3eb] text-[11px] text-black/70">
             <tr className="border-t-2 border-black/15">
-              <td colSpan={7} className="px-3 py-2 font-semibold text-right">Total commission owed</td>
+              <td colSpan={product === "LTC" ? 9 : 7} className="px-3 py-2 font-semibold text-right">Total commission owed</td>
               <td className="px-3 py-2 font-semibold">{formatCents(stmtTotals.owed)}</td>
               <td colSpan={4} className="px-3 py-2">
                 <span className="text-black/60">
@@ -905,7 +905,7 @@ function View() {
               </td>
             </tr>
             <tr>
-              <td colSpan={12} className="px-3 py-1 text-[11px] text-black/50">
+              <td colSpan={product === "LTC" ? 14 : 12} className="px-3 py-1 text-[11px] text-black/50">
                 {stmtTotals.draft} draft · {stmtTotals.approved} approved · {stmtTotals.paid} paid
               </td>
             </tr>
