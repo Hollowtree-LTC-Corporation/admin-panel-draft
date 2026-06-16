@@ -483,6 +483,11 @@ function OrgDetail() {
   const showCcaBadge = product === "DI" && org.cca_group;
   const showEmployerContributionBadge = product === "LTC" && (org.contribution_type === "buy_up" || org.contribution_type === "employer_paid");
 
+  // Onboarding checks state — lifted so the header chip and Setup-tab section share one source of truth.
+  const [onboardingChecks, setOnboardingChecks] = useState<CheckItem[]>(() => seedChecks(id, product));
+  useEffect(() => { setOnboardingChecks(seedChecks(id, product)); }, [id, product]);
+  const onboardingAggregate = computeAggregate(onboardingChecks);
+
   return (
     <div>
       <Link to="/organizations" className="inline-flex items-center text-xs text-black/60 hover:text-black mb-2">
