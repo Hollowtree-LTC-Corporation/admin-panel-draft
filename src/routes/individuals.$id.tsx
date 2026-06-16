@@ -187,6 +187,22 @@ function fmtDate(d: string | null | undefined): string {
   if (!y || !m || !day) return "—";
   return `${MONTH_ABBR[m - 1]} ${day}, ${y}`;
 }
+function titleCase(s: string | null | undefined): string {
+  if (!s) return "—";
+  return s.split(/[_\s]+/).map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
+}
+function addMonths(iso: string | null | undefined, months: number | null | undefined): string {
+  if (!iso || !months) return "—";
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+  dt.setMonth(dt.getMonth() + months);
+  return `${MONTH_ABBR[dt.getMonth()]} ${dt.getDate()}, ${dt.getFullYear()}`;
+}
+function premiumStructureLabel(v: string | null | undefined): string {
+  if (v === "ten_pay") return "10-Pay";
+  if (v === "lifetime") return "Lifetime";
+  return "—";
+}
 
 function IndividualDetail() {
   const { id } = Route.useParams();
