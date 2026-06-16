@@ -1293,7 +1293,7 @@ function CheckRow({
           <div className={`mt-0.5 ${helperClass}`}>{c.helper}</div>
           {gatingActive ? (
             <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
-              <Lock className="h-3 w-3" />
+              <LockIcon className="h-3 w-3" />
               <span>Enrollment windows cannot be opened until this check passes.</span>
             </div>
           ) : null}
