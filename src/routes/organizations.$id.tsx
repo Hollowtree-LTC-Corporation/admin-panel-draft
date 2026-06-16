@@ -1111,6 +1111,18 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
   const MicrositeFieldRow = (
     <RField label="Microsite URL"><MicrositeField url={org.microsite_url} product={product} editing={e.editing} /></RField>
   );
+  const ContributionTypeField = (
+    <div className="col-span-2">
+      <RField label="Contribution Type">
+        {e.editing
+          ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o} value={o}>{titleCase(o)}</option>)}</select>
+          : titleCase(org.contribution_type)}
+        <div className="text-[11px] text-black/55 italic mt-1">
+          How premium is funded. Buy-Up and Employer Paid require census-level contribution data per individual.
+        </div>
+      </RField>
+    </div>
+  );
 
   return (
     <SectionCard title="Identity" defaultOpen summary={summary} editing={e.editing} canEdit={!readOnly} onEdit={e.onEdit} variant={variant}>
