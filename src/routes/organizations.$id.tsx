@@ -694,7 +694,7 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
         <LocalizationSection org={org} readOnly={readOnly} />
         <BrokerSection org={org} product={product} readOnly={readOnly} />
         {product === "DI" && <GroupPolicySection org={org} readOnly={readOnly} />}
-        {org.employer_moov_account_id && <EmployerBillingSection org={org} readOnly={readOnly} />}
+        {(org.employer_moov_account_id || org.contribution_type !== "voluntary") && <EmployerBillingSection org={org} readOnly={readOnly} />}
       </div>
 
       <BucketHeader
