@@ -855,8 +855,8 @@ function View() {
                 <TCell className="font-medium">{s.payee_name}</TCell>
                 <TCell><PayeeTypeBadge t={s.payee_type} /></TCell>
                 <TCell>{formatCents(s.total_premium_cents)}</TCell>
-                <TCell title={rateTooltip}>
-                  {s.commission_pct.toFixed(2)}%
+                <TCell>
+                  <span title={rateTooltip}>{s.commission_pct.toFixed(2)}%</span>
                   {product === "LTC" && <Info className="h-3 w-3 inline ml-1 text-black/30" />}
                 </TCell>
                 {product === "LTC" && (
