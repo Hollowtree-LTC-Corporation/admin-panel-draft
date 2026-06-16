@@ -1386,8 +1386,9 @@ function ActiveSplitsDrawer({ open, policyId, partners, rows, onClose, onSave }:
 // ===========================================================================
 // Drawer C — Statement Detail
 // ===========================================================================
-function StatementDrawerView({ open, stmt, onClose, onApprove, onMarkPaid }: {
+function StatementDrawerView({ open, stmt, product, onClose, onApprove, onMarkPaid }: {
   open: boolean; stmt: Statement | null;
+  product: "DI" | "LTC";
   onClose: () => void;
   onApprove: (s: Statement) => void;
   onMarkPaid: (s: Statement) => void;
@@ -1396,6 +1397,9 @@ function StatementDrawerView({ open, stmt, onClose, onApprove, onMarkPaid }: {
   const pol = POLICIES.find((p) => p.id === stmt.policy_id);
   // Derivation: count of ledger entries that fed the premium base (PHI-gated — count only)
   const contributingEntries = Math.max(1, Math.round(stmt.total_premium_cents / 80000));
+  const sched = product === "LTC" ? deriveScheduleForPolicy(stmt.policy_id) : null;
+  const polYear = product === "LTC" && pol ? policyYearFor(pol.initial_effective_date, stmt.period_start) : null;
+  const matched = sched && polYear ? matchTier(sched.id, polYear) : null;
 
   return (
     <Drawer open={open} onClose={onClose} title={`Statement ${fmtPeriod(stmt.period_start, stmt.period_end)} — ${stmt.payee_name}`}>
@@ -1425,6 +1429,34 @@ function StatementDrawerView({ open, stmt, onClose, onApprove, onMarkPaid }: {
       <Field label="Premium Base"><div>{formatCents(stmt.total_premium_cents)}</div></Field>
       <Field label="Commission Rate"><div>{stmt.commission_pct.toFixed(2)}%</div></Field>
       <Field label="Commission Owed"><div className="text-lg font-semibold">{formatCents(stmt.commission_owed_cents)}</div></Field>
+
+      {product === "LTC" && (
+        <>
+          <SectionHeader>Rate Derivation</SectionHeader>
+          <Card className="p-2 mb-3 text-xs space-y-1">
+            {sched ? (
+              <>
+                <div><span className="text-black/50">Schedule:</span> <span className="font-medium">{sched.schedule_name}</span></div>
+                <div><span className="text-black/50">Type:</span> {scheduleTypeChip(sched.schedule_type)}</div>
+                <div><span className="text-black/50">State:</span> {stateChip(sched.state_code)}</div>
+                <div><span className="text-black/50">Policy effective:</span> {fmtDate(pol?.initial_effective_date ?? null)}</div>
+                <div><span className="text-black/50">Billing period:</span> {fmtPeriod(stmt.period_start, stmt.period_end)}</div>
+                <div><span className="text-black/50">Policy year:</span> <span className="font-mono">Y{polYear}</span></div>
+                {matched ? (
+                  <div><span className="text-black/50">Tier matched:</span> from_year={matched.year_from}, to_year={matched.year_to === 99 ? "perpetual" : matched.year_to}, rate_pct={matched.pct}</div>
+                ) : (
+                  <div className="text-rose-700">No tier matches policy year {polYear}.</div>
+                )}
+                <div className="pt-1 border-t border-black/10">
+                  <span className="text-black/50">Snapshot commission_pct:</span> <span className="font-semibold">{stmt.commission_pct.toFixed(2)}%</span>
+                </div>
+              </>
+            ) : (
+              <div className="text-rose-700">No active schedule derived for this policy.</div>
+            )}
+          </Card>
+        </>
+      )}
 
       <SectionHeader>Derivation Breakdown</SectionHeader>
       <Card className="p-2 mb-3">
