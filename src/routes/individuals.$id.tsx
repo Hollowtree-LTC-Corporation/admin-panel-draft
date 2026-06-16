@@ -322,18 +322,20 @@ function IndividualDetail() {
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-semibold text-gray-900">Deactivate Enrollment</h3>
+                <h3 className="text-base font-semibold text-gray-900">Cancel coverage for {i.full_name}?</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  This will set the coverage status to <b>canceled</b> for {i.full_name}. This action can be reversed by an admin.
+                  This sets <b>coverage_status</b> to <code>canceled</code>, revokes active tokens, and stops future payment processing.
+                  This action is logged and reversible by an admin within 30 days.
                 </p>
               </div>
             </div>
             <div className="mt-4 space-y-3">
               <div>
                 <label className="text-[10px] uppercase tracking-wider text-black/50">Reason <span className="text-red-600">*</span></label>
-                <input
+                <textarea
                   value={deactReason}
                   onChange={(e) => setDeactReason(e.target.value)}
+                  rows={3}
                   className={`${inputCls} mt-1`}
                   placeholder="e.g. employee left the organization"
                 />
@@ -351,7 +353,7 @@ function IndividualDetail() {
             <div className="mt-5 flex justify-end gap-2">
               <Btn onClick={() => setDeactivateOpen(false)}>Cancel</Btn>
               <Btn variant="danger" disabled={!deactReason.trim()} onClick={() => { setDeactivateOpen(false); setDeactReason(""); }}>
-                Confirm Deactivation
+                Cancel Coverage
               </Btn>
             </div>
           </div>
