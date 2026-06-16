@@ -533,7 +533,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
           { key: "result", label: "Result" },
         ],
         rows: TOKEN_AUDIT_LOG.map((t) => ({
-          ts: t.ts, token_hash: t.token_hash, ip: t.ip, user_agent: t.user_agent, result: t.result,
+          ts: t.created_at, token_hash: t.attempted_token_hash, ip: t.ip_address, user_agent: t.user_agent, result: t.outcome,
         })),
       };
     }
