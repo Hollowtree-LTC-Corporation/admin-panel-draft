@@ -339,6 +339,10 @@ function synthesize(org: typeof ORGS[number]) {
     // LTC system
     ltc_enrollment_phase: "open_enrollment",
     ltc_one_week_to_go: "2025-08-24",
+    // New joiner policy (LTC)
+    new_joiner_enrollment_period_days: 30,
+    new_joiner_waiting_period_days: 90,
+    new_joiner_effective_date_rule: "first_of_next_month" as "first_of_next_month" | "hire_date" | "first_of_month_after_waiting",
   };
 }
 
