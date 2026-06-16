@@ -243,7 +243,7 @@ function QueueTab() {
               </TCell>
               <TCell><span /></TCell><TCell><span /></TCell><TCell><span /></TCell>
               <TCell><span /></TCell><TCell><span /></TCell><TCell><span /></TCell>
-              <TCell><span /></TCell><TCell><span /></TCell>
+              <TCell><span /></TCell><TCell><span /></TCell><TCell><span /></TCell>
             </TRow>
           ) : rows.map((a) => {
             const d = daysBetween(a.upgrade_submitted_at, a.upgrade_carrier_decision_at ?? undefined);
@@ -264,6 +264,7 @@ function QueueTab() {
                   {d} days
                 </TCell>
                 <TCell>{decisionPill(a.upgrade_carrier_decision)}</TCell>
+                <TCell>{a.assigned_rep ?? <span className="text-black/40">—</span>}</TCell>
                 <TCell>
                   <Btn variant="secondary" size="sm" onClick={() => setGate(a)}>
                     <Lock className="inline h-3 w-3 mr-1" /> Review
