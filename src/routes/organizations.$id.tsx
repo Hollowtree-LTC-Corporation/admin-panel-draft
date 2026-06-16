@@ -567,6 +567,12 @@ function OrgDetail() {
         <QuickLinksCard org={org} />
       </div>
 
+      <div className="-mt-2 mb-4 flex items-center gap-2">
+        <span className="text-[10px] uppercase tracking-wider text-black/50">Ready to enroll?</span>
+        <ReadyToEnrollChip aggregate={onboardingAggregate} />
+      </div>
+
+
       <Tabs defaultValue="setup" className="w-full">
         <TabsList>
           <TabsTrigger value="setup">Setup</TabsTrigger>
