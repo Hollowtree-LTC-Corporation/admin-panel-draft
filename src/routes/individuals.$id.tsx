@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Btn, ProductBadge } from "@/components/wireframe/Bits";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, ChevronDown, ChevronRight, Lock, Pencil, AlertTriangle, Copy, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronRight, Lock, Pencil, AlertTriangle, Copy, ExternalLink, Eye, EyeOff } from "lucide-react";
 import { INDIVIDUALS, ORGS, BILLING_GROUPS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 
@@ -167,6 +167,14 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     // LTC-only extras
     employee_upgrade_option: isLTC && base.upgrade_applied_for ? ["Silver→Gold","Gold→Platinum","Platinum→Diamond"][n % 3] : null,
     applied_for_upgrade: isLTC ? base.upgrade_applied_for : null,
+    // v14: individuals.premium_structure — TODO: confirm column migrated; default 'lifetime'
+    premium_structure: isLTC ? (n % 4 === 0 ? "ten_pay" : "lifetime") : null,
+    // Mocked from organizations.available_premium_structures
+    org_available_premium_structures: isLTC ? (n % 3 === 0 ? ["lifetime", "ten_pay"] : ["lifetime"]) : ["lifetime"],
+    // Mocked from enrollment_windows.affiliate_organization_id
+    enrollment_window_affiliate: isLTC && (n === 5 || n === 11)
+      ? { id: n === 5 ? "org_aff_seiu" : "org_aff_teamsters", name: n === 5 ? "SEIU Affiliate Org" : "Teamsters Affiliate Org" }
+      : null,
     _org: org,
     _riders: org ? [org.extension_of_benefits_rider && "EOB", org.benefit_restoration_rider && "BR"].filter(Boolean).join(" + ") || "—" : "—",
   };
@@ -179,6 +187,22 @@ function fmtDate(d: string | null | undefined): string {
   if (!y || !m || !day) return "—";
   return `${MONTH_ABBR[m - 1]} ${day}, ${y}`;
 }
+function titleCase(s: string | null | undefined): string {
+  if (!s) return "—";
+  return s.split(/[_\s]+/).map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
+}
+function addMonths(iso: string | null | undefined, months: number | null | undefined): string {
+  if (!iso || !months) return "—";
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+  dt.setMonth(dt.getMonth() + months);
+  return `${MONTH_ABBR[dt.getMonth()]} ${dt.getDate()}, ${dt.getFullYear()}`;
+}
+function premiumStructureLabel(v: string | null | undefined): string {
+  if (v === "ten_pay") return "10-Pay";
+  if (v === "lifetime") return "Lifetime";
+  return "—";
+}
 
 function IndividualDetail() {
   const { id } = Route.useParams();
@@ -190,7 +214,12 @@ function IndividualDetail() {
   if (!base) return <div className="p-4">Individual not found.</div>;
   const i: Detail = synthesize(base);
   const isLTC = _product === "LTC";
-  const linked = i.linked_individual_id ? INDIVIDUALS.find((x) => x.id === i.linked_individual_id) : null;
+  // Resolve linked spouse: first try the forward link, then reverse-lookup individuals whose linked_individual_id points here
+  let linked = i.linked_individual_id ? INDIVIDUALS.find((x) => x.id === i.linked_individual_id) ?? null : null;
+  if (!linked) {
+    const reverse = INDIVIDUALS.find((x) => x.id !== i.id && synthesize(x).linked_individual_id === i.id);
+    if (reverse) linked = reverse;
+  }
   const linkedDetail = linked ? synthesize(linked) : null;
   const readOnly = !can("individuals", "update");
   const bg = BILLING_GROUPS.find((b) => b.id === i.billing_group_id);
@@ -229,7 +258,7 @@ function IndividualDetail() {
           </div>
           <div className="flex gap-2">
             <Btn disabled={readOnly} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Edit</Btn>
-            <Btn variant="danger" disabled={!can("individuals", "delete")} onClick={() => setDeactivateOpen(true)}>Deactivate</Btn>
+            <Btn variant="danger" disabled={!can("individuals", "delete")} onClick={() => setDeactivateOpen(true)}>Cancel Coverage</Btn>
           </div>
         </div>
         <div className="grid grid-cols-8 gap-2">
@@ -238,14 +267,18 @@ function IndividualDetail() {
             onClick={i.org_id ? () => navigate({ to: "/organizations/$id", params: { id: i.org_id! } }) : undefined} />
           <SummaryChip label="Coverage Status" value={<Badge map={COVERAGE_BADGE} value={i.coverage_status} />} />
           <SummaryChip label="Current Stage" value={<Badge map={STAGE_BADGE} value={i.stage} />} />
+          {isLTC && (
+            <SummaryChip label="Issue Type" value={<IssueTypeBadge value={i.issue_type} />} />
+          )}
+          {isLTC && (
+            <SummaryChip label="Benefit Class" value={i.benefit_class_name || "—"} />
+          )}
           <SummaryChip label="Last Payment"
             value={<span className="inline-flex items-center gap-1">{paymentBadge(i.last_payment_status, i.retry_count)}<span className="text-[11px] text-black/50">{fmtDate(i.last_charge_date)}</span></span>}
             onClick={() => navigate({ to: "/payment-ledger" })} />
           <SummaryChip label="Monthly Premium" value={formatCents(i.monthly_premium_cents)} />
           <SummaryChip label="Balance" value={formatCents(balanceCents)} tone={balanceNeg ? "bad" : "ok"}
             onClick={() => navigate({ to: "/enrollee-balance" })} />
-          <SummaryChip label="Enrollment Window" value={i.org_id ? "annual · 2025-09" : "—"}
-            onClick={i.org_id ? () => navigate({ to: "/organizations/$id", params: { id: i.org_id! } }) : undefined} />
           <SummaryChip label="Billing Group" value={bg?.name ?? i.billing_group_id}
             onClick={() => navigate({ to: "/billing-groups" })} />
         </div>
@@ -289,18 +322,20 @@ function IndividualDetail() {
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-semibold text-gray-900">Deactivate Enrollment</h3>
+                <h3 className="text-base font-semibold text-gray-900">Cancel coverage for {i.full_name}?</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  This will set the coverage status to <b>canceled</b> for {i.full_name}. This action can be reversed by an admin.
+                  This sets <b>coverage_status</b> to <code>canceled</code>, revokes active tokens, and stops future payment processing.
+                  This action is logged and reversible by an admin within 30 days.
                 </p>
               </div>
             </div>
             <div className="mt-4 space-y-3">
               <div>
                 <label className="text-[10px] uppercase tracking-wider text-black/50">Reason <span className="text-red-600">*</span></label>
-                <input
+                <textarea
                   value={deactReason}
                   onChange={(e) => setDeactReason(e.target.value)}
+                  rows={3}
                   className={`${inputCls} mt-1`}
                   placeholder="e.g. employee left the organization"
                 />
@@ -318,7 +353,7 @@ function IndividualDetail() {
             <div className="mt-5 flex justify-end gap-2">
               <Btn onClick={() => setDeactivateOpen(false)}>Cancel</Btn>
               <Btn variant="danger" disabled={!deactReason.trim()} onClick={() => { setDeactivateOpen(false); setDeactReason(""); }}>
-                Confirm Deactivation
+                Cancel Coverage
               </Btn>
             </div>
           </div>
@@ -372,7 +407,7 @@ function CoverageStatusField({ editing, status, setStatus, allowed, current }: {
       {editing ? (
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
           {COVERAGE_STATUSES.map((s) => (
-            <option key={s} value={s} disabled={!allowed.includes(s)}>{s}{allowed.includes(s) ? "" : " (invalid)"}</option>
+            <option key={s} value={s} disabled={!allowed.includes(s)}>{titleCase(s)}{allowed.includes(s) ? "" : " (invalid)"}</option>
           ))}
         </select>
       ) : <Badge map={COVERAGE_BADGE} value={current} />}
@@ -453,6 +488,42 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
         <RField label="Face Amount" value={unfunded ? "—" : formatCents(i.face_amount_cents)} />
         <RField label="Monthly Premium" value={unfunded ? "—" : formatCents(i.monthly_premium_cents)} />
 
+        <RField label="Premium Structure" editing={editing}>
+          {(() => {
+            const offersBoth = (i.org_available_premium_structures ?? []).length > 1;
+            const current = i.premium_structure ?? "lifetime";
+            const display = (
+              <span className="inline-flex items-center gap-1">
+                <span>{premiumStructureLabel(current)}</span>
+                {!offersBoth && <Lock className="h-3 w-3 text-black/30" aria-label="Org only offers Lifetime" />}
+              </span>
+            );
+            if (editing && offersBoth) {
+              return (
+                <div>
+                  <select defaultValue={current} className={inputCls}>
+                    <option value="lifetime">Lifetime</option>
+                    <option value="ten_pay">10-Pay</option>
+                  </select>
+                  <div className="text-[11px] text-stone-500 mt-1">
+                    Lifetime = monthly premiums paid for life. 10-Pay = monthly premiums over 120 months (10 years), then policy is fully paid up.
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div>
+                {display}
+                <div className="text-[11px] text-stone-500 mt-1">
+                  {offersBoth
+                    ? "Lifetime = monthly premiums paid for life. 10-Pay = monthly premiums over 120 months (10 years), then policy is fully paid up."
+                    : "Organization only offers Lifetime premium structure."}
+                </div>
+              </div>
+            );
+          })()}
+        </RField>
+
         <RField label="Tobacco Use">
           {i.tobacco_use
             ? <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Yes</span>
@@ -482,6 +553,10 @@ function paymentMethodLabel(bg: ReturnType<typeof BILLING_GROUPS.find>): React.R
 
 function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof BILLING_GROUPS.find>; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideDate, setOverrideDate] = useState(i.next_charge_date ?? "");
+  const [nextCharge, setNextCharge] = useState(i.next_charge_date);
   return (
     <SectionCard title="Payment & Billing" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
@@ -507,8 +582,19 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
         <div />
 
         <RField label="Last Charge Date" value={fmtDate(i.last_charge_date)} locked={editing} />
-        <RField label="Next Charge Date" value={fmtDate(i.next_charge_date)} editing={editing}>
-          <input type="date" defaultValue={i.next_charge_date ?? ""} className={inputCls} />
+        <RField label="Next Charge Date" locked>
+          <span className="inline-flex items-center gap-2">
+            <span>{fmtDate(nextCharge)}</span>
+            {!readOnly && (
+              <button
+                onClick={() => { setOverrideDate(nextCharge ?? ""); setOverrideReason(""); setOverrideOpen(true); }}
+                className="text-[10px] px-2 py-0.5 rounded border border-amber-300 text-amber-700 hover:bg-amber-50"
+                title="Override the standard billing schedule"
+              >
+                Override
+              </button>
+            )}
+          </span>
         </RField>
         <RField label="Failed Attempt Date" value={fmtDate(i.failed_attempt_date)} locked={editing} />
         <RField label="Next Retry Date" value={fmtDate(i.next_retry_date)} locked={editing} />
@@ -526,6 +612,51 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
         </Link>
       </div>
       {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
+
+      {overrideOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setOverrideOpen(false)} />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-amber-50 text-amber-600"><AlertTriangle className="h-5 w-5" /></div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-gray-900">Override Next Charge Date</h3>
+                <p className="text-sm text-gray-600 mt-1">This skips the standard schedule. Reason required.</p>
+              </div>
+            </div>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-black/50">New Next Charge Date</label>
+                <input type="date" value={overrideDate} onChange={(e) => setOverrideDate(e.target.value)} className={`${inputCls} mt-1`} />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-black/50">Reason <span className="text-red-600">*</span></label>
+                <textarea
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  rows={3}
+                  className={`${inputCls} mt-1`}
+                  placeholder="e.g. enrollee paid out of band on 6/14"
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <Btn onClick={() => setOverrideOpen(false)}>Cancel</Btn>
+              <Btn
+                variant="primary"
+                disabled={!overrideReason.trim() || !overrideDate}
+                onClick={() => {
+                  // TODO: write audit_log entry { action:'update', old_values:{next_charge_date}, new_values:{next_charge_date, override_reason} }
+                  setNextCharge(overrideDate);
+                  setOverrideOpen(false);
+                }}
+              >
+                Save Override
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </SectionCard>
   );
 }
@@ -534,12 +665,16 @@ function ContributionSection({ i, readOnly }: { i: Detail; readOnly: boolean }) 
   const [editing, setEditing] = useState(false);
   const active = i.contribution_active;
   const hasHistory = !active && !!i.contribution_start_date && !!i.contribution_duration_months;
-  const endDate = i.contribution_duration_months ? `${i.contribution_start_date} + ${i.contribution_duration_months}mo` : "Indefinite";
+  const endDate = i.contribution_duration_months
+    ? addMonths(i.contribution_start_date, i.contribution_duration_months)
+    : "Indefinite";
   return (
     <SectionCard title="Employer Contribution" defaultOpen={active} editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
-        <RField label="Contribution Tier" value={i.contribution_tier ?? "—"} editing={editing && active}>
-          <select defaultValue={i.contribution_tier ?? ""} className={inputCls}>{TIERS.map((t) => <option key={t}>{t}</option>)}</select>
+        <RField label="Contribution Tier" value={titleCase(i.contribution_tier)} editing={editing && active}>
+          <select defaultValue={i.contribution_tier ?? ""} className={inputCls}>
+            {TIERS.map((t) => <option key={t} value={t}>{titleCase(t)}</option>)}
+          </select>
         </RField>
         <RField label="Active">
           {active ? <Badge map={COVERAGE_BADGE} value="active" /> : <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">Inactive</span>}
@@ -559,17 +694,18 @@ function ContributionSection({ i, readOnly }: { i: Detail; readOnly: boolean }) 
           </>
         )}
       </Grid>
+      {/* TODO: confirm tier→percentage mapping with product team before exposing % to ops */}
       {active && i.contribution_tier && (
         <div className="mt-4 bg-blue-50 border-l-4 border-blue-400 text-sm text-black/75 p-3 rounded-r leading-relaxed">
-          The employer covers this enrollee's premium at the <b>{i.contribution_tier}</b> tier
+          The employer covers this enrollee's premium at the <b>{titleCase(i.contribution_tier)}</b> tier
           {i.contribution_duration_months ? <> for <b>{i.contribution_duration_months} months</b></> : <> <b>indefinitely</b></>}
           {i.contribution_start_date ? <> starting <b>{fmtDate(i.contribution_start_date)}</b></> : null}.
-          The dollar amount is derived at billing time from the rate table based on age and smoker status.
+          The dollar amount is derived at billing time from the benefit class configuration.
         </div>
       )}
       {!active && hasHistory && (
         <div className="mt-4 text-sm text-black/60 leading-relaxed">
-          Employer covered this enrollee's premium at the <b>{i.contribution_tier}</b> tier from <b>{fmtDate(i.contribution_start_date)}</b> to <b>{endDate}</b>. The enrollee now pays the full premium.
+          Employer covered this enrollee's premium at the <b>{titleCase(i.contribution_tier)}</b> tier from <b>{fmtDate(i.contribution_start_date)}</b> to <b>{endDate}</b>. The enrollee now pays the full premium.
         </div>
       )}
       {!active && !hasHistory && (
@@ -653,13 +789,7 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
 
       <div className="mt-4 pt-4 border-t border-black/10">
         <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">SSN</div>
-        {editing ? (
-          <input placeholder={i.ssn_on_file ? `•••-••-${i.ssn_last4}` : "9 digits"} className={`${inputCls} max-w-xs`} />
-        ) : (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-black/5 text-black/70">
-            <Lock className="h-3 w-3" /> {i.ssn_on_file ? `SSN on file (••• •• ${i.ssn_last4})` : "No SSN"}
-          </span>
-        )}
+        <SsnField individualId={i.id} ssnOnFile={i.ssn_on_file} last4={i.ssn_last4} editing={editing} />
       </div>
 
       {editing && <SectionActions onCancel={() => setEditing(false)} onSave={onSave} />}
@@ -669,6 +799,8 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
 
 function UnderwritingSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
+  // GI enrollees don't fill medical questions (per 2026-06-14 decision). Tobacco lives on Coverage & Plan.
+  if (i.issue_type === "GI") return null;
   return (
     <SectionCard title="Underwriting" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
@@ -729,11 +861,21 @@ function SpouseSection({ i, linked, linkedDetail, readOnly }: { i: Detail; linke
       <Grid cols={3}>
         <RField label="Relationship Type" value={i.relationship_type} />
         <RField label="Linked Individual">
-          {editing ? (
-            <input placeholder="Search individual…" className={inputCls} />
-          ) : linked ? (
-            <Link to="/individuals/$id" params={{ id: linked.id }} className="text-sm underline hover:text-[#0a3d3e]">{linked.full_name}</Link>
-          ) : <span className="text-sm text-black/50">—</span>}
+          {linked && linkedDetail ? (
+            <Link to="/individuals/$id" params={{ id: linked.id }} className="text-sm underline hover:text-[#0a3d3e]">
+              {linked.full_name} · {linked.email} · {linked.id} →
+            </Link>
+          ) : editing ? (
+            <div>
+              <input placeholder="Search individual…" className={inputCls} />
+              <div className="text-[11px] text-stone-500 mt-1">No linked spouse on file yet.</div>
+            </div>
+          ) : (
+            <div>
+              <span className="text-sm text-black/50">—</span>
+              <div className="text-[11px] text-stone-500 mt-1">No linked spouse on file yet.</div>
+            </div>
+          )}
         </RField>
         <div />
         {i.relationship_type === "primary" && (
@@ -756,19 +898,21 @@ function SpouseSection({ i, linked, linkedDetail, readOnly }: { i: Detail; linke
 }
 
 function UpgradeSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
+  // Hide for GI enrollees with no buy-up interest; show for SI or any GI who expressed interest
   const hasActivity = i.interested_upgrading || i.applied_for_upgrade;
-  if (!hasActivity) return null;
+  if (i.issue_type === "GI" && !i.interested_upgrading) return null;
+  if (!hasActivity && i.issue_type !== "SI") return null;
   const [editing, setEditing] = useState(false);
   return (
-    <SectionCard title="Upgrade" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+    <SectionCard title="SI Buy-up" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={3}>
-        <RField label="Interested in Upgrading" value={i.interested_upgrading ? "yes" : "no"} />
-        <RField label="Applied for Upgrade" value={i.applied_for_upgrade ? "yes" : "no"} />
-        <RField label="Employee Upgrade Option" value={i.employee_upgrade_option ?? "—"} />
-        <RField label="Pre-Upgrade Premium" value={i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"} />
-        <RField label="Upgrade Submitted At" value={fmtDate(i.upgrade_submitted_at)} />
-        <RField label="Upgrade Carrier Decision" value={i.upgrade_carrier_decision ?? "—"} />
-        <RField label="Upgrade Carrier Decision At" value={fmtDate(i.upgrade_carrier_decision_at)} />
+        <RField label="Interested in SI Buy-up" value={i.interested_upgrading ? "yes" : "no"} />
+        <RField label="SI Application Submitted" value={i.applied_for_upgrade ? "yes" : "no"} />
+        <RField label="SI Buy-up Option Selected" value={i.employee_upgrade_option ?? "—"} />
+        <RField label="Pre-Buy-up Premium" value={i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"} />
+        <RField label="SI Application Submitted At" value={fmtDate(i.upgrade_submitted_at)} />
+        <RField label="Carrier Decision" value={titleCase(i.upgrade_carrier_decision)} />
+        <RField label="Carrier Decision At" value={fmtDate(i.upgrade_carrier_decision_at)} />
       </Grid>
       {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
     </SectionCard>
@@ -788,13 +932,26 @@ function EnrollmentSection({ i }: { i: Detail }) {
         </RField>
         <RField label="Enrollment Deadline" value={fmtDate(i.enrollment_deadline)} />
         <RField label="Affiliations">
-          {i.affiliations.length === 0 ? <span className="text-sm text-black/50">None</span> : (
-            <div className="flex flex-wrap gap-1">
-              {i.affiliations.map((a) => (
-                <span key={a.id} className="px-1.5 py-0.5 rounded text-[11px] bg-[#d4b87a]/40 text-[#0a3d3e]">{a.name}</span>
-              ))}
-            </div>
-          )}
+          {(() => {
+            const fromWindow = i.enrollment_window_affiliate
+              ? [{ id: i.enrollment_window_affiliate.id, name: i.enrollment_window_affiliate.name }]
+              : [];
+            const all = [...fromWindow, ...i.affiliations];
+            if (all.length === 0) return <span className="text-sm text-black/50">None</span>;
+            return (
+              <div className="flex flex-wrap gap-1">
+                {all.map((a) => (
+                  <Link
+                    key={a.id}
+                    to="/affiliates"
+                    className="px-1.5 py-0.5 rounded text-[11px] bg-[#d4b87a]/40 text-[#0a3d3e] hover:bg-[#d4b87a]/60"
+                  >
+                    {a.name}
+                  </Link>
+                ))}
+              </div>
+            );
+          })()}
         </RField>
       </Grid>
     </SectionCard>
@@ -840,6 +997,25 @@ function SystemRefsSection({ i }: { i: Detail }) {
         )}
       </div>
 
+      {(() => {
+        const enrollment = tokens.find((t) => t.type === "enrollment");
+        const deadline = i.enrollment_deadline;
+        if (!enrollment || !deadline) return null;
+        const [ey, em, ed] = enrollment.expires.split("-").map(Number);
+        const [dy, dm, dd] = deadline.split("-").map(Number);
+        const eDt = new Date(ey, (em ?? 1) - 1, ed ?? 1).getTime();
+        const dDt = new Date(dy, (dm ?? 1) - 1, dd ?? 1).getTime();
+        const diffDays = Math.round((eDt - dDt) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 14) return null;
+        return (
+          <div className="mt-4 text-xs bg-amber-50 border border-amber-200 text-amber-900 rounded p-2 leading-relaxed">
+            <AlertTriangle className="inline h-3 w-3 mr-1" />
+            Enrollment token expires <b>{diffDays} days</b> after the enrollment deadline ({fmtDate(deadline)}).
+            Per spec, tokens should expire at <code>enrollment_close_date + 7 days</code>.
+            Flagging for schema review — not silently patching dummy data.
+          </div>
+        );
+      })()}
       <div className="mt-5 pt-4 border-t border-black/10">
         <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2 font-sans">Magic Tokens</div>
         <table className="w-full text-[11px] font-sans">
@@ -931,6 +1107,59 @@ function SystemRefsSection({ i }: { i: Detail }) {
 ============================================================= */
 
 const inputCls = "w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400";
+
+// TODO: restrict to a narrower role set in Phase B (currently any admin can reveal/edit SSN)
+function SsnField({ individualId, ssnOnFile, last4, editing }: { individualId: string; ssnOnFile: boolean; last4: string; editing: boolean }) {
+  const [revealed, setRevealed] = useState<string | null>(null);
+  const [editSsn, setEditSsn] = useState(false);
+  React.useEffect(() => {
+    if (!revealed) return;
+    const t = setTimeout(() => setRevealed(null), 30000);
+    return () => clearTimeout(t);
+  }, [revealed]);
+  if (!ssnOnFile && !editing) {
+    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-black/5 text-black/70"><Lock className="h-3 w-3" /> No SSN</span>;
+  }
+  if (editing && editSsn) {
+    return (
+      <div className="flex items-center gap-2">
+        <input placeholder="9 digits" className={`${inputCls} max-w-xs`} />
+        <button onClick={() => setEditSsn(false)} className="text-[10px] text-black/50 hover:text-black/80">Cancel</button>
+      </div>
+    );
+  }
+  if (editing) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-black/5 text-black/70">
+          <Lock className="h-3 w-3" /> {ssnOnFile ? `•••-••-${last4}` : "No SSN"}
+        </span>
+        <button onClick={() => setEditSsn(true)} className="text-[10px] px-2 py-0.5 rounded border border-amber-300 text-amber-700 hover:bg-amber-50">Edit SSN</button>
+      </div>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-black/5 text-black/70">
+        <Lock className="h-3 w-3" /> {revealed ?? `•••-••-${last4}`}
+      </span>
+      <button
+        onClick={() => {
+          if (revealed) { setRevealed(null); return; }
+          // TODO: call backend decrypt endpoint; write audit_log { table_name:'individuals', record_id, action:'reveal_pii', new_values:{field:'ssn'} }
+          void individualId;
+          setRevealed(`123-45-${last4}`);
+        }}
+        className="text-black/40 hover:text-[#0a3d3e]"
+        title={revealed ? "Hide SSN" : "Reveal SSN (auto-hides after 30s, logged to audit)"}
+      >
+        {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+      </button>
+      {revealed && <span className="text-[10px] text-black/40">auto-hides in 30s · access logged</span>}
+    </span>
+  );
+}
+
 
 function SectionCard({
   title, children, defaultOpen = false, summary, editing = false, canEdit = false, onEdit,
