@@ -787,15 +787,17 @@ function LifecycleTab({
           <Btn variant="primary" disabled={!canCreate} onClick={onNew}>+ New Window</Btn>
         </div>
         <TableShell>
-          <THead cols={["Type", "Sponsor", "Start", "End", "Default Effective", "Status", "GI", "Carrier", "Notes"]} />
+          <THead cols={["Type", "Sponsor", "Start", "End", "Default Effective", "Status", "GI", "Carrier", "Notes", ""]} />
           <tbody>
             {windows.map((w) => {
               const isAlwaysOpen = w.window_type === "new_joiner";
               const sponsor = w.sponsor_type === "affiliate"
-                ? <span><span className="text-black/40">—</span> <span className="text-[11px] text-black/50">(affiliate-sponsored: {w.affiliate})</span></span>
+                ? <span className="text-black/70 italic">{w.affiliate} <span className="ml-1 text-[10px] uppercase tracking-wider text-black/40">(affiliate-sponsored)</span></span>
                 : w.affiliate
-                  ? <span>{orgName} <span className="text-black/40">+</span> {w.affiliate}</span>
+                  ? <span>{orgName}<span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-stone-100 text-stone-700 border border-stone-200">+ {w.affiliate}</span></span>
                   : <span>{orgName}</span>;
+              const locked = w.status === "open" || w.status === "closed";
+              const pencilDim = w.status === "closed";
               return (
                 <TRow key={w.id} onClick={canEdit ? () => onEdit(w) : undefined}>
                   <TCell className="capitalize font-medium">{w.window_type.replace("_", " ")}</TCell>
@@ -807,6 +809,17 @@ function LifecycleTab({
                   <TCell>{w.gi_eligible ? <Pill tone="ok">GI</Pill> : <span className="text-black/30">—</span>}</TCell>
                   <TCell>{w.carrier}</TCell>
                   <TCell className="text-black/60">{w.notes}</TCell>
+                  <TCell>
+                    {canEdit ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(w); }}
+                        title={locked ? (w.status === "closed" ? "View (closed — read-only)" : "View (open — locked)") : "Edit window"}
+                        className={`p-1 rounded ${pencilDim ? "text-black/25 hover:text-black/40" : "text-black/50 hover:text-black/80"}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </TCell>
                 </TRow>
               );
             })}
@@ -814,6 +827,7 @@ function LifecycleTab({
           </tbody>
         </TableShell>
       </div>
+
 
       <OnboardingChecklist orgId={orgId} orgStatus={orgStatus} product={product} isAdmin={isAdmin} />
 
