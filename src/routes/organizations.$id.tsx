@@ -576,7 +576,9 @@ function OrgDetail() {
       <Drawer open={windowDrawer.state.open} onClose={windowDrawer.close} title={windowDrawer.state.mode === "create" ? "New Enrollment Window" : "Edit Window"}>
         <Field label="Window Type"><DSelect defaultValue={windowDrawer.state.data?.window_type ?? "initial"} options={WINDOW_TYPES} /></Field>
         <Field label="Sponsor Type"><DSelect defaultValue={windowDrawer.state.data?.sponsor_type ?? "employer"} options={SPONSOR_TYPES} /></Field>
-        <Field label="Affiliate Org (if any)"><Input defaultValue={windowDrawer.state.data?.affiliate ?? ""} placeholder="e.g. CCA Member Foundation" /></Field>
+        {(windowDrawer.state.data?.sponsor_type === "affiliate" || windowDrawer.state.data?.affiliate) && (
+          <Field label="Affiliate Org"><DSelect defaultValue={windowDrawer.state.data?.affiliate ?? AFFILIATE_ORG_OPTIONS[0].value} options={AFFILIATE_ORG_OPTIONS} /></Field>
+        )}
         <Field label="Start Date"><Input defaultValue={windowDrawer.state.data?.start ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" /></Field>
         <Field label="End Date"><Input defaultValue={windowDrawer.state.data?.end ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" /></Field>
         <Field label="Default Effective Date"><Input defaultValue={windowDrawer.state.data?.effective ?? ""} /></Field>
@@ -2597,7 +2599,11 @@ function CarrierIdentifiersSection({ org, readOnly, variant }: { org: OrgDetail;
     >
       <Grid2>
         <RField label="Case ID">{e.editing ? <input className={inputCls} defaultValue={org.case_id} /> : <span className="font-mono text-xs">{org.case_id}</span>}</RField>
-        <RField label="Benefit System">{e.editing ? <input className={inputCls} defaultValue={org.benefit_system} /> : org.benefit_system}</RField>
+        <RField label="Benefit System">
+          {e.editing
+            ? <select className={inputCls} defaultValue={org.benefit_system}>{BENEFIT_SYSTEMS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+            : benefitSystemLabel(org.benefit_system)}
+        </RField>
         <RField label="Enrollment ID (Carrier)">{e.editing ? <input className={inputCls} defaultValue={org.enrollment_id_carrier} /> : <span className="font-mono text-xs">{org.enrollment_id_carrier}</span>}</RField>
         <RField label="Rider Codes">
           {e.editing
