@@ -676,6 +676,7 @@ function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product
       />
       <div className="space-y-3">
         <IdentitySection org={org} product={product} statusValue={statusValue} isAdmin={isAdmin} readOnly={readOnly} summary={identitySummary} variant="info" />
+        {product === "LTC" && <NewJoinerPolicySection org={org} readOnly={readOnly} variant="info" />}
         <CarrierProductSection org={org} product={product} readOnly={readOnly} variant="info" />
         {product === "LTC" && <CarrierIdentifiersSection org={org} readOnly={readOnly} variant="info" />}
         <ContactsSection org={org} readOnly={readOnly} variant="info" />
