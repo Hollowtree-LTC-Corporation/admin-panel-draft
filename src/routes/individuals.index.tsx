@@ -38,15 +38,8 @@ import { INDIVIDUALS, ORGS, formatCents } from "@/lib/wireframe/data";
 function formatFaceAmount(cents: number): string {
   return `$${Math.round(cents / 100).toLocaleString()}`;
 }
-function ridersFor(orgId: string): string {
-  const o = ORGS.find((x) => x.id === orgId);
-  const eob = !!o?.extension_of_benefits_rider;
-  const br = !!o?.benefit_restoration_rider;
-  if (eob && br) return "EOB + BR";
-  if (eob) return "EOB";
-  if (br) return "BR";
-  return "—";
-}
+// ridersFor removed — LTC list no longer surfaces riders column per latest spec
+
 function benefitClassFor(n: number): string { return n % 2 === 0 ? "All Employees" : "Management"; }
 function premiumStructureFor(n: number): "lifetime" | "ten_pay" { return n % 4 === 0 ? "ten_pay" : "lifetime"; }
 function premiumStructureLabel(v: string): string { return v === "ten_pay" ? "10-Pay" : "Lifetime"; }
