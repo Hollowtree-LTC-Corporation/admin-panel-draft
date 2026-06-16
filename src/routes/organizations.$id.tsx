@@ -106,10 +106,7 @@ function carrierOptionsForProduct(
     .sort((a, b) => a.label.localeCompare(b.label));
   return [...recent, ...rest];
 }
-function carrierIdFromName(name: string | null | undefined, product: "DI" | "LTC"): string | null {
-  if (!name) return null;
-  return carrierOptionsForProduct(product).find((o) => o.label === name)?.value ?? null;
-}
+// carrierIdFromName helper removed — lookup now lives inside WindowDrawerBody.
 const BROKER_TYPES = ["Broker","IMO","Internal"] as const;
 type BrokerType = typeof BROKER_TYPES[number];
 type BrokerRecord = {
