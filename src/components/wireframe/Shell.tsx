@@ -20,7 +20,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/organizations", label: "Organizations", icon: Building2 },
       { to: "/individuals", label: "Individuals", icon: Users },
       { to: "/enrollment-windows", label: "Enrollment Windows", icon: CalendarRange },
-      { to: "/enrollment-responses", label: "Enrollment Responses", icon: Layers, product: "LTC" },
+      { to: "/si-applications", label: "SI Applications", icon: Layers, product: "LTC" },
       { to: "/policies", label: "Policies", icon: FileText },
     ],
   },
