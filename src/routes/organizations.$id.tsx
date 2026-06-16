@@ -1167,6 +1167,7 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
             {EligibleLivesField}
             {PolicyOwnerField}
             {MicrositeFieldRow}
+            {ContributionTypeField}
           </>
         )}
       </Grid2>
