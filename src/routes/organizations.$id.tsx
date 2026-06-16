@@ -3045,57 +3045,407 @@ function Ref({ label, value, muted }: { label: string; value: string; muted?: bo
 ============================================================= */
 
 
+/* ---------- Benefit Classes helpers ---------- */
+type BCRow = typeof BENEFIT_CLASSES[number];
+
+const TIER_KEYS = ["bronze", "silver", "gold", "platinum", "diamond"] as const;
+type TierKey = typeof TIER_KEYS[number];
+const TIER_LABEL: Record<TierKey, string> = {
+  bronze: "Bronze", silver: "Silver", gold: "Gold", platinum: "Platinum", diamond: "Diamond",
+};
+
+const CENT_25K = 2_500_000;
+const CENT_50K = 5_000_000;
+const CENT_150K = 15_000_000;
+
+function deriveTiers(giCents: number) {
+  const gold = giCents;
+  const silver = Math.max(0, gold - CENT_25K);
+  const bronze = gold > CENT_50K ? Math.max(0, silver - CENT_25K) : null;
+  const platinum = gold + CENT_50K;
+  const diamond = gold + CENT_150K;
+  return { bronze, silver, gold, platinum, diamond };
+}
+function divisibleBy25k(c: number | null): boolean {
+  if (c == null) return true;
+  return c % CENT_25K === 0;
+}
+function dollarsToCents(s: string): number | null {
+  const v = s.replace(/[$,\s]/g, "");
+  if (v === "") return null;
+  const n = Number(v);
+  if (!isFinite(n)) return null;
+  return Math.round(n * 100);
+}
+function centsToDollarStr(c: number | null | undefined): string {
+  if (c == null) return "";
+  return (c / 100).toFixed(2);
+}
+// Deterministic synth: split org individuals across the org's classes by index.
+function individualsForClass(classes: BCRow[], classId: string, orgId: string): number {
+  if (!classes.length) return 0;
+  const idx = classes.findIndex((c) => c.id === classId);
+  if (idx < 0) return 0;
+  const orgInds = INDIVIDUALS.filter((i) => i.org_id === orgId);
+  return orgInds.filter((_, i) => i % classes.length === idx).length;
+}
+
+/* ---------- Dollar input ---------- */
+function DollarInput({
+  value, onChange, placeholder = "$0.00", disabled = false, error,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  error?: string;
+}) {
+  return (
+    <div>
+      <div className={`flex items-center border rounded ${error ? "border-red-500" : "border-black/15"} ${disabled ? "bg-black/5" : "bg-white"}`}>
+        <span className="px-2 text-sm text-black/55">$</span>
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          inputMode="decimal"
+          className="w-full px-1 py-1 text-sm bg-transparent outline-none disabled:text-black/50"
+        />
+      </div>
+      {error ? <div className="text-[11px] text-red-600 mt-0.5">{error}</div> : null}
+    </div>
+  );
+}
+
+/* ---------- Confirm modal (simple overlay) ---------- */
+function ConfirmModal({
+  open, onClose, title, body, confirmLabel = "Confirm", onConfirm, danger = false, blocked = false,
+}: {
+  open: boolean; onClose: () => void; title: string; body: React.ReactNode;
+  confirmLabel?: string; onConfirm?: () => void; danger?: boolean; blocked?: boolean;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
+      <div className="bg-white rounded-md shadow-lg max-w-md w-full p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="text-sm font-semibold mb-2">{title}</div>
+        <div className="text-xs text-black/70 mb-4 space-y-2">{body}</div>
+        <div className="flex justify-end gap-2">
+          <Btn onClick={onClose}>{blocked ? "Close" : "Cancel"}</Btn>
+          {!blocked && onConfirm ? (
+            <button
+              onClick={() => { onConfirm(); onClose(); }}
+              className={`px-3 py-1 rounded text-xs font-medium text-white ${danger ? "bg-red-600 hover:bg-red-700" : "bg-[#0a3d3e] hover:bg-[#0a3d3e]/90"}`}
+            >{confirmLabel}</button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Benefit Class drawer body ---------- */
+function BenefitClassDrawerBody({
+  mode, initial, classes, orgName, onClose, canSave,
+}: {
+  mode: "create" | "edit";
+  initial: BCRow | undefined;
+  classes: BCRow[];
+  orgName: string;
+  onClose: () => void;
+  canSave: boolean;
+}) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [giStr, setGiStr] = useState(centsToDollarStr(initial?.gi_offer_cents));
+  const initialDerived = initial ? {
+    bronze: initial.bronze ?? null,
+    silver: initial.silver,
+    gold: initial.gold,
+    platinum: initial.platinum,
+    diamond: initial.diamond,
+  } : deriveTiers(0);
+  const [silverStr, setSilverStr] = useState(centsToDollarStr(initialDerived.silver));
+  const [bronzeStr, setBronzeStr] = useState(centsToDollarStr(initialDerived.bronze));
+  const [platinumStr, setPlatinumStr] = useState(centsToDollarStr(initialDerived.platinum));
+  const [diamondStr, setDiamondStr] = useState(centsToDollarStr(initialDerived.diamond));
+  const [silverAuto, setSilverAuto] = useState(true);
+  const [bronzeAuto, setBronzeAuto] = useState(true);
+  const [platinumAuto, setPlatinumAuto] = useState(true);
+  const [diamondAuto, setDiamondAuto] = useState(true);
+  const onlyClass = classes.length <= 1 && mode === "create";
+  const [isDefault, setIsDefault] = useState<boolean>(initial?.is_default ?? onlyClass);
+
+  const giCents = dollarsToCents(giStr) ?? 0;
+  const showBronze = giCents > CENT_50K;
+  const derived = deriveTiers(giCents);
+
+  // Apply auto-derived values when GI changes
+  useEffect(() => {
+    if (silverAuto) setSilverStr(centsToDollarStr(derived.silver));
+    if (bronzeAuto && derived.bronze != null) setBronzeStr(centsToDollarStr(derived.bronze));
+    if (platinumAuto) setPlatinumStr(centsToDollarStr(derived.platinum));
+    if (diamondAuto) setDiamondStr(centsToDollarStr(derived.diamond));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [giCents]);
+
+  const goldStr = centsToDollarStr(derived.gold);
+
+  const silverCents = dollarsToCents(silverStr);
+  const bronzeCents = showBronze ? dollarsToCents(bronzeStr) : null;
+  const platinumCents = dollarsToCents(platinumStr);
+  const diamondCents = dollarsToCents(diamondStr);
+
+  const errors: Record<string, string> = {};
+  if (!name.trim()) errors.name = "Required.";
+  if (!giCents) errors.gi = "Required.";
+  if (!divisibleBy25k(giCents)) errors.gi = "Must be divisible by $25,000.";
+  if (!divisibleBy25k(silverCents)) errors.silver = "Must be divisible by $25,000.";
+  if (showBronze && !divisibleBy25k(bronzeCents)) errors.bronze = "Must be divisible by $25,000.";
+  if (!divisibleBy25k(platinumCents)) errors.platinum = "Must be divisible by $25,000.";
+  if (!divisibleBy25k(diamondCents)) errors.diamond = "Must be divisible by $25,000.";
+
+  const valid = Object.keys(errors).length === 0;
+  const currentDefault = classes.find((c) => c.is_default && c.id !== initial?.id);
+
+  // Edit-mode warnings
+  const rateCount = initial ? LTC_RATE_CELLS.filter((r) => r.benefit_class_id === initial.id).length : 0;
+  const indCount = initial ? individualsForClass(classes, initial.id, initial.org_id) : 0;
+
+  function handleTierChange(setter: (s: string) => void, setAuto: (b: boolean) => void) {
+    return (v: string) => { setter(v); setAuto(false); };
+  }
+
+  return (
+    <div>
+      {mode === "edit" && rateCount > 0 ? (
+        <div className="mb-3 p-2 border border-amber-300 bg-amber-50 rounded text-[11px] text-amber-900">
+          This class has {rateCount} rate cells. Changing tier face amounts may invalidate
+          existing rates. After saving, verify rates are still correct or re-import from
+          the carrier proposal.
+        </div>
+      ) : null}
+      {mode === "edit" ? (
+        <div className="mb-3 text-[11px] text-black/60">
+          {indCount} individuals are assigned to this class.
+        </div>
+      ) : null}
+
+      <Field label="Name">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g., All Employees"
+          className={`w-full px-2 py-1 text-sm border rounded ${errors.name ? "border-red-500" : "border-black/15"}`}
+        />
+      </Field>
+
+      <Field label="GI Offer">
+        <DollarInput value={giStr} onChange={setGiStr} error={errors.gi} />
+        <div className="text-[11px] text-black/55 mt-1">
+          The Guaranteed Issue face amount for this class. All tiers are derived from this value.
+        </div>
+      </Field>
+
+      {showBronze ? (
+        <Field label="Bronze">
+          <div className="flex items-center gap-2">
+            <div className="flex-1"><DollarInput value={bronzeStr} onChange={handleTierChange(setBronzeStr, setBronzeAuto)} error={errors.bronze} /></div>
+            <ChipAuto auto={bronzeAuto} />
+          </div>
+        </Field>
+      ) : (
+        <Field label="Bronze">
+          <div className="text-[11px] italic text-black/50 py-1">
+            Bronze tier not available when GI Offer is $50,000 or below.
+          </div>
+        </Field>
+      )}
+
+      <Field label="Silver">
+        <div className="flex items-center gap-2">
+          <div className="flex-1"><DollarInput value={silverStr} onChange={handleTierChange(setSilverStr, setSilverAuto)} error={errors.silver} /></div>
+          <ChipAuto auto={silverAuto} />
+        </div>
+      </Field>
+
+      <Field label="Gold (= GI Offer)">
+        <DollarInput value={goldStr} onChange={() => {}} disabled />
+      </Field>
+
+      <Field label="Platinum">
+        <div className="flex items-center gap-2">
+          <div className="flex-1"><DollarInput value={platinumStr} onChange={handleTierChange(setPlatinumStr, setPlatinumAuto)} error={errors.platinum} /></div>
+          <ChipAuto auto={platinumAuto} />
+        </div>
+      </Field>
+
+      <Field label="Diamond">
+        <div className="flex items-center gap-2">
+          <div className="flex-1"><DollarInput value={diamondStr} onChange={handleTierChange(setDiamondStr, setDiamondAuto)} error={errors.diamond} /></div>
+          <ChipAuto auto={diamondAuto} />
+        </div>
+      </Field>
+
+      <div className="flex items-center gap-2 mt-3 mb-1">
+        <Switch
+          checked={onlyClass ? true : isDefault}
+          disabled={onlyClass}
+          onCheckedChange={(v) => setIsDefault(Boolean(v))}
+        />
+        <span className="text-xs text-black/70">Default for org</span>
+      </div>
+      {onlyClass ? (
+        <div className="text-[11px] text-black/60 mb-2">
+          This will be the only class. It must be the default.
+        </div>
+      ) : isDefault && currentDefault ? (
+        <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mb-2">
+          Enabling this will remove default status from &lsquo;{currentDefault.name}&rsquo;.
+          All individuals without an explicit class assignment will use this class instead.
+        </div>
+      ) : null}
+
+      <div className="flex gap-2 mt-4">
+        <Btn variant="primary" disabled={!canSave || !valid} onClick={onClose}>Save</Btn>
+        <Btn onClick={onClose}>Cancel</Btn>
+      </div>
+      <div className="text-[10px] text-black/40 mt-2">
+        Org: {orgName}. Values are stored as cents on save.
+      </div>
+    </div>
+  );
+}
+
+function ChipAuto({ auto }: { auto: boolean }) {
+  return auto
+    ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800">Auto-derived</span>
+    : <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-800">Custom</span>;
+}
+
+/* ---------- Benefit Classes Tab ---------- */
 function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
-  classes: typeof BENEFIT_CLASSES; onNew: () => void; onEdit: (c: typeof BENEFIT_CLASSES[number]) => void; canEdit: boolean; canCreate: boolean;
+  classes: BCRow[]; onNew: () => void; onEdit: (c: BCRow) => void; canEdit: boolean; canCreate: boolean;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [setDefaultFor, setSetDefaultFor] = useState<BCRow | null>(null);
+  const [deleteFor, setDeleteFor] = useState<BCRow | null>(null);
+
+  const orgId = classes[0]?.org_id ?? "";
+  const currentDefault = classes.find((c) => c.is_default);
+
+  function blockedDeleteReason(c: BCRow): string | null {
+    if (c.is_default && classes.length > 1) return "Cannot delete the default class. Set another class as default first.";
+    if (classes.length <= 1) return "Cannot delete the only benefit class. Every organization must have at least one class.";
+    const inds = individualsForClass(classes, c.id, c.org_id);
+    if (inds > 0) return `Cannot delete this class while ${inds} individuals are assigned to it. Reassign them to another class first.`;
+    return null;
+  }
+
   return (
     <div className="mt-3">
       <div className="flex justify-end mb-2">
         <Btn variant="primary" disabled={!canCreate} onClick={onNew}>+ New Benefit Class</Btn>
       </div>
       <TableShell>
-        <THead cols={["", "Name", "GI Offer", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "# Rate Cells", "Last Rate Update", "Default"]} />
+        <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/55">
+          <tr>
+            <th className="text-left font-medium px-3 py-2"></th>
+            <th className="text-left font-medium px-3 py-2">Name</th>
+            <th className="text-left font-medium px-3 py-2">GI Offer</th>
+            <th className="text-left font-medium px-3 py-2">Bronze</th>
+            <th className="text-left font-medium px-3 py-2">Silver</th>
+            <th className="text-left font-medium px-3 py-2">Gold</th>
+            <th className="text-left font-medium px-3 py-2">Platinum</th>
+            <th className="text-left font-medium px-3 py-2">Diamond</th>
+            <th className="text-left font-medium px-3 py-2"># Rates</th>
+            <th className="text-left font-medium px-3 py-2">Last Rate Update</th>
+            <th className="text-left font-medium px-3 py-2">Default</th>
+            <th className="text-left font-medium px-3 py-2"></th>
+          </tr>
+          <tr className="text-[9px] normal-case tracking-normal text-black/40">
+            <th className="px-3 pb-1"></th>
+            <th className="px-3 pb-1"></th>
+            <th className="text-left font-normal px-3 pb-1">Face Amt</th>
+            <th className="text-left font-normal px-3 pb-1">Face Amt</th>
+            <th className="text-left font-normal px-3 pb-1">Face Amt</th>
+            <th className="text-left font-normal px-3 pb-1">Face Amt</th>
+            <th className="text-left font-normal px-3 pb-1">Face Amt</th>
+            <th className="text-left font-normal px-3 pb-1">Face Amt</th>
+            <th className="px-3 pb-1"></th>
+            <th className="px-3 pb-1"></th>
+            <th className="px-3 pb-1"></th>
+            <th className="px-3 pb-1"></th>
+          </tr>
+        </thead>
         <tbody>
           {classes.map((c) => {
-            const bronzeAbsent = c.gi_offer_cents <= 5000000;
+            const bronzeAbsent = c.gi_offer_cents <= CENT_50K;
             const cells = LTC_RATE_CELLS.filter((r) => r.benefit_class_id === c.id);
             const lastUpdate = cells.length > 0 ? cells.map((r) => r.effective_date).sort().slice(-1)[0] : null;
             const isOpen = expanded === c.id;
-            const hasRates = cells.length > 0;
+            const indCount = individualsForClass(classes, c.id, c.org_id);
             return (
               <React.Fragment key={c.id}>
-                <TRow onClick={canEdit ? () => onEdit(c) : undefined}>
-                  <TCell className="w-6" onClick={(e) => { e.stopPropagation(); if (hasRates) setExpanded(isOpen ? null : c.id); }}>
-                    {hasRates ? (
-                      <button className="text-black/60 hover:text-black" title={isOpen ? "Collapse" : "Expand rates"}>
-                        {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                      </button>
-                    ) : (
-                      <span className="text-black/20" title="No rates configured for this benefit class. Click Add Rate to start.">
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </span>
-                    )}
+                <TRow>
+                  <TCell className="w-6" onClick={(e) => { e.stopPropagation(); setExpanded(isOpen ? null : c.id); }}>
+                    <button className="text-black/60 hover:text-black" title={isOpen ? "Collapse" : "Expand rates"}>
+                      {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                    </button>
                   </TCell>
-                  <TCell className="font-medium">{c.name}</TCell>
+                  <TCell className="font-medium">
+                    {c.name}
+                    <span className="ml-1 text-[10px] text-black/45">({indCount} individuals)</span>
+                  </TCell>
                   <TCell>{formatCents(c.gi_offer_cents)}</TCell>
                   <TCell>
                     {bronzeAbsent
-                      ? <span className="text-black/30" title="Bronze tier absent because GI offer is $50K or below">—</span>
+                      ? <span className="text-black/30 italic">---</span>
                       : formatCents(c.bronze)}
                   </TCell>
                   <TCell>{formatCents(c.silver)}</TCell>
-                  <TCell>{formatCents(c.gold)} <span className="text-[10px] text-black/40">(= GI)</span></TCell>
+                  <TCell>{formatCents(c.gi_offer_cents)} <span className="text-[10px] text-black/40">(= GI)</span></TCell>
                   <TCell>{formatCents(c.platinum)}</TCell>
                   <TCell>{formatCents(c.diamond)}</TCell>
                   <TCell>{cells.length}</TCell>
-                  <TCell>{lastUpdate ? fmtDate(lastUpdate) : <span className="text-black/30">—</span>}</TCell>
+                  <TCell>{lastUpdate ? fmtDate(lastUpdate) : <span className="text-black/30">---</span>}</TCell>
                   <TCell>{c.is_default ? <Pill tone="ok">Default</Pill> : null}</TCell>
+                  <TCell className="w-8 relative">
+                    <button
+                      className="p-1 hover:bg-black/5 rounded"
+                      onClick={(e) => { e.stopPropagation(); setMenuFor(menuFor === c.id ? null : c.id); }}
+                      title="Actions"
+                    >
+                      <span className="text-base leading-none">⋯</span>
+                    </button>
+                    {menuFor === c.id ? (
+                      <div className="absolute right-2 top-7 z-20 bg-white border border-black/15 rounded shadow-md text-xs w-44" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className="w-full text-left px-3 py-1.5 hover:bg-black/5 disabled:opacity-40"
+                          disabled={!canEdit}
+                          onClick={() => { setMenuFor(null); onEdit(c); }}
+                        >Edit</button>
+                        {!c.is_default ? (
+                          <button
+                            className="w-full text-left px-3 py-1.5 hover:bg-black/5 disabled:opacity-40"
+                            disabled={!canEdit}
+                            onClick={() => { setMenuFor(null); setSetDefaultFor(c); }}
+                          >Set as Default</button>
+                        ) : null}
+                        <button
+                          className="w-full text-left px-3 py-1.5 hover:bg-red-50 text-red-700 disabled:opacity-40"
+                          disabled={!canEdit}
+                          onClick={() => { setMenuFor(null); setDeleteFor(c); }}
+                        >Delete</button>
+                      </div>
+                    ) : null}
+                  </TCell>
                 </TRow>
                 {isOpen ? (
                   <tr className="bg-[#f7f3eb]/40 border-t border-black/5">
-                    <td colSpan={11} className="p-3">
-                      <LTCRatePanel benefitClassId={c.id} benefitClassName={c.name} />
+                    <td colSpan={12} className="p-3">
+                      <LTCRatePanel benefitClass={c} />
                     </td>
                   </tr>
                 ) : null}
@@ -3104,22 +3454,82 @@ function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
           })}
         </tbody>
       </TableShell>
+
+      {/* Modal B: Set as Default */}
+      <ConfirmModal
+        open={!!setDefaultFor}
+        onClose={() => setSetDefaultFor(null)}
+        title="Set as Default Benefit Class"
+        confirmLabel="Set as Default"
+        onConfirm={() => { /* wireframe: would swap default */ }}
+        body={
+          setDefaultFor ? (
+            <>
+              <p>Set &lsquo;{setDefaultFor.name}&rsquo; as the default benefit class?</p>
+              {currentDefault ? (
+                <p>This will replace &lsquo;{currentDefault.name}&rsquo; as the default.{" "}
+                  {individualsForClass(classes, currentDefault.id, orgId)} individuals without an
+                  explicit class assignment currently use the default class.</p>
+              ) : null}
+            </>
+          ) : null
+        }
+      />
+
+      {/* Modal C: Delete */}
+      {deleteFor ? (() => {
+        const reason = blockedDeleteReason(deleteFor);
+        const cellsToDelete = LTC_RATE_CELLS.filter((r) => r.benefit_class_id === deleteFor.id).length;
+        return (
+          <ConfirmModal
+            open={true}
+            onClose={() => setDeleteFor(null)}
+            title={reason ? "Cannot delete benefit class" : `Delete '${deleteFor.name}'?`}
+            confirmLabel="Delete"
+            danger
+            blocked={!!reason}
+            onConfirm={reason ? undefined : () => { /* wireframe delete */ }}
+            body={
+              reason ? <p>{reason}</p> : (
+                <>
+                  <p>Delete benefit class &lsquo;{deleteFor.name}&rsquo;?</p>
+                  <p>This will also delete {cellsToDelete} rate cells associated with this class. This action cannot be undone.</p>
+                </>
+              )
+            }
+          />
+        );
+      })() : null}
     </div>
   );
 }
 
 /* ---------- LTC Rate matrix panel (nested under benefit_class) ---------- */
-function LTCRatePanel({ benefitClassId, benefitClassName }: { benefitClassId: string; benefitClassName: string }) {
+function LTCRatePanel({ benefitClass }: { benefitClass: BCRow }) {
   const [smoker, setSmoker] = useState<"non_tobacco" | "tobacco">("non_tobacco");
   const [importOpen, setImportOpen] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [cells, setCells] = useState<LTCRateCell[]>(() => LTC_RATE_CELLS.filter((r) => r.benefit_class_id === benefitClassId));
-  const [editing, setEditing] = useState<string | null>(null); // cell id being edited
+  const [cells, setCells] = useState<LTCRateCell[]>(() => LTC_RATE_CELLS.filter((r) => r.benefit_class_id === benefitClass.id));
+  const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
+  const [importStep, setImportStep] = useState<1 | 2 | 3>(1);
+  const [importReplace, setImportReplace] = useState(true);
 
   const visible = cells.filter((r) => r.smoker_status === smoker);
-  const allTiers: Array<LTCRateCell["tier"]> = ["bronze","silver","gold","platinum","diamond"];
-  const presentTiers = allTiers.filter((t) => cells.some((r) => r.tier === t));
+
+  // Tiers defined on the class (face amount present and not zero for non-bronze)
+  const classTierFace: Record<TierKey, number | null> = {
+    bronze: benefitClass.gi_offer_cents > CENT_50K ? (benefitClass.bronze ?? null) : null,
+    silver: benefitClass.silver,
+    gold: benefitClass.gi_offer_cents,
+    platinum: benefitClass.platinum,
+    diamond: benefitClass.diamond,
+  };
+  const definedTiers = TIER_KEYS.filter((t) => classTierFace[t] != null && classTierFace[t]! > 0);
+  const tiersWithData = new Set(visible.map((r) => r.tier));
+  const tiersMissingData = definedTiers.filter((t) => !tiersWithData.has(t));
+
   const ages = Array.from(new Set(visible.map((r) => r.issue_age))).sort((a, b) => a - b);
   const cellMap = new Map<string, LTCRateCell>();
   for (const r of visible) cellMap.set(`${r.issue_age}_${r.tier}`, r);
@@ -3131,15 +3541,15 @@ function LTCRatePanel({ benefitClassId, benefitClassName }: { benefitClassId: st
   const sourceCounts = new Map<string, number>();
   for (const r of cells) sourceCounts.set(r.source, (sourceCounts.get(r.source) ?? 0) + 1);
   const topSource = [...sourceCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const sourceLabel = topSource === "carrier_proposal" ? "Carrier Proposal"
+    : topSource === "google_sheet_import" ? "Google Sheet Import"
+    : topSource === "manual_entry" ? "Manual Entry" : (topSource ?? "---");
 
-  const nominalRefBits = allTiers
-    .map((t) => {
-      const c = cells.find((r) => r.tier === t);
-      if (!c) return null;
-      return `${t[0].toUpperCase()}${t.slice(1)}: ${formatCents(c.nominal_death_benefit_cents)}`;
-    })
-    .filter(Boolean)
-    .join(" · ");
+  // Mismatch detection: nominal_death_benefit_cents in any cell vs class tier face
+  const mismatch = cells.some((r) => {
+    const expected = classTierFace[r.tier];
+    return expected != null && r.nominal_death_benefit_cents !== expected;
+  });
 
   function startEdit(id: string, val: number) {
     setEditing(id);
@@ -3152,11 +3562,15 @@ function LTCRatePanel({ benefitClassId, benefitClassName }: { benefitClassId: st
     }
     setEditing(null);
   }
-
-  function addRate(form: { issue_age: number; tier: LTCRateCell["tier"]; nominal: number; death: number; premium: number; effective: string }) {
+  function addRate(form: { issue_age: number; tier: TierKey; nominal: number; death: number; premium: number; effective: string }) {
+    const dup = cells.find((r) => r.smoker_status === smoker && r.issue_age === form.issue_age && r.tier === form.tier);
+    if (dup) {
+      alert(`A rate already exists for age ${form.issue_age}, ${TIER_LABEL[form.tier]}, ${smoker === "non_tobacco" ? "Non-Tobacco" : "Tobacco"}. Edit the existing rate instead.`);
+      return;
+    }
     const newCell: LTCRateCell = {
-      id: `lrc_${benefitClassId}_${Date.now()}`,
-      benefit_class_id: benefitClassId,
+      id: `lrc_${benefitClass.id}_${Date.now()}`,
+      benefit_class_id: benefitClass.id,
       carrier_product_id: carrierProductId ?? "cp_6",
       smoker_status: smoker,
       issue_age: form.issue_age,
@@ -3170,11 +3584,20 @@ function LTCRatePanel({ benefitClassId, benefitClassName }: { benefitClassId: st
     setCells((prev) => [...prev, newCell]);
     setAdding(false);
   }
+  function deleteAll() {
+    setCells((prev) => prev.filter((r) => r.smoker_status !== smoker));
+    setDeleteAllOpen(false);
+  }
 
   return (
     <div className="bg-white border border-black/10 rounded">
       <div className="flex items-center justify-between px-3 py-2 border-b border-black/10">
-        <div className="text-xs font-semibold">Rates for {benefitClassName}</div>
+        <div className="text-xs font-semibold flex items-center gap-2">
+          Monthly Lifetime Premiums for {benefitClass.name}
+          {mismatch ? (
+            <span title="Nominal face amounts in rate cells do not match class tier definition. Rates may need re-import." className="text-amber-600">⚠</span>
+          ) : null}
+        </div>
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-md border border-black/15 overflow-hidden text-[11px]">
             {(["non_tobacco","tobacco"] as const).map((s) => (
@@ -3186,12 +3609,25 @@ function LTCRatePanel({ benefitClassId, benefitClassName }: { benefitClassId: st
             ))}
           </div>
           <Btn onClick={() => setAdding((v) => !v)} variant="primary">+ Add Rate</Btn>
-          <Btn onClick={() => setImportOpen(true)}>Import from Carrier Proposal</Btn>
+          <Btn onClick={() => { setImportOpen(true); setImportStep(1); }}>Import from Carrier Proposal</Btn>
+          {visible.length > 0 ? (
+            <button
+              onClick={() => setDeleteAllOpen(true)}
+              className="text-[11px] text-red-600 hover:text-red-700 px-2 py-1 border border-red-300 rounded"
+            >Delete All Rates</button>
+          ) : null}
         </div>
       </div>
 
       {adding ? (
-        <AddRateForm onCancel={() => setAdding(false)} onSubmit={addRate} smoker={smoker} tiers={presentTiers.length ? presentTiers : allTiers} defaultEffective={lastEffective ?? "2025-01-01"} />
+        <AddRateForm
+          onCancel={() => setAdding(false)}
+          onSubmit={addRate}
+          smoker={smoker}
+          tiers={definedTiers.length ? definedTiers : (TIER_KEYS as readonly TierKey[]).slice()}
+          classTierFace={classTierFace}
+          defaultEffective={lastEffective ?? "2025-01-01"}
+        />
       ) : null}
 
       <div className="overflow-x-auto">
@@ -3199,18 +3635,24 @@ function LTCRatePanel({ benefitClassId, benefitClassName }: { benefitClassId: st
           <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
             <tr>
               <th className="text-left font-medium px-3 py-2">Issue Age</th>
-              {presentTiers.map((t) => (
-                <th key={t} className="text-right font-medium px-3 py-2 capitalize">{t}</th>
+              {definedTiers.map((t) => (
+                <th key={t} className="text-right font-medium px-3 py-2">
+                  <div>{TIER_LABEL[t]}</div>
+                  <div className="text-[9px] font-normal text-black/45 normal-case">
+                    {classTierFace[t] != null ? formatCents(classTierFace[t]!) : "---"}
+                  </div>
+                </th>
               ))}
+              <th className="w-8"></th>
             </tr>
           </thead>
           <tbody>
             {ages.map((age) => (
-              <tr key={age} className="border-t border-black/5">
+              <tr key={age} className="border-t border-black/5 group">
                 <td className="px-3 py-1.5 font-medium">{age}</td>
-                {presentTiers.map((t) => {
+                {definedTiers.map((t) => {
                   const c = cellMap.get(`${age}_${t}`);
-                  if (!c) return <td key={t} className="px-3 py-1.5 text-right text-black/25">—</td>;
+                  if (!c) return <td key={t} className="px-3 py-1.5 text-right text-black/25">---</td>;
                   const isEdit = editing === c.id;
                   return (
                     <td key={t} className="px-3 py-1.5 text-right font-mono">
@@ -3231,83 +3673,177 @@ function LTCRatePanel({ benefitClassId, benefitClassName }: { benefitClassId: st
                     </td>
                   );
                 })}
+                <td className="px-2 py-1.5 text-right opacity-0 group-hover:opacity-100">
+                  <Pencil className="h-3 w-3 inline text-black/50" />
+                </td>
               </tr>
             ))}
             {ages.length === 0 ? (
-              <tr><td colSpan={presentTiers.length + 1} className="px-3 py-4 text-center text-black/40">No rates for this smoker status. Use Add Rate to start.</td></tr>
+              <tr><td colSpan={definedTiers.length + 2} className="px-3 py-4 text-center text-black/40">No rates for this smoker status. Use Add Rate to start.</td></tr>
             ) : null}
           </tbody>
         </table>
       </div>
 
+      {tiersMissingData.length > 0 ? (
+        <div className="px-3 py-2 text-[11px] text-black/55 border-t border-black/5">
+          Rates not yet imported for: {tiersMissingData.map((t) => TIER_LABEL[t]).join(", ")}
+        </div>
+      ) : null}
+
       <div className="px-3 py-2 border-t border-black/10 text-[10px] text-black/55 flex flex-wrap gap-x-4 gap-y-1">
-        <span>Carrier product: <span className="text-black/75">{carrierName ? `${carrierName} - ${carrierProduct?.product_name}` : "—"}</span></span>
-        <span>Effective date: <span className="text-black/75">{lastEffective ? fmtDate(lastEffective) : "—"}</span></span>
-        <span>Source: <span className="text-black/75">{topSource ?? "—"}</span></span>
-        {nominalRefBits ? <span>Nominal: <span className="text-black/75">{nominalRefBits}</span></span> : null}
+        <span>Carrier product: <span className="text-black/75">{carrierName ? `${carrierName} - ${carrierProduct?.product_name}` : "---"}</span></span>
+        <span>Effective date: <span className="text-black/75">{lastEffective ? fmtDate(lastEffective) : "---"}</span></span>
+        <span>Source: <span className="text-black/75">{sourceLabel}</span></span>
+        <span>Nominal: <span className="text-black/75">
+          {definedTiers.map((t) => `${TIER_LABEL[t]}: ${formatCents(classTierFace[t]!)}`).join(" · ")}
+        </span></span>
       </div>
 
+      {/* Delete-all confirmation */}
+      <ConfirmModal
+        open={deleteAllOpen}
+        onClose={() => setDeleteAllOpen(false)}
+        title="Delete all rates"
+        confirmLabel="Delete All"
+        danger
+        onConfirm={deleteAll}
+        body={
+          <p>Delete all {visible.length} {smoker === "non_tobacco" ? "Non-Tobacco" : "Tobacco"} rate
+            cells for {benefitClass.name}? This cannot be undone. You will need to re-import
+            rates from a carrier proposal.</p>
+        }
+      />
+
+      {/* Import modal */}
       <Drawer open={importOpen} onClose={() => setImportOpen(false)} title="Import from Carrier Proposal">
-        <div className="text-xs text-black/60 mb-3">
-          Standard format: carrier rate sheets are pasted as Age x Tier matrices per smoker status.
-          The import deactivates prior rates for the same benefit_class + smoker_status + age + tier combinations.
-        </div>
-        <div className="border-2 border-dashed border-black/20 rounded p-6 text-center text-xs text-black/40 mb-3">
-          Drop carrier proposal here, or click to browse
-        </div>
-        <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">Preview</div>
-        <div className="border border-black/10 rounded p-2 text-xs text-black/60 mb-3">
-          25 cells would be imported across ages 25-65, tiers bronze-platinum, smoker status non_tobacco.
-        </div>
-        <div className="flex gap-2">
-          <Btn variant="primary" onClick={() => setImportOpen(false)}>Confirm Import</Btn>
-          <Btn onClick={() => setImportOpen(false)}>Cancel</Btn>
-        </div>
+        <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">Step {importStep} of 3</div>
+        {importStep === 1 ? (
+          <>
+            <Field label="Carrier Product">
+              <select className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
+                {CARRIER_PRODUCTS.map((cp) => <option key={cp.id} value={cp.id}>{cp.product_name}</option>)}
+              </select>
+            </Field>
+            <Field label="Effective Date">
+              <input type="date" defaultValue="2026-01-01" className="w-full px-2 py-1 text-sm border border-black/15 rounded" />
+            </Field>
+            <Field label="Import Mode">
+              <div className="flex flex-col gap-1 text-xs">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="imode" checked={!importReplace} onChange={() => setImportReplace(false)} />
+                  Add to existing rates
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="imode" checked={importReplace} onChange={() => setImportReplace(true)} />
+                  Replace all rates for this class + smoker status
+                </label>
+              </div>
+              {importReplace ? (
+                <div className="mt-1 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
+                  This will delete all existing {smoker === "non_tobacco" ? "Non-Tobacco" : "Tobacco"} rate cells for this class before importing.
+                </div>
+              ) : null}
+            </Field>
+            <div className="border-2 border-dashed border-black/20 rounded p-6 text-center text-xs text-black/40 my-3">
+              Drop CSV or XLSX here, or click to browse
+            </div>
+            <div className="flex gap-2">
+              <Btn variant="primary" onClick={() => setImportStep(2)}>Parse File</Btn>
+              <Btn onClick={() => setImportOpen(false)}>Cancel</Btn>
+            </div>
+          </>
+        ) : importStep === 2 ? (
+          <>
+            <div className="text-xs text-black/70 mb-2">25 rates will be imported for {smoker === "non_tobacco" ? "Non-Tobacco" : "Tobacco"}.</div>
+            <div className="text-[11px] text-emerald-700 mb-2">23 valid · <span className="text-red-600">2 errors (highlighted below)</span></div>
+            <TableShell>
+              <THead cols={["Age", ...definedTiers.map((t) => TIER_LABEL[t])]} />
+              <tbody>
+                {[40, 45, 50, 55, 60].map((age) => (
+                  <TRow key={age}>
+                    <TCell className="font-medium">{age}</TCell>
+                    {definedTiers.map((t) => (
+                      <TCell key={t} className="font-mono text-right">${(40 + age * 1.2).toFixed(2)}</TCell>
+                    ))}
+                  </TRow>
+                ))}
+              </tbody>
+            </TableShell>
+            <div className="flex gap-2 mt-3">
+              <Btn variant="primary" onClick={() => setImportStep(3)}>Continue</Btn>
+              <Btn onClick={() => setImportStep(1)}>Back</Btn>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-xs text-black/70 mb-3">Import 23 rate cells now? Invalid rows will be skipped.</p>
+            <div className="flex gap-2">
+              <Btn variant="primary" onClick={() => { setImportOpen(false); setImportStep(1); }}>Import 23 Rates</Btn>
+              <Btn onClick={() => setImportStep(2)}>Back</Btn>
+            </div>
+          </>
+        )}
       </Drawer>
     </div>
   );
 }
 
-function AddRateForm({ onCancel, onSubmit, smoker, tiers, defaultEffective }: {
+function AddRateForm({ onCancel, onSubmit, smoker, tiers, classTierFace, defaultEffective }: {
   onCancel: () => void;
-  onSubmit: (form: { issue_age: number; tier: LTCRateCell["tier"]; nominal: number; death: number; premium: number; effective: string }) => void;
+  onSubmit: (form: { issue_age: number; tier: TierKey; nominal: number; death: number; premium: number; effective: string }) => void;
   smoker: "non_tobacco" | "tobacco";
-  tiers: Array<LTCRateCell["tier"]>;
+  tiers: TierKey[];
+  classTierFace: Record<TierKey, number | null>;
   defaultEffective: string;
 }) {
   const [age, setAge] = useState("45");
-  const [tier, setTier] = useState<LTCRateCell["tier"]>(tiers[0] ?? "bronze");
-  const [nominal, setNominal] = useState("25000");
-  const [death, setDeath] = useState("25000");
+  const [tier, setTier] = useState<TierKey>(tiers[0] ?? "silver");
+  const nominalCents = classTierFace[tier] ?? 0;
+  const [deathStr, setDeathStr] = useState(centsToDollarStr(nominalCents));
   const [premium, setPremium] = useState("50.00");
   const [effective, setEffective] = useState(defaultEffective);
+
+  useEffect(() => { setDeathStr(centsToDollarStr(classTierFace[tier] ?? 0)); }, [tier, classTierFace]);
+
   return (
     <div className="px-3 py-2 bg-[#f7f3eb]/60 border-b border-black/10">
       <div className="grid grid-cols-7 gap-2 items-end text-xs">
         <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Issue Age</span>
           <input value={age} onChange={(e) => setAge(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
         <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Smoker</span>
-          <input value={smoker} disabled className="px-1.5 py-1 border border-black/10 bg-black/5 rounded text-black/50" /></label>
+          <input value={smoker === "non_tobacco" ? "Non-Tobacco" : "Tobacco"} disabled className="px-1.5 py-1 border border-black/10 bg-black/5 rounded text-black/50" /></label>
         <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Tier</span>
-          <select value={tier} onChange={(e) => setTier(e.target.value as LTCRateCell["tier"])} className="px-1.5 py-1 border border-black/15 rounded">
-            {(["bronze","silver","gold","platinum","diamond"] as const).map((t) => <option key={t} value={t}>{t}</option>)}
+          <select value={tier} onChange={(e) => setTier(e.target.value as TierKey)} className="px-1.5 py-1 border border-black/15 rounded">
+            {tiers.map((t) => <option key={t} value={t}>{TIER_LABEL[t]}</option>)}
           </select></label>
-        <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Nominal $</span>
-          <input value={nominal} onChange={(e) => setNominal(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
-        <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Death $</span>
-          <input value={death} onChange={(e) => setDeath(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
+        <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Nominal Face</span>
+          <input value={`$${centsToDollarStr(nominalCents)}`} disabled className="px-1.5 py-1 border border-black/10 bg-black/5 rounded text-black/50" /></label>
+        <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Actual Face $</span>
+          <input value={deathStr} onChange={(e) => setDeathStr(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
         <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Premium $/mo</span>
           <input value={premium} onChange={(e) => setPremium(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
         <label className="flex flex-col gap-1"><span className="text-[10px] uppercase text-black/50">Effective</span>
-          <input value={effective} onChange={(e) => setEffective(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
+          <input type="date" value={effective} onChange={(e) => setEffective(e.target.value)} className="px-1.5 py-1 border border-black/15 rounded" /></label>
       </div>
       <div className="flex gap-2 mt-2">
-        <Btn variant="primary" onClick={() => onSubmit({ issue_age: Number(age) || 0, tier, nominal: Number(nominal) || 0, death: Number(death) || 0, premium: Number(premium) || 0, effective })}>Save</Btn>
+        <Btn variant="primary" onClick={() => onSubmit({
+          issue_age: Number(age) || 0,
+          tier,
+          nominal: nominalCents / 100,
+          death: Number(deathStr) || (nominalCents / 100),
+          premium: Number(premium) || 0,
+          effective,
+        })}>Add Rate</Btn>
         <Btn onClick={onCancel}>Cancel</Btn>
+      </div>
+      <div className="text-[11px] text-black/50 mt-1">
+        Usually the Actual Face equals the Nominal amount. Differs for ULE enrollees under age 24.
       </div>
     </div>
   );
 }
+
 
 /* ---------- DI Rates tab ---------- */
 function DIRatesTab({ orgId, canEdit, canCreate }: { orgId: string; canEdit: boolean; canCreate: boolean }) {
