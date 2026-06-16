@@ -214,7 +214,12 @@ function IndividualDetail() {
   if (!base) return <div className="p-4">Individual not found.</div>;
   const i: Detail = synthesize(base);
   const isLTC = _product === "LTC";
-  const linked = i.linked_individual_id ? INDIVIDUALS.find((x) => x.id === i.linked_individual_id) : null;
+  // Resolve linked spouse: first try the forward link, then reverse-lookup individuals whose linked_individual_id points here
+  let linked = i.linked_individual_id ? INDIVIDUALS.find((x) => x.id === i.linked_individual_id) ?? null : null;
+  if (!linked) {
+    const reverse = INDIVIDUALS.find((x) => x.id !== i.id && synthesize(x).linked_individual_id === i.id);
+    if (reverse) linked = reverse;
+  }
   const linkedDetail = linked ? synthesize(linked) : null;
   const readOnly = !can("individuals", "update");
   const bg = BILLING_GROUPS.find((b) => b.id === i.billing_group_id);
