@@ -71,7 +71,7 @@ import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
-type IndSearch = { org?: string; coverage?: string; stage?: string; type?: string; di_type?: string; payment?: string; rep?: string };
+type IndSearch = { org?: string; coverage?: string; stage?: string; type?: string; di_type?: string; payment?: string; rep?: string; issue?: string; bclass?: string };
 
 export const Route = createFileRoute("/individuals/")({
   component: IndividualsView,
@@ -83,6 +83,8 @@ export const Route = createFileRoute("/individuals/")({
     di_type: typeof s.di_type === "string" ? s.di_type : undefined,
     payment: typeof s.payment === "string" ? s.payment : undefined,
     rep: typeof s.rep === "string" ? s.rep : undefined,
+    issue: typeof s.issue === "string" ? s.issue : undefined,
+    bclass: typeof s.bclass === "string" ? s.bclass : undefined,
   }),
 });
 
