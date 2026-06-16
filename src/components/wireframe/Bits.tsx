@@ -165,8 +165,8 @@ export function Field({ label, children }: { label: string; children: ReactNode 
   );
 }
 
-export function Input({ defaultValue, placeholder }: { defaultValue?: string; placeholder?: string }) {
-  return <input defaultValue={defaultValue} placeholder={placeholder} className="w-full px-2 py-1 text-sm border border-black/15 rounded" />;
+export function Input({ defaultValue, placeholder, disabled }: { defaultValue?: string; placeholder?: string; disabled?: boolean }) {
+  return <input defaultValue={defaultValue} placeholder={placeholder} disabled={disabled} className={`w-full px-2 py-1 text-sm border border-black/15 rounded ${disabled ? "bg-stone-50 text-black/60 cursor-not-allowed" : ""}`} />;
 }
 
 export function ProductBadge({ product }: { product: string }) {

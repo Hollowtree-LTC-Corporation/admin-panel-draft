@@ -580,29 +580,50 @@ function OrgDetail() {
       </Drawer>
 
       <Drawer open={windowDrawer.state.open} onClose={windowDrawer.close} title={windowDrawer.state.mode === "create" ? "New Enrollment Window" : "Edit Window"}>
-        <Field label="Window Type"><DSelect defaultValue={windowDrawer.state.data?.window_type ?? "initial"} options={WINDOW_TYPES} /></Field>
-        <Field label="Sponsor Type"><DSelect defaultValue={windowDrawer.state.data?.sponsor_type ?? "employer"} options={SPONSOR_TYPES} /></Field>
-        {(windowDrawer.state.data?.sponsor_type === "affiliate" || windowDrawer.state.data?.affiliate) && (
-          <Field label="Affiliate Org"><DSelect defaultValue={windowDrawer.state.data?.affiliate ?? AFFILIATE_ORG_OPTIONS[0].value} options={AFFILIATE_ORG_OPTIONS} /></Field>
-        )}
-        <Field label="Start Date"><Input defaultValue={windowDrawer.state.data?.start ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" /></Field>
-        <Field label="End Date"><Input defaultValue={windowDrawer.state.data?.end ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" /></Field>
-        <Field label="Default Effective Date"><Input defaultValue={windowDrawer.state.data?.effective ?? ""} /></Field>
-        <Field label="Carrier"><DSelect defaultValue={windowDrawer.state.data?.carrier ?? CARRIER_NAMES[0]} options={CARRIER_NAMES} /></Field>
-        <Field label="Status"><DSelect defaultValue={windowDrawer.state.data?.status ?? "upcoming"} options={WINDOW_STATUSES} /></Field>
-        <div className="mb-3">
-          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">GI Eligible</div>
-          <div className="flex items-center gap-2">
-            <Switch defaultChecked={windowDrawer.state.data?.gi_eligible ?? true} />
-            <span className="text-xs text-black/60">Guaranteed-issue pricing (no medical underwriting)</span>
-          </div>
-        </div>
-        <Field label="Notes"><Input defaultValue={windowDrawer.state.data?.notes ?? ""} /></Field>
-        <div className="flex gap-2 mt-4">
-          <Btn variant="primary" disabled={!can("enrollment_windows", "update")}>Save</Btn>
-          <Btn onClick={windowDrawer.close}>Cancel</Btn>
-        </div>
+        {(() => {
+          const wd = windowDrawer.state.data;
+          const isEdit = windowDrawer.state.mode === "edit";
+          const wStatus = wd?.status;
+          const locked = isEdit && (wStatus === "open" || wStatus === "closed");
+          return (
+            <>
+              {locked && wStatus === "open" && (
+                <div className="mb-3 px-3 py-2 rounded border border-amber-300 bg-amber-50 text-[12px] text-amber-900">
+                  This window is currently <strong>open</strong>. Sponsor configuration, dates, and carrier are locked while enrollment is active. Changes here would affect enrollees already in flight.
+                </div>
+              )}
+              {locked && wStatus === "closed" && (
+                <div className="mb-3 px-3 py-2 rounded border border-stone-300 bg-stone-50 text-[12px] text-stone-700">
+                  This window is <strong>closed</strong>. Historical record — fields are read-only for audit integrity.
+                </div>
+              )}
+              <Field label="Window Type"><DSelect defaultValue={wd?.window_type ?? "initial"} options={WINDOW_TYPES} disabled={locked} /></Field>
+              <Field label="Sponsor Type"><DSelect defaultValue={wd?.sponsor_type ?? "employer"} options={SPONSOR_TYPES} disabled={locked} /></Field>
+              {(wd?.sponsor_type === "affiliate" || wd?.affiliate) && (
+                <Field label="Affiliate Org"><DSelect defaultValue={wd?.affiliate ?? AFFILIATE_ORG_OPTIONS[0].value} options={AFFILIATE_ORG_OPTIONS} disabled={locked} /></Field>
+              )}
+              <Field label="Start Date"><Input defaultValue={wd?.start ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" disabled={locked} /></Field>
+              <Field label="End Date"><Input defaultValue={wd?.end ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" disabled={locked} /></Field>
+              <Field label="Default Effective Date"><Input defaultValue={wd?.effective ?? ""} disabled={locked} /></Field>
+              <Field label="Carrier"><DSelect defaultValue={wd?.carrier ?? CARRIER_NAMES[0]} options={CARRIER_NAMES} disabled={locked} /></Field>
+              <Field label="Status"><DSelect defaultValue={wd?.status ?? "upcoming"} options={WINDOW_STATUSES} disabled={locked} /></Field>
+              <div className="mb-3">
+                <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">GI Eligible</div>
+                <div className="flex items-center gap-2">
+                  <Switch defaultChecked={wd?.gi_eligible ?? true} disabled={locked} />
+                  <span className="text-xs text-black/60">Guaranteed-issue pricing (no medical underwriting)</span>
+                </div>
+              </div>
+              <Field label="Notes"><Input defaultValue={wd?.notes ?? ""} disabled={locked} /></Field>
+              <div className="flex gap-2 mt-4">
+                {!locked && <Btn variant="primary" disabled={!can("enrollment_windows", "update")}>Save</Btn>}
+                <Btn onClick={windowDrawer.close}>{locked ? "Close" : "Cancel"}</Btn>
+              </div>
+            </>
+          );
+        })()}
       </Drawer>
+
 
       <Drawer open={bcDrawer.state.open} onClose={bcDrawer.close} title={bcDrawer.state.mode === "create" ? "New Benefit Class" : "Edit Benefit Class"}>
         <Field label="Name"><Input defaultValue={bcDrawer.state.data?.name ?? ""} /></Field>
@@ -697,9 +718,9 @@ function QuickLinksCard({ org }: { org: OrgDetail }) {
 
 /* ---------- Drawer Select ---------- */
 
-function DSelect({ defaultValue, options }: { defaultValue?: string; options: Array<string | { value: string; label: string }> }) {
+function DSelect({ defaultValue, options, disabled }: { defaultValue?: string; options: Array<string | { value: string; label: string }>; disabled?: boolean }) {
   return (
-    <select defaultValue={defaultValue} className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
+    <select defaultValue={defaultValue} disabled={disabled} className={`w-full px-2 py-1 text-sm border border-black/15 rounded ${disabled ? "bg-stone-50 text-black/60 cursor-not-allowed" : "bg-white"}`}>
       {options.map((o) => {
         const value = typeof o === "string" ? o : o.value;
         const label = typeof o === "string" ? o : o.label;
@@ -787,15 +808,17 @@ function LifecycleTab({
           <Btn variant="primary" disabled={!canCreate} onClick={onNew}>+ New Window</Btn>
         </div>
         <TableShell>
-          <THead cols={["Type", "Sponsor", "Start", "End", "Default Effective", "Status", "GI", "Carrier", "Notes"]} />
+          <THead cols={["Type", "Sponsor", "Start", "End", "Default Effective", "Status", "GI", "Carrier", "Notes", ""]} />
           <tbody>
             {windows.map((w) => {
               const isAlwaysOpen = w.window_type === "new_joiner";
               const sponsor = w.sponsor_type === "affiliate"
-                ? <span><span className="text-black/40">—</span> <span className="text-[11px] text-black/50">(affiliate-sponsored: {w.affiliate})</span></span>
+                ? <span className="text-black/70 italic">{w.affiliate} <span className="ml-1 text-[10px] uppercase tracking-wider text-black/40">(affiliate-sponsored)</span></span>
                 : w.affiliate
-                  ? <span>{orgName} <span className="text-black/40">+</span> {w.affiliate}</span>
+                  ? <span>{orgName}<span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-stone-100 text-stone-700 border border-stone-200">+ {w.affiliate}</span></span>
                   : <span>{orgName}</span>;
+              const locked = w.status === "open" || w.status === "closed";
+              const pencilDim = w.status === "closed";
               return (
                 <TRow key={w.id} onClick={canEdit ? () => onEdit(w) : undefined}>
                   <TCell className="capitalize font-medium">{w.window_type.replace("_", " ")}</TCell>
@@ -807,6 +830,17 @@ function LifecycleTab({
                   <TCell>{w.gi_eligible ? <Pill tone="ok">GI</Pill> : <span className="text-black/30">—</span>}</TCell>
                   <TCell>{w.carrier}</TCell>
                   <TCell className="text-black/60">{w.notes}</TCell>
+                  <TCell>
+                    {canEdit ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(w); }}
+                        title={locked ? (w.status === "closed" ? "View (closed — read-only)" : "View (open — locked)") : "Edit window"}
+                        className={`p-1 rounded ${pencilDim ? "text-black/25 hover:text-black/40" : "text-black/50 hover:text-black/80"}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </TCell>
                 </TRow>
               );
             })}
@@ -814,6 +848,7 @@ function LifecycleTab({
           </tbody>
         </TableShell>
       </div>
+
 
       <OnboardingChecklist orgId={orgId} orgStatus={orgStatus} product={product} isAdmin={isAdmin} />
 
