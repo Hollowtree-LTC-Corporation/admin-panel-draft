@@ -1418,12 +1418,15 @@ function LTCProductPlanSection({ org, readOnly }: { org: OrgDetail; readOnly: bo
               : productTemplateVariantLabel(org.product_template_variant)}
           </RField>
           <RField label="Extension of Benefits Rider">{e.editing ? <Switch defaultChecked={org.extension_of_benefits_rider} /> : <YesNo b={org.extension_of_benefits_rider} />}</RField>
-          <RField label="Healthcare Company">{e.editing ? <input className={inputCls} defaultValue={org.healthcare_company} /> : titleCase(org.healthcare_company)}</RField>
+          <RField label="Healthcare Company">{e.editing ? <Switch defaultChecked={org.healthcare_company} /> : <YesNo b={org.healthcare_company} />}</RField>
           <RField label="Benefit Restoration Rider">{e.editing ? <Switch defaultChecked={org.benefit_restoration_rider} /> : <YesNo b={org.benefit_restoration_rider} />}</RField>
         </Grid2>
         <div className="grid grid-cols-4 gap-x-6 gap-y-4 mt-4">
-          <RField label="Benefit Duration">{e.editing ? <input className={inputCls} defaultValue={String(org.benefit_duration)} /> : org.benefit_duration}</RField>
-          <RField label="Duration">{e.editing ? <input className={inputCls} defaultValue={org.duration} /> : org.duration}</RField>
+          <RField label="Benefit Duration (years)">
+            {e.editing
+              ? <input className={inputCls} type="number" min={1} defaultValue={String(org.benefit_duration)} />
+              : <span>{org.benefit_duration} <span className="text-stone-400 text-xs">years</span></span>}
+          </RField>
           <RField label="Min Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.min_age} /> : org.min_age}</RField>
           <RField label="Max Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.max_age} /> : org.max_age}</RField>
         </div>
