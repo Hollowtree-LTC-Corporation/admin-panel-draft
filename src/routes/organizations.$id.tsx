@@ -1349,6 +1349,31 @@ function LTCProductPlanSection({ org, readOnly }: { org: OrgDetail; readOnly: bo
           <RField label="Min Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.min_age} /> : org.min_age}</RField>
           <RField label="Max Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.max_age} /> : org.max_age}</RField>
         </div>
+        <div className="mt-4">
+          <RField label="Available Premium Structures">
+            {e.editing ? (
+              <div className="flex flex-col gap-1.5">
+                {PREMIUM_STRUCTURES.map((s) => (
+                  <label key={s} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" defaultChecked={org.available_premium_structures.includes(s)} />
+                    <span>{premiumStructureLabel(s)}</span>
+                  </label>
+                ))}
+                <div className="text-[11px] text-black/55 italic mt-0.5">
+                  Which premium calculation structures employees can choose from. 10-Pay compresses premiums into 120 monthly payments. All billing is monthly.
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {org.available_premium_structures.length === 0
+                  ? <Empty />
+                  : org.available_premium_structures.map((s) => (
+                      <Pill key={s} tone="neutral">{premiumStructureLabel(s)}</Pill>
+                    ))}
+              </div>
+            )}
+          </RField>
+        </div>
       </div>
 
       <hr className="border-black/10 my-5" />
