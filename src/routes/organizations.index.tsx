@@ -207,12 +207,23 @@ function OrgsView() {
             </select>
           </Field>
         )}
-        <Field label="Pay Mode">
-          <select className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white" defaultValue="monthly">
-            <option value="monthly">Monthly</option>
-            <option value="10_pay">10-Pay</option>
-          </select>
-        </Field>
+        {product === "LTC" && (
+          <Field label="Available Premium Structures">
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" defaultChecked />
+                <span>Lifetime</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" />
+                <span>10-Pay</span>
+              </label>
+              <div className="text-[11px] text-black/55 italic mt-0.5">
+                Which premium calculation structures employees can choose from. 10-Pay compresses premiums into 120 monthly payments. All billing is monthly.
+              </div>
+            </div>
+          </Field>
+        )}
         <div className="flex gap-2 mt-4">
           <Btn variant="primary" disabled={!can("organizations", "create")}>Save</Btn>
           <Btn onClick={d.close}>Cancel</Btn>
