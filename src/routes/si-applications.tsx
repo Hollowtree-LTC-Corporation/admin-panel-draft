@@ -204,6 +204,10 @@ function QueueTab() {
           { value: "Platinum", label: "Platinum" },
           { value: "Diamond", label: "Diamond" },
         ]} />
+        <FilterCombobox value={rep} onChange={setRep} placeholder="All reps" options={[
+          ...repOptions.map((v) => ({ value: v, label: v })),
+          { value: "__unassigned__", label: "Unassigned" },
+        ]} />
         <ClearFiltersLink show={active} onClick={clearAll} />
         <div className="ml-auto flex items-center gap-2 text-[11px] text-black/50">
           <button disabled className="px-2 py-1 rounded border border-black/15 bg-stone-100 text-black/40 cursor-not-allowed">
