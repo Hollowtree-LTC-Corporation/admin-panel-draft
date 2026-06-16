@@ -697,9 +697,9 @@ function QuickLinksCard({ org }: { org: OrgDetail }) {
 
 /* ---------- Drawer Select ---------- */
 
-function DSelect({ defaultValue, options }: { defaultValue?: string; options: Array<string | { value: string; label: string }> }) {
+function DSelect({ defaultValue, options, disabled }: { defaultValue?: string; options: Array<string | { value: string; label: string }>; disabled?: boolean }) {
   return (
-    <select defaultValue={defaultValue} className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
+    <select defaultValue={defaultValue} disabled={disabled} className={`w-full px-2 py-1 text-sm border border-black/15 rounded ${disabled ? "bg-stone-50 text-black/60 cursor-not-allowed" : "bg-white"}`}>
       {options.map((o) => {
         const value = typeof o === "string" ? o : o.value;
         const label = typeof o === "string" ? o : o.label;
