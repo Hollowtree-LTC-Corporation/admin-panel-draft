@@ -1305,13 +1305,38 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
       note={note}
     >
       <Grid2>
-        <RField label="Carrier">{selected ? selected.carrier : <Empty />}</RField>
+        <div className="col-span-2">
+          <RField label="Carrier & Product">
+            {e.editing
+              ? (
+                  <select
+                    className={inputCls}
+                    value={carrierProductId ?? ""}
+                    onChange={(ev) => setCarrierProductId(ev.target.value || null)}
+                  >
+                    <option value="">— Not set —</option>
+                    {options.map((o) => (
+                      <option key={o.id} value={o.id}>{o.label}</option>
+                    ))}
+                  </select>
+                )
+              : (selected
+                  ? <span className="text-sm">{selected.label}</span>
+                  : <Empty />)}
+            {selected && (
+              <div className="mt-1 text-[11px] text-black/55">
+                <span className="font-medium text-black/70">Carrier:</span> {selected.carrier}
+                <span className="mx-2 text-black/30">·</span>
+                <span className="font-medium text-black/70">Product:</span> {selected.product}
+              </div>
+            )}
+          </RField>
+        </div>
         <RField label="Effective Date">
           {e.editing
             ? <input className={inputCls} type="date" defaultValue={org.policy_effective_date} />
             : fmtDate(org.policy_effective_date)}
         </RField>
-        <RField label="Product">{selected ? selected.product : <Empty />}</RField>
         {product === "LTC" ? (
           <RField label="Carrier Commission Schedule">
             <Link to="/carriers" className="text-sky-700 hover:underline inline-flex items-center gap-1">View schedule <ExternalLink className="h-3 w-3" /></Link>
@@ -1321,24 +1346,6 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
             <span className="text-xs text-black/60 italic">Per-policy commission rates</span>
           </RField>
         )}
-        <RField label="Carrier Product">
-          {e.editing
-            ? (
-                <select
-                  className={inputCls}
-                  value={carrierProductId ?? ""}
-                  onChange={(ev) => setCarrierProductId(ev.target.value || null)}
-                >
-                  <option value="">— Not set —</option>
-                  {options.map((o) => (
-                    <option key={o.id} value={o.id}>{o.label}</option>
-                  ))}
-                </select>
-              )
-            : (selected
-                ? <span className="text-sm">{selected.label}</span>
-                : <Empty />)}
-        </RField>
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
     </SectionCard>
