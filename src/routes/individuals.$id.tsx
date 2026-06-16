@@ -859,11 +859,21 @@ function SpouseSection({ i, linked, linkedDetail, readOnly }: { i: Detail; linke
       <Grid cols={3}>
         <RField label="Relationship Type" value={i.relationship_type} />
         <RField label="Linked Individual">
-          {editing ? (
-            <input placeholder="Search individual…" className={inputCls} />
-          ) : linked ? (
-            <Link to="/individuals/$id" params={{ id: linked.id }} className="text-sm underline hover:text-[#0a3d3e]">{linked.full_name}</Link>
-          ) : <span className="text-sm text-black/50">—</span>}
+          {linked && linkedDetail ? (
+            <Link to="/individuals/$id" params={{ id: linked.id }} className="text-sm underline hover:text-[#0a3d3e]">
+              {linked.full_name} · {linked.email} · {linked.id} →
+            </Link>
+          ) : editing ? (
+            <div>
+              <input placeholder="Search individual…" className={inputCls} />
+              <div className="text-[11px] text-stone-500 mt-1">No linked spouse on file yet.</div>
+            </div>
+          ) : (
+            <div>
+              <span className="text-sm text-black/50">—</span>
+              <div className="text-[11px] text-stone-500 mt-1">No linked spouse on file yet.</div>
+            </div>
+          )}
         </RField>
         <div />
         {i.relationship_type === "primary" && (
