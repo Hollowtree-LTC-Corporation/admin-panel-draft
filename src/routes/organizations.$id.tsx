@@ -102,6 +102,12 @@ function useBrokers(): BrokerRecord[] {
 const INBOUND_TYPES = ["Broker Referral","Direct","Partner Referral","Inbound"];
 const PRODUCT_TEMPLATE_VARIANTS = ["base","eob_only","restoration_only","eob_and_restoration"];
 const CONTRIBUTION_TYPES = ["voluntary","buy_up","employer_paid"];
+function contributionTypeLabel(v: string | null | undefined): string {
+  if (v === "voluntary") return "Voluntary";
+  if (v === "buy_up") return "Buy-Up";
+  if (v === "employer_paid") return "Employer Paid";
+  return v ?? "—";
+}
 const PREMIUM_STRUCTURES = ["lifetime","10_pay"] as const;
 type PremiumStructure = typeof PREMIUM_STRUCTURES[number];
 function premiumStructureLabel(s: PremiumStructure): string {
@@ -1160,8 +1166,8 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
     <div className="col-span-2">
       <RField label="Contribution Type">
         {e.editing
-          ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o} value={o}>{titleCase(o)}</option>)}</select>
-          : titleCase(org.contribution_type)}
+          ? <select className={inputCls} defaultValue={org.contribution_type}>{CONTRIBUTION_TYPES.map((o) => <option key={o} value={o}>{contributionTypeLabel(o)}</option>)}</select>
+          : contributionTypeLabel(org.contribution_type)}
         <div className="text-[11px] text-black/55 italic mt-1">
           How premium is funded. Buy-Up and Employer Paid require census-level contribution data per individual.
         </div>
