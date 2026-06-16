@@ -519,16 +519,24 @@ function Dashboard() {
                 </li>
               </>
             ) : (
-              <>
-                <li onClick={() => navigate({ to: "/enrollment-windows" })} className="px-3 py-2 border-b border-black/5 flex justify-between cursor-pointer hover:bg-[#f7f3eb]/60">
-                  <span>1 enrollment window closes in 5 days</span>
-                  <Pill tone="warn">LTC</Pill>
-                </li>
-                <li onClick={() => navigate({ to: "/individuals" })} className="px-3 py-2 border-b border-black/5 flex justify-between cursor-pointer hover:bg-[#f7f3eb]/60">
-                  <span>3 individuals interested in spousal coverage</span>
-                  <Pill tone="info">LTC</Pill>
-                </li>
-              </>
+            <>
+              <li onClick={() => navigate({ to: "/enrollment-windows" })} className="px-3 py-2 border-b border-black/5 flex justify-between cursor-pointer hover:bg-[#f7f3eb]/60">
+                <span>1 enrollment window closes in 5 days</span>
+                <Pill tone="warn">LTC</Pill>
+              </li>
+              <li onClick={() => navigate({ to: "/individuals" })} className="px-3 py-2 border-b border-black/5 flex justify-between cursor-pointer hover:bg-[#f7f3eb]/60">
+                <span>3 individuals interested in spousal coverage</span>
+                <Pill tone="info">LTC</Pill>
+              </li>
+              <li onClick={() => navigate({ to: "/individuals" })} className="px-3 py-2 border-b border-black/5 flex justify-between cursor-pointer hover:bg-[#f7f3eb]/60">
+                <span>2 individuals interested in upgrading</span>
+                <Pill tone="purple">upgrade</Pill>
+              </li>
+              <li onClick={() => navigate({ to: "/individuals" })} className="px-3 py-2 border-b border-black/5 flex justify-between cursor-pointer hover:bg-[#f7f3eb]/60">
+                <span>1 SI application awaiting carrier decision</span>
+                <Pill tone="amber">carrier</Pill>
+              </li>
+            </>
             )}
             <li onClick={() => navigate({ to: "/payment-ledger" })} className="px-3 py-2 border-b border-black/5 flex justify-between cursor-pointer hover:bg-[#f7f3eb]/60">
               <span>2 failed payments in last 7 days</span>
