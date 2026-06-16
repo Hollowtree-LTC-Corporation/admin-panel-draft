@@ -592,11 +592,23 @@ export const AUDIT_LOG = Array.from({ length: 20 }, (_, i) => ({
   after: { status: "active" },
 }));
 
-export const MISSING_SUBMISSIONS = [
-  { id: "ms_1", full_name: "Test Person A", email: "a@example.com", phone: "555-0001", org_name: "Acme Widgets Co", origin_url: "/enroll/acme", status: "new" },
-  { id: "ms_2", full_name: "Test Person B", email: "b@example.com", phone: "555-0002", org_name: "Bluefin Logistics", origin_url: "/enroll/bluefin", status: "reviewing" },
-  { id: "ms_3", full_name: "Test Person C", email: "c@example.com", phone: null, org_name: null, origin_url: "/enroll/unknown", status: "resolved" },
-  { id: "ms_4", full_name: "Test Person D", email: "d@example.com", phone: "555-0004", org_name: "Greylock Partners LLC", origin_url: "/enroll/greylock", status: "new" },
+export type MissingSubmission = {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  org_name: string | null;
+  origin_url: string;
+  status: "new" | "reviewing" | "resolved";
+  created_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+};
+export const MISSING_SUBMISSIONS: MissingSubmission[] = [
+  { id: "ms_1", full_name: "Test Person A", email: "a@example.com", phone: "555-0001", org_name: "Acme Widgets Co", origin_url: "/enroll/acme", status: "new", created_at: "2026-06-14", reviewed_by: null, reviewed_at: null },
+  { id: "ms_2", full_name: "Test Person B", email: "b@example.com", phone: "555-0002", org_name: "Bluefin Logistics", origin_url: "/enroll/bluefin", status: "reviewing", created_at: "2026-06-10", reviewed_by: "jordan.ops", reviewed_at: "2026-06-11" },
+  { id: "ms_3", full_name: "Test Person C", email: "c@example.com", phone: null, org_name: null, origin_url: "/enroll/unknown", status: "resolved", created_at: "2026-06-05", reviewed_by: "alex.admin", reviewed_at: "2026-06-07" },
+  { id: "ms_4", full_name: "Test Person D", email: "d@example.com", phone: "555-0004", org_name: "Greylock Partners LLC", origin_url: "/enroll/greylock", status: "new", created_at: "2026-06-15", reviewed_by: null, reviewed_at: null },
 ];
 
 // DI rate_config: per-org, age-banded rate sheet (rate per $1,000 of monthly coverage).
