@@ -1027,13 +1027,14 @@ function LifecycleTab({
           <Btn variant="primary" disabled={!canCreate} onClick={onNew}>+ New Window</Btn>
         </div>
         <TableShell>
-          <THead cols={["Type", "Sponsor", "Start", "End", "Default Effective", "Status", "GI", "Carrier", "Notes", ""]} />
+          <THead cols={["Type", "Sponsor Shape", "Sponsor", "Start", "End", "Default Effective", "Status", "GI", "Carrier", "Notes", ""]} />
           <tbody>
             {windows.map((w) => {
               const isAlwaysOpen = w.window_type === "new_joiner";
-              const sponsor = w.sponsor_type === "affiliate"
-                ? <span className="text-black/70 italic">{w.affiliate} <span className="ml-1 text-[10px] uppercase tracking-wider text-black/40">(affiliate-sponsored)</span></span>
-                : w.affiliate
+              const shape = getSponsorShape(w);
+              const sponsor = shape === "affiliate_only"
+                ? <span className="text-black/70 italic">{w.affiliate}</span>
+                : shape === "employer_affiliate"
                   ? <span>{orgName}<span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-stone-100 text-stone-700 border border-stone-200">+ {w.affiliate}</span></span>
                   : <span>{orgName}</span>;
               const locked = w.status === "open" || w.status === "closed";
@@ -1041,6 +1042,7 @@ function LifecycleTab({
               return (
                 <TRow key={w.id} onClick={canEdit ? () => onEdit(w) : undefined}>
                   <TCell className="capitalize font-medium">{w.window_type.replace("_", " ")}</TCell>
+                  <TCell className="text-black/70">{sponsorShapeLabel(shape)}</TCell>
                   <TCell>{sponsor}</TCell>
                   <TCell>{isAlwaysOpen ? <span className="text-black/40 italic">Always Open</span> : w.start}</TCell>
                   <TCell>{isAlwaysOpen ? <span className="text-black/40 italic">Always Open</span> : w.end}</TCell>
