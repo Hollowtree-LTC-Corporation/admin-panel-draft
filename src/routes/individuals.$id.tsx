@@ -486,6 +486,42 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
         <RField label="Face Amount" value={unfunded ? "—" : formatCents(i.face_amount_cents)} />
         <RField label="Monthly Premium" value={unfunded ? "—" : formatCents(i.monthly_premium_cents)} />
 
+        <RField label="Premium Structure" editing={editing}>
+          {(() => {
+            const offersBoth = (i.org_available_premium_structures ?? []).length > 1;
+            const current = i.premium_structure ?? "lifetime";
+            const display = (
+              <span className="inline-flex items-center gap-1">
+                <span>{premiumStructureLabel(current)}</span>
+                {!offersBoth && <Lock className="h-3 w-3 text-black/30" aria-label="Org only offers Lifetime" />}
+              </span>
+            );
+            if (editing && offersBoth) {
+              return (
+                <div>
+                  <select defaultValue={current} className={inputCls}>
+                    <option value="lifetime">Lifetime</option>
+                    <option value="ten_pay">10-Pay</option>
+                  </select>
+                  <div className="text-[11px] text-stone-500 mt-1">
+                    Lifetime = monthly premiums paid for life. 10-Pay = monthly premiums over 120 months (10 years), then policy is fully paid up.
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div>
+                {display}
+                <div className="text-[11px] text-stone-500 mt-1">
+                  {offersBoth
+                    ? "Lifetime = monthly premiums paid for life. 10-Pay = monthly premiums over 120 months (10 years), then policy is fully paid up."
+                    : "Organization only offers Lifetime premium structure."}
+                </div>
+              </div>
+            );
+          })()}
+        </RField>
+
         <RField label="Tobacco Use">
           {i.tobacco_use
             ? <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Yes</span>
