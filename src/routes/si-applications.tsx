@@ -99,6 +99,10 @@ function QueueTab() {
       if (org !== "all" && a.org_id !== org) return false;
       if (resp !== "all" && a.respondent_type !== resp) return false;
       if (tier !== "all" && a.plan_tier !== tier) return false;
+      if (rep !== "all") {
+        if (rep === "__unassigned__") { if (a.assigned_rep) return false; }
+        else if (a.assigned_rep !== rep) return false;
+      }
       if (dir !== "all") {
         const d = daysBetween(a.upgrade_submitted_at, a.upgrade_carrier_decision_at ?? undefined);
         if (dir === "lt7" && !(d < 7)) return false;
