@@ -109,6 +109,8 @@ function IndividualsView() {
   const [diTypeFilter, setDiTypeFilter] = useState<string>(searchParams.di_type ?? "all");
   const [paymentFilter, setPaymentFilter] = useState<string>(searchParams.payment ?? "all");
   const [repFilter, setRepFilter] = useState<string>(searchParams.rep ?? "all");
+  const [issueFilter, setIssueFilter] = useState<string>(searchParams.issue ?? "all");
+  const [bclassFilter, setBclassFilter] = useState<string>(searchParams.bclass ?? "all");
   const sort = useSort<SortKey>("full_name", "asc");
 
   useEffect(() => {
@@ -119,28 +121,34 @@ function IndividualsView() {
     if (searchParams.di_type !== undefined) setDiTypeFilter(searchParams.di_type);
     if (searchParams.payment !== undefined) setPaymentFilter(searchParams.payment);
     if (searchParams.rep !== undefined) setRepFilter(searchParams.rep);
-  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type, searchParams.payment, searchParams.rep]);
+    if (searchParams.issue !== undefined) setIssueFilter(searchParams.issue);
+    if (searchParams.bclass !== undefined) setBclassFilter(searchParams.bclass);
+  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type, searchParams.payment, searchParams.rep, searchParams.issue, searchParams.bclass]);
 
   const productRows = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
   const stageOptions = Array.from(new Set(productRows.map((r) => r.stage)));
   const repOptions = Array.from(new Set(productRows.map((r) => r.assigned_rep).filter(Boolean))) as string[];
+  const benefitClassOptions = ["All Employees", "Management"];
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     const rows = productRows.filter((i) => {
+      const n = parseInt(i.id.replace("ind_", ""), 10) || 1;
       if (s && !(i.full_name.toLowerCase().includes(s) || i.email.toLowerCase().includes(s))) return false;
       if (orgFilter !== "all" && i.org_id !== orgFilter) return false;
       if (coverageFilter !== "all" && i.coverage_status !== coverageFilter) return false;
       if (stageFilter !== "all" && i.stage !== stageFilter) return false;
-      if (isLTC && typeFilter !== "all") {
+      if (isLTC && issueFilter !== "all" && issueTypeFor(i) !== issueFilter) return false;
+      if (isLTC && bclassFilter !== "all" && benefitClassFor(n) !== bclassFilter) return false;
+      if (!isLTC && typeFilter !== "all") {
         const isSpouse = i.relationship_type === "spouse";
         if (typeFilter === "Spouse" && !isSpouse) return false;
         if (typeFilter === "Employee" && isSpouse) return false;
       }
       if (!isLTC && diTypeFilter !== "all" && i.di_type !== diTypeFilter) return false;
       if (paymentFilter !== "all" && i.last_payment_status !== paymentFilter) return false;
-      if (repFilter !== "all") {
+      if (!isLTC && repFilter !== "all") {
         if (repFilter === "__unassigned__") { if (i.assigned_rep) return false; }
         else if (i.assigned_rep !== repFilter) return false;
       }
@@ -151,12 +159,12 @@ function IndividualsView() {
       if (k === "relationship_type") return r.relationship_type === "spouse" ? "Spouse" : "Employee";
       return (r as unknown as Record<string, string | number>)[k];
     });
-  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, paymentFilter, repFilter, sort, isLTC]);
+  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, paymentFilter, repFilter, issueFilter, bclassFilter, sort, isLTC]);
 
-  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || paymentFilter !== "all" || repFilter !== "all" || !sort.isDefault;
+  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || paymentFilter !== "all" || repFilter !== "all" || issueFilter !== "all" || bclassFilter !== "all" || !sort.isDefault;
 
   const clearAll = () => {
-    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all"); setPaymentFilter("all"); setRepFilter("all");
+    setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all"); setPaymentFilter("all"); setRepFilter("all"); setIssueFilter("all"); setBclassFilter("all");
     sort.reset();
     navigate({ to: "/individuals", search: {} });
   };
