@@ -962,7 +962,7 @@ function WindowDrawerBody({
    CONFIG TAB — section-card layout
 ============================================================= */
 
-function SetupTab({ org, product, readOnly, isAdmin }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean }) {
+function SetupTab({ org, product, readOnly, isAdmin, checks, setChecks }: { org: OrgDetail; product: "DI" | "LTC"; readOnly: boolean; isAdmin: boolean; checks: CheckItem[]; setChecks: React.Dispatch<React.SetStateAction<CheckItem[]>> }) {
   const statusValue = org.status;
   const identitySummary = product === "LTC"
     ? `${org.domain} · ${org.situs_city}, ${org.situs_state} · ${org.eligible_lives} eligible · NAIC ${org.naic_code}`
