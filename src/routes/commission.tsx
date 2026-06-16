@@ -10,7 +10,9 @@ import {
 } from "@/components/wireframe/Bits";
 import {
   CHANNEL_PARTNERS, POLICY_SPLITS_INITIAL, POLICIES, formatCents,
+  CARRIER_COMMISSION_SCHEDULES, COMMISSION_RATE_TIERS, CARRIER_PRODUCTS, CARRIERS,
   type PayeeType, type PaymentMethodSetting, type SplitSource,
+  type CarrierCommissionSchedule, type ScheduleType,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import {
@@ -280,6 +282,65 @@ function PolicyTotalChip({ total }: { total: number }) {
 }
 
 // ---------------------------------------------------------------------------
+// LTC schedule helpers
+// ---------------------------------------------------------------------------
+function scheduleTypeChip(t: ScheduleType) {
+  const tone: Record<ScheduleType, string> = {
+    heaped: "bg-purple-100 text-purple-800",
+    flat: "bg-sky-100 text-sky-800",
+    level: "bg-teal-100 text-teal-800",
+  };
+  return <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium capitalize ${tone[t]}`}>{t}</span>;
+}
+function stateChip(s: string | null) {
+  if (!s) return <span className="text-[11px] text-black/50">All states</span>;
+  if (s === "NY") return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">NY only</span>;
+  return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-black/5 text-black/70">{s} only</span>;
+}
+function tiersFor(scheduleId: string) {
+  return COMMISSION_RATE_TIERS.filter((t) => t.schedule_id === scheduleId).sort((a, b) => a.year_from - b.year_from);
+}
+function tierPreview(scheduleId: string): string {
+  const tiers = tiersFor(scheduleId);
+  if (tiers.length === 0) return "—";
+  const fmt = (t: { year_from: number; year_to: number | null; pct: number }) => {
+    if (t.year_to === null || t.year_to >= 99) return `${t.pct}% Y${t.year_from}+`;
+    if (t.year_to === t.year_from) return `${t.pct}% Y${t.year_from}`;
+    return `${t.pct}% Y${t.year_from}–${t.year_to}`;
+  };
+  if (tiers.length === 1) {
+    const t = tiers[0];
+    if ((t.year_to === null || t.year_to >= 99) && t.year_from === 1) return `${t.pct}% all years`;
+  }
+  if (tiers.length <= 4) return tiers.map(fmt).join(" → ");
+  return `${tiers.slice(0, 3).map(fmt).join(" → ")} … (${tiers.length} tiers)`;
+}
+function policyYearFor(effectiveDate: string, periodStart: string): number {
+  const a = new Date(effectiveDate + "T00:00:00");
+  const b = new Date(periodStart + "T00:00:00");
+  const months = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth());
+  return Math.max(1, Math.floor(months / 12) + 1);
+}
+function matchTier(scheduleId: string, year: number) {
+  return tiersFor(scheduleId).find((t) => year >= t.year_from && (t.year_to === null || year <= t.year_to));
+}
+function carrierProductLabel(cpId: string): string {
+  const cp = CARRIER_PRODUCTS.find((p) => p.id === cpId);
+  if (!cp) return cpId;
+  const c = CARRIERS.find((x) => x.id === cp.carrier_id);
+  return `${c?.carrier_name ?? "—"} — ${cp.product_name}`;
+}
+function deriveScheduleForPolicy(policyId: string): CarrierCommissionSchedule | null {
+  const pol = POLICIES.find((p) => p.id === policyId);
+  if (!pol) return null;
+  // explicit assignment first
+  if (pol.commission_schedule_id) {
+    const s = CARRIER_COMMISSION_SCHEDULES.find((x) => x.id === pol.commission_schedule_id);
+    if (s) return s;
+  }
+  // fall back to default for carrier_product
+  return CARRIER_COMMISSION_SCHEDULES.find((s) => s.carrier_product_id === pol.carrier_product_id && s.is_default) ?? null;
+}
 // Main view
 // ---------------------------------------------------------------------------
 const LAST_ATTIO_SYNC = "2025-10-15T11:56:00Z";
@@ -703,7 +764,10 @@ function View() {
         )}
       </div>
 
-      {/* ============================ SECTION 4 ============================ */}
+      {/* ===================== SECTION 4 (LTC ONLY) ===================== */}
+      {product === "LTC" && <LtcSchedulesSection />}
+
+      {/* ============================ SECTION 5 ============================ */}
       <SectionTitle>Commission Statements</SectionTitle>
       <div className="text-xs text-black/50 mb-2">
         Generated per period per payee. Statements drive payment instructions and broker reporting.
@@ -747,7 +811,10 @@ function View() {
                   }
                 }} />
             </th>
-            {["Period","Policy","Payee","Payee Type","Premium Base","Rate %","Commission Owed","Status","Payable","PDF","Actions"].map((c) => (
+            {(product === "LTC"
+              ? ["Period","Policy Year","Policy","Payee","Payee Type","Premium Base","Rate %","Schedule","Commission Owed","Status","Payable","PDF","Actions"]
+              : ["Period","Policy","Payee","Payee Type","Premium Base","Rate %","Commission Owed","Status","Payable","PDF","Actions"]
+            ).map((c) => (
               <th key={c} className="text-left font-medium px-3 py-2">{c}</th>))}
           </tr>
         </thead>
@@ -755,6 +822,12 @@ function View() {
           {filteredStatements.map((s) => {
             const pol = POLICIES.find((p) => p.id === s.policy_id);
             const checkable = s.status === "draft";
+            const sched = product === "LTC" ? deriveScheduleForPolicy(s.policy_id) : null;
+            const polYear = product === "LTC" && pol ? policyYearFor(pol.initial_effective_date, s.period_start) : null;
+            const matched = sched && polYear ? matchTier(sched.id, polYear) : null;
+            const rateTooltip = sched && matched
+              ? `Rate derived from ${sched.schedule_name}, Year ${polYear} tier (${matched.year_from}–${matched.year_to === 99 ? "perpetual" : matched.year_to})`
+              : undefined;
             return (
               <TRow key={s.id} onClick={() => setStmtDrawer({ open: true, id: s.id })}>
                 <TCell onClick={(e) => e.stopPropagation()}>
@@ -772,6 +845,9 @@ function View() {
                     }} />
                 </TCell>
                 <TCell>{fmtPeriod(s.period_start, s.period_end)}</TCell>
+                {product === "LTC" && (
+                  <TCell><span className="font-mono text-[11px]">Y{polYear ?? "?"}</span></TCell>
+                )}
                 <TCell>
                   <Link to="/policies" className="text-[#0a3d3e] underline">{s.policy_id}</Link>
                   <span className="text-black/50"> ({pol?.org_name ?? "—"})</span>
@@ -779,7 +855,17 @@ function View() {
                 <TCell className="font-medium">{s.payee_name}</TCell>
                 <TCell><PayeeTypeBadge t={s.payee_type} /></TCell>
                 <TCell>{formatCents(s.total_premium_cents)}</TCell>
-                <TCell>{s.commission_pct.toFixed(2)}%</TCell>
+                <TCell>
+                  <span title={rateTooltip}>{s.commission_pct.toFixed(2)}%</span>
+                  {product === "LTC" && <Info className="h-3 w-3 inline ml-1 text-black/30" />}
+                </TCell>
+                {product === "LTC" && (
+                  <TCell>
+                    {sched
+                      ? <button className="text-[11px] text-[#0a3d3e] underline" onClick={(e) => { e.stopPropagation(); document.getElementById(`sched-${sched.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>{sched.schedule_name}</button>
+                      : <span className="text-rose-700 text-[11px]">no schedule</span>}
+                  </TCell>
+                )}
                 <TCell className="font-semibold">{formatCents(s.commission_owed_cents)}</TCell>
                 <TCell><StatusBadge s={s.status} /></TCell>
                 <TCell>
@@ -802,13 +888,13 @@ function View() {
             );
           })}
           {filteredStatements.length === 0 && (
-            <tr><td colSpan={12} className="px-3 py-6 text-center text-black/40">No statements match the current filters.</td></tr>
+            <tr><td colSpan={product === "LTC" ? 14 : 12} className="px-3 py-6 text-center text-black/40">No statements match the current filters.</td></tr>
           )}
         </tbody>
         {filteredStatements.length > 0 && (
           <tfoot className="bg-[#f7f3eb] text-[11px] text-black/70">
             <tr className="border-t-2 border-black/15">
-              <td colSpan={7} className="px-3 py-2 font-semibold text-right">Total commission owed</td>
+              <td colSpan={product === "LTC" ? 9 : 7} className="px-3 py-2 font-semibold text-right">Total commission owed</td>
               <td className="px-3 py-2 font-semibold">{formatCents(stmtTotals.owed)}</td>
               <td colSpan={4} className="px-3 py-2">
                 <span className="text-black/60">
@@ -819,7 +905,7 @@ function View() {
               </td>
             </tr>
             <tr>
-              <td colSpan={12} className="px-3 py-1 text-[11px] text-black/50">
+              <td colSpan={product === "LTC" ? 14 : 12} className="px-3 py-1 text-[11px] text-black/50">
                 {stmtTotals.draft} draft · {stmtTotals.approved} approved · {stmtTotals.paid} paid
               </td>
             </tr>
@@ -839,6 +925,7 @@ function View() {
       <StatementDrawerView
         open={stmtDrawer.open}
         stmt={selectedStmt}
+        product={product}
         onClose={() => setStmtDrawer({ open: false, id: null })}
         onApprove={(s) => setApproveStmt(s)}
         onMarkPaid={(s) => setPaidStmt(s)}
@@ -1299,8 +1386,9 @@ function ActiveSplitsDrawer({ open, policyId, partners, rows, onClose, onSave }:
 // ===========================================================================
 // Drawer C — Statement Detail
 // ===========================================================================
-function StatementDrawerView({ open, stmt, onClose, onApprove, onMarkPaid }: {
+function StatementDrawerView({ open, stmt, product, onClose, onApprove, onMarkPaid }: {
   open: boolean; stmt: Statement | null;
+  product: "DI" | "LTC";
   onClose: () => void;
   onApprove: (s: Statement) => void;
   onMarkPaid: (s: Statement) => void;
@@ -1309,6 +1397,9 @@ function StatementDrawerView({ open, stmt, onClose, onApprove, onMarkPaid }: {
   const pol = POLICIES.find((p) => p.id === stmt.policy_id);
   // Derivation: count of ledger entries that fed the premium base (PHI-gated — count only)
   const contributingEntries = Math.max(1, Math.round(stmt.total_premium_cents / 80000));
+  const sched = product === "LTC" ? deriveScheduleForPolicy(stmt.policy_id) : null;
+  const polYear = product === "LTC" && pol ? policyYearFor(pol.initial_effective_date, stmt.period_start) : null;
+  const matched = sched && polYear ? matchTier(sched.id, polYear) : null;
 
   return (
     <Drawer open={open} onClose={onClose} title={`Statement ${fmtPeriod(stmt.period_start, stmt.period_end)} — ${stmt.payee_name}`}>
@@ -1338,6 +1429,34 @@ function StatementDrawerView({ open, stmt, onClose, onApprove, onMarkPaid }: {
       <Field label="Premium Base"><div>{formatCents(stmt.total_premium_cents)}</div></Field>
       <Field label="Commission Rate"><div>{stmt.commission_pct.toFixed(2)}%</div></Field>
       <Field label="Commission Owed"><div className="text-lg font-semibold">{formatCents(stmt.commission_owed_cents)}</div></Field>
+
+      {product === "LTC" && (
+        <>
+          <SectionHeader>Rate Derivation</SectionHeader>
+          <Card className="p-2 mb-3 text-xs space-y-1">
+            {sched ? (
+              <>
+                <div><span className="text-black/50">Schedule:</span> <span className="font-medium">{sched.schedule_name}</span></div>
+                <div><span className="text-black/50">Type:</span> {scheduleTypeChip(sched.schedule_type)}</div>
+                <div><span className="text-black/50">State:</span> {stateChip(sched.state_code)}</div>
+                <div><span className="text-black/50">Policy effective:</span> {fmtDate(pol?.initial_effective_date ?? null)}</div>
+                <div><span className="text-black/50">Billing period:</span> {fmtPeriod(stmt.period_start, stmt.period_end)}</div>
+                <div><span className="text-black/50">Policy year:</span> <span className="font-mono">Y{polYear}</span></div>
+                {matched ? (
+                  <div><span className="text-black/50">Tier matched:</span> from_year={matched.year_from}, to_year={matched.year_to === 99 ? "perpetual" : matched.year_to}, rate_pct={matched.pct}</div>
+                ) : (
+                  <div className="text-rose-700">No tier matches policy year {polYear}.</div>
+                )}
+                <div className="pt-1 border-t border-black/10">
+                  <span className="text-black/50">Snapshot commission_pct:</span> <span className="font-semibold">{stmt.commission_pct.toFixed(2)}%</span>
+                </div>
+              </>
+            ) : (
+              <div className="text-rose-700">No active schedule derived for this policy.</div>
+            )}
+          </Card>
+        </>
+      )}
 
       <SectionHeader>Derivation Breakdown</SectionHeader>
       <Card className="p-2 mb-3">
@@ -1677,5 +1796,373 @@ function RemoveDefaultModal({ row, activeCount, onCancel, onConfirm }: {
         This default has been copied to {activeCount} active policy split{activeCount === 1 ? "" : "s"}. Those existing splits will NOT be removed automatically. New policies for {row.channel_partner_name} won't include this payee.
       </div>
     </Modal>
+  );
+}
+
+// ===========================================================================
+// LTC Section 4 — Carrier Commission Schedules
+// ===========================================================================
+type SchedDraft = {
+  id: string;
+  carrier_product_id: string;
+  schedule_name: string;
+  schedule_type: ScheduleType;
+  state_code: string;
+  is_default: boolean;
+  effective_from: string;
+  effective_to: string;
+  notes: string;
+  tiers: Array<{ key: string; year_from: number; year_to: number | null; pct: number }>;
+};
+
+function ltcCarrierProducts() {
+  return CARRIER_PRODUCTS.filter((p) => p.line_of_business === "LTC");
+}
+
+function LtcSchedulesSection() {
+  const [schedules, setSchedules] = useState<CarrierCommissionSchedule[]>(CARRIER_COMMISSION_SCHEDULES);
+  const [tiers, setTiers] = useState(COMMISSION_RATE_TIERS);
+  const [fProduct, setFProduct] = useState<string>("all");
+  const [fType, setFType] = useState<ScheduleType | "all">("all");
+  const [fState, setFState] = useState<"all" | "ny" | "std">("all");
+  const [fDefaultOnly, setFDefaultOnly] = useState(false);
+  const [drawer, setDrawer] = useState<{ open: boolean; id: string | null; create?: boolean }>({ open: false, id: null });
+
+  const filtered = useMemo(() => schedules.filter((s) => {
+    if (fProduct !== "all" && s.carrier_product_id !== fProduct) return false;
+    if (fType !== "all" && s.schedule_type !== fType) return false;
+    if (fState === "ny" && s.state_code !== "NY") return false;
+    if (fState === "std" && s.state_code !== null) return false;
+    if (fDefaultOnly && !s.is_default) return false;
+    return true;
+  }), [schedules, fProduct, fType, fState, fDefaultOnly]);
+
+  const grouped = useMemo(() => {
+    const g: Record<string, CarrierCommissionSchedule[]> = {};
+    for (const s of filtered) (g[s.carrier_product_id] ??= []).push(s);
+    return Object.entries(g).sort(([a], [b]) => a.localeCompare(b));
+  }, [filtered]);
+
+  const ltcProducts = ltcCarrierProducts();
+  const stmtsBySchedule = (sid: string) => 0; // placeholder; statement snapshots don't store schedule_id in seed
+
+  function makeDefault(id: string) {
+    setSchedules((rs) => {
+      const target = rs.find((r) => r.id === id);
+      if (!target) return rs;
+      return rs.map((r) => {
+        if (r.carrier_product_id !== target.carrier_product_id) return r;
+        return { ...r, is_default: r.id === id };
+      });
+    });
+    toast.success("Promoted to default. Previous default demoted.");
+  }
+
+  return (
+    <>
+      <SectionTitle>Carrier Commission Schedules</SectionTitle>
+      <div className="text-xs text-black/50 mb-2">
+        What each carrier product pays in commission, by year band. Multiple schedules per product (heaped vs flat vs level). One default per carrier product. State-specific variants supported (NY).
+      </div>
+      <FilterRow>
+        <FilterCombobox value={fProduct} onChange={setFProduct} placeholder="All carrier products"
+          options={ltcProducts.map((p) => ({ value: p.id, label: carrierProductLabel(p.id) }))} />
+        <FilterSelect value={fType} onChange={setFType} allLabel="All types"
+          options={[{value:"heaped"},{value:"flat"},{value:"level"}]} />
+        <FilterSelect value={fState} onChange={setFState} allLabel="All states"
+          options={[{value:"ny",label:"NY only"},{value:"std",label:"Standard only"}]} />
+        <label className="inline-flex items-center gap-1 text-xs ml-1">
+          <input type="checkbox" checked={fDefaultOnly} onChange={(e) => setFDefaultOnly(e.target.checked)} />
+          Show defaults only
+        </label>
+        <ClearFiltersLink show={fProduct !== "all" || fType !== "all" || fState !== "all" || fDefaultOnly}
+          onClick={() => { setFProduct("all"); setFType("all"); setFState("all"); setFDefaultOnly(false); }} />
+        <ExportCsvButton filteredCount={filtered.length} totalCount={schedules.length} resourceLabel="carrier commission schedules" />
+        <div className="ml-auto">
+          <Btn variant="primary" onClick={() => setDrawer({ open: true, id: null, create: true })}>
+            <Plus className="h-3 w-3" /> New Schedule
+          </Btn>
+        </div>
+      </FilterRow>
+      <div className="space-y-3">
+        {grouped.map(([cpId, rows]) => (
+          <div key={cpId} className="bg-white border border-black/10 rounded-md overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 bg-[#f7f3eb] border-b border-black/10">
+              <div className="text-sm font-semibold text-[#0a3d3e]">{carrierProductLabel(cpId)}</div>
+              <div className="text-[11px] text-black/50">{rows.length} schedule{rows.length === 1 ? "" : "s"}</div>
+            </div>
+            <table className="w-full text-xs">
+              <thead className="text-[10px] uppercase tracking-wider text-black/50">
+                <tr>{["Schedule Name","Type","State","Effective","Tier Preview","Default","Actions"].map((c) => (
+                  <th key={c} className="text-left font-medium px-3 py-1.5">{c}</th>))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((s) => (
+                  <tr key={s.id} id={`sched-${s.id}`} className="border-t border-black/5 hover:bg-stone-50 cursor-pointer"
+                    onClick={() => setDrawer({ open: true, id: s.id })}>
+                    <td className="px-3 py-2 font-medium text-[#0a3d3e] underline">{s.schedule_name}</td>
+                    <td className="px-3 py-2">{scheduleTypeChip(s.schedule_type)}</td>
+                    <td className="px-3 py-2">{stateChip(s.state_code)}</td>
+                    <td className="px-3 py-2">{fmtDate(s.effective_from)} — {s.effective_to ? fmtDate(s.effective_to) : <span className="text-emerald-700">current</span>}</td>
+                    <td className="px-3 py-2 font-mono text-[11px]">{tierPreview(s.id)}</td>
+                    <td className="px-3 py-2">
+                      {s.is_default
+                        ? <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-800">Default</span>
+                        : <span className="text-black/30">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                      <button className="text-[11px] text-black/60 hover:text-black mr-3 inline-flex items-center gap-1"
+                        onClick={() => setDrawer({ open: true, id: s.id })}>
+                        <Pencil className="h-3 w-3" /> Edit
+                      </button>
+                      {!s.is_default && (
+                        <button className="text-[11px] text-[#0a3d3e] hover:underline"
+                          onClick={() => makeDefault(s.id)}>
+                          Make default
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+        {grouped.length === 0 && (
+          <div className="bg-white border border-black/10 rounded-md p-6 text-center text-xs text-black/40">
+            No schedules match the current filters.
+          </div>
+        )}
+      </div>
+
+      {drawer.open && (
+        <ScheduleDrawer
+          schedule={drawer.id ? schedules.find((s) => s.id === drawer.id) ?? null : null}
+          tiers={tiers}
+          allSchedules={schedules}
+          onClose={() => setDrawer({ open: false, id: null })}
+          onSave={(sched, newTiers) => {
+            setSchedules((rs) => {
+              const exists = rs.some((r) => r.id === sched.id);
+              let next = exists ? rs.map((r) => r.id === sched.id ? sched : r) : [...rs, sched];
+              if (sched.is_default) {
+                next = next.map((r) =>
+                  r.carrier_product_id === sched.carrier_product_id && r.id !== sched.id ? { ...r, is_default: false } : r
+                );
+              }
+              return next;
+            });
+            setTiers((ts) => [
+              ...ts.filter((t) => t.schedule_id !== sched.id),
+              ...newTiers,
+            ]);
+            setDrawer({ open: false, id: null });
+            toast.success(exists(schedules, sched.id) ? "Schedule updated. Existing approved/paid statements unaffected." : "Schedule created.");
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function exists(arr: CarrierCommissionSchedule[], id: string) {
+  return arr.some((s) => s.id === id);
+}
+
+// ===========================================================================
+// Drawer D — Schedule + Tiers
+// ===========================================================================
+function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
+  schedule: CarrierCommissionSchedule | null;
+  tiers: typeof COMMISSION_RATE_TIERS;
+  allSchedules: CarrierCommissionSchedule[];
+  onClose: () => void;
+  onSave: (sched: CarrierCommissionSchedule, tiers: typeof COMMISSION_RATE_TIERS) => void;
+}) {
+  const ltcProducts = ltcCarrierProducts();
+  const isNew = !schedule;
+  const initialTiers = schedule ? tiersFor(schedule.id) : [{ id: `crt_new_1`, schedule_id: "new", year_from: 1, year_to: null as number | null, pct: 0 }];
+  const [draft, setDraft] = useState<SchedDraft>({
+    id: schedule?.id ?? `ccs_new_${Date.now()}`,
+    carrier_product_id: schedule?.carrier_product_id ?? (ltcProducts[0]?.id ?? ""),
+    schedule_name: schedule?.schedule_name ?? "",
+    schedule_type: schedule?.schedule_type ?? "heaped",
+    state_code: schedule?.state_code ?? "",
+    is_default: schedule?.is_default ?? false,
+    effective_from: schedule?.effective_from ?? new Date().toISOString().slice(0, 10),
+    effective_to: schedule?.effective_to ?? "",
+    notes: "",
+    tiers: initialTiers.map((t, i) => ({ key: `${t.id}_${i}`, year_from: t.year_from, year_to: t.year_to === 99 ? null : t.year_to, pct: t.pct })),
+  });
+
+  const otherDefault = allSchedules.find((s) => s.carrier_product_id === draft.carrier_product_id && s.is_default && s.id !== draft.id);
+  const onlySchedule = allSchedules.filter((s) => s.carrier_product_id === draft.carrier_product_id && s.id !== draft.id).length === 0;
+
+  // Validation
+  const sorted = [...draft.tiers].sort((a, b) => a.year_from - b.year_from);
+  let overlap = false;
+  let gap: number | null = null;
+  for (let i = 0; i < sorted.length; i++) {
+    const cur = sorted[i];
+    const nxt = sorted[i + 1];
+    if (cur.year_to !== null && cur.year_from > cur.year_to) overlap = true;
+    if (nxt) {
+      const curEnd = cur.year_to ?? Infinity;
+      if (nxt.year_from <= curEnd) overlap = true;
+      else if (nxt.year_from > curEnd + 1 && gap === null) gap = curEnd + 1;
+    }
+  }
+  const allClosed = sorted.length > 0 && sorted.every((t) => t.year_to !== null);
+  const canSave = draft.schedule_name.trim().length > 0 && draft.carrier_product_id && !overlap && draft.tiers.every((t) => t.pct >= 0 && t.year_from >= 1);
+
+  function updateTier(idx: number, patch: Partial<SchedDraft["tiers"][number]>) {
+    setDraft((d) => ({ ...d, tiers: d.tiers.map((t, i) => i === idx ? { ...t, ...patch } : t) }));
+  }
+
+  function handleSave() {
+    const sched: CarrierCommissionSchedule = {
+      id: draft.id,
+      carrier_product_id: draft.carrier_product_id,
+      carrier_product_name: CARRIER_PRODUCTS.find((p) => p.id === draft.carrier_product_id)?.product_name ?? "",
+      schedule_name: draft.schedule_name.trim(),
+      schedule_type: draft.schedule_type,
+      state_code: draft.state_code.trim() || null,
+      is_default: onlySchedule ? true : draft.is_default,
+      effective_from: draft.effective_from,
+      effective_to: draft.effective_to || null,
+    };
+    const newTiers = draft.tiers.map((t, i) => ({
+      id: `${draft.id}_t${i}`,
+      schedule_id: draft.id,
+      year_from: Number(t.year_from),
+      year_to: t.year_to === null ? 99 : Number(t.year_to),
+      pct: Number(t.pct),
+    }));
+    onSave(sched, newTiers);
+  }
+
+  return (
+    <Drawer open onClose={onClose} title={isNew ? "New Commission Schedule" : `Edit — ${schedule?.schedule_name}`}>
+      <SectionHeader>Schedule</SectionHeader>
+      <Field label="Carrier Product">
+        <select value={draft.carrier_product_id} onChange={(e) => setDraft({ ...draft, carrier_product_id: e.target.value })}
+          className="px-2 py-1 text-sm border border-black/15 rounded w-full">
+          {ltcProducts.map((p) => <option key={p.id} value={p.id}>{carrierProductLabel(p.id)}</option>)}
+        </select>
+      </Field>
+      <Field label="Schedule Name">
+        <input value={draft.schedule_name} onChange={(e) => setDraft({ ...draft, schedule_name: e.target.value })}
+          placeholder="e.g., Trustmark UL Heaped 100/5"
+          className="px-2 py-1 text-sm border border-black/15 rounded w-full" />
+      </Field>
+      <Field label="Schedule Type">
+        <select value={draft.schedule_type} onChange={(e) => setDraft({ ...draft, schedule_type: e.target.value as ScheduleType })}
+          className="px-2 py-1 text-sm border border-black/15 rounded w-full">
+          <option value="heaped">Heaped</option>
+          <option value="flat">Flat</option>
+          <option value="level">Level</option>
+        </select>
+      </Field>
+      <Field label="State Code">
+        <input value={draft.state_code} onChange={(e) => setDraft({ ...draft, state_code: e.target.value.toUpperCase() })}
+          placeholder="Blank = all states. 'NY' for NY-specific."
+          className="px-2 py-1 text-sm border border-black/15 rounded w-full" />
+      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Effective From">
+          <input type="date" value={draft.effective_from} onChange={(e) => setDraft({ ...draft, effective_from: e.target.value })}
+            className="px-2 py-1 text-sm border border-black/15 rounded w-full" />
+        </Field>
+        <Field label="Effective To">
+          <input type="date" value={draft.effective_to} onChange={(e) => setDraft({ ...draft, effective_to: e.target.value })}
+            className="px-2 py-1 text-sm border border-black/15 rounded w-full" />
+        </Field>
+      </div>
+      <Field label="Notes">
+        <textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+          className="px-2 py-1 text-sm border border-black/15 rounded w-full" rows={2} />
+      </Field>
+
+      <SectionHeader>Default</SectionHeader>
+      <label className="inline-flex items-center gap-2 text-xs">
+        <input type="checkbox" disabled={onlySchedule} checked={onlySchedule ? true : draft.is_default}
+          onChange={(e) => setDraft({ ...draft, is_default: e.target.checked })} />
+        Make this the default schedule for this carrier product
+      </label>
+      {onlySchedule && (
+        <div className="text-[11px] text-black/50 mt-1">Only schedule for this product — must be default.</div>
+      )}
+      {draft.is_default && otherDefault && (
+        <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mt-2">
+          This will demote the current default ({otherDefault.schedule_name}) automatically.
+        </div>
+      )}
+
+      <SectionHeader>Rate Tiers</SectionHeader>
+      <Card className="p-2 mb-2">
+        <table className="w-full text-xs">
+          <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
+            <tr>{["From Year","To Year","Rate %",""].map((c) => (<th key={c} className="text-left font-medium px-2 py-1">{c}</th>))}</tr>
+          </thead>
+          <tbody>
+            {draft.tiers.map((t, i) => (
+              <tr key={t.key} className="border-t border-black/5">
+                <td className="px-2 py-1"><input type="number" min={1} value={t.year_from} onChange={(e) => updateTier(i, { year_from: Number(e.target.value) })} className="px-1 py-0.5 text-xs border border-black/15 rounded w-16" /></td>
+                <td className="px-2 py-1">
+                  <input type="number" min={1} value={t.year_to ?? ""} placeholder="∞"
+                    onChange={(e) => updateTier(i, { year_to: e.target.value === "" ? null : Number(e.target.value) })}
+                    className="px-1 py-0.5 text-xs border border-black/15 rounded w-16" />
+                </td>
+                <td className="px-2 py-1"><input type="number" min={0} step={0.5} value={t.pct} onChange={(e) => updateTier(i, { pct: Number(e.target.value) })} className="px-1 py-0.5 text-xs border border-black/15 rounded w-20" />%</td>
+                <td className="px-2 py-1 text-right">
+                  <button className="text-[11px] text-rose-600 hover:underline" onClick={() => setDraft((d) => ({ ...d, tiers: d.tiers.filter((_, j) => j !== i) }))}>
+                    <Trash2 className="h-3 w-3 inline" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="px-2 py-1">
+          <button className="text-[11px] text-[#0a3d3e] hover:underline inline-flex items-center gap-1"
+            onClick={() => setDraft((d) => ({ ...d, tiers: [...d.tiers, { key: `new_${Date.now()}`, year_from: (d.tiers.at(-1)?.year_to ?? 0) + 1, year_to: null, pct: 0 }] }))}>
+            <Plus className="h-3 w-3" /> Add Tier
+          </button>
+        </div>
+      </Card>
+      {overlap && (
+        <div className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded p-2 mb-2">
+          Overlapping or invalid year ranges. Fix before saving.
+        </div>
+      )}
+      {gap !== null && (
+        <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mb-2">
+          Gap in coverage: Year {gap} has no defined rate. Statements for that policy year will fail to derive a rate.
+        </div>
+      )}
+      {allClosed && (
+        <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mb-2">
+          All tiers have a closed end year. Add a perpetual tier (blank To Year) or commissions stop after the last band.
+        </div>
+      )}
+
+      {!isNew && (
+        <div className="text-[11px] text-black/60 bg-stone-50 border border-black/10 rounded p-2 mb-2">
+          Changes do NOT propagate to existing approved or paid statements. Draft statements re-derive on regeneration. Past commission_pct snapshots are preserved.
+        </div>
+      )}
+
+      <SectionHeader>Usage</SectionHeader>
+      <div className="text-[11px] text-black/60">
+        {POLICIES.filter((p) => p.commission_schedule_id === draft.id).length} polic
+        {POLICIES.filter((p) => p.commission_schedule_id === draft.id).length === 1 ? "y" : "ies"} reference this schedule.
+      </div>
+
+      <div className="flex justify-end gap-2 mt-4">
+        <Btn onClick={onClose}>Cancel</Btn>
+        <Btn variant="primary" onClick={handleSave} disabled={!canSave}>Save</Btn>
+      </div>
+    </Drawer>
   );
 }
