@@ -1069,7 +1069,7 @@ function LifecycleTab({
       </div>
 
 
-      <OnboardingChecklist orgId={orgId} orgStatus={orgStatus} product={product} isAdmin={isAdmin} />
+      
 
 
 
