@@ -663,12 +663,16 @@ function ContributionSection({ i, readOnly }: { i: Detail; readOnly: boolean }) 
   const [editing, setEditing] = useState(false);
   const active = i.contribution_active;
   const hasHistory = !active && !!i.contribution_start_date && !!i.contribution_duration_months;
-  const endDate = i.contribution_duration_months ? `${i.contribution_start_date} + ${i.contribution_duration_months}mo` : "Indefinite";
+  const endDate = i.contribution_duration_months
+    ? addMonths(i.contribution_start_date, i.contribution_duration_months)
+    : "Indefinite";
   return (
     <SectionCard title="Employer Contribution" defaultOpen={active} editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
-        <RField label="Contribution Tier" value={i.contribution_tier ?? "—"} editing={editing && active}>
-          <select defaultValue={i.contribution_tier ?? ""} className={inputCls}>{TIERS.map((t) => <option key={t}>{t}</option>)}</select>
+        <RField label="Contribution Tier" value={titleCase(i.contribution_tier)} editing={editing && active}>
+          <select defaultValue={i.contribution_tier ?? ""} className={inputCls}>
+            {TIERS.map((t) => <option key={t} value={t}>{titleCase(t)}</option>)}
+          </select>
         </RField>
         <RField label="Active">
           {active ? <Badge map={COVERAGE_BADGE} value="active" /> : <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">Inactive</span>}
@@ -688,17 +692,18 @@ function ContributionSection({ i, readOnly }: { i: Detail; readOnly: boolean }) 
           </>
         )}
       </Grid>
+      {/* TODO: confirm tier→percentage mapping with product team before exposing % to ops */}
       {active && i.contribution_tier && (
         <div className="mt-4 bg-blue-50 border-l-4 border-blue-400 text-sm text-black/75 p-3 rounded-r leading-relaxed">
-          The employer covers this enrollee's premium at the <b>{i.contribution_tier}</b> tier
+          The employer covers this enrollee's premium at the <b>{titleCase(i.contribution_tier)}</b> tier
           {i.contribution_duration_months ? <> for <b>{i.contribution_duration_months} months</b></> : <> <b>indefinitely</b></>}
           {i.contribution_start_date ? <> starting <b>{fmtDate(i.contribution_start_date)}</b></> : null}.
-          The dollar amount is derived at billing time from the rate table based on age and smoker status.
+          The dollar amount is derived at billing time from the benefit class configuration.
         </div>
       )}
       {!active && hasHistory && (
         <div className="mt-4 text-sm text-black/60 leading-relaxed">
-          Employer covered this enrollee's premium at the <b>{i.contribution_tier}</b> tier from <b>{fmtDate(i.contribution_start_date)}</b> to <b>{endDate}</b>. The enrollee now pays the full premium.
+          Employer covered this enrollee's premium at the <b>{titleCase(i.contribution_tier)}</b> tier from <b>{fmtDate(i.contribution_start_date)}</b> to <b>{endDate}</b>. The enrollee now pays the full premium.
         </div>
       )}
       {!active && !hasHistory && (
