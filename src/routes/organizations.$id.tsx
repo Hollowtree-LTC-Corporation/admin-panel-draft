@@ -1097,140 +1097,363 @@ function LifecycleTab({
   );
 }
 
-/* ---------- Onboarding Checklist ---------- */
+/* ---------- Onboarding Checklist (v15 schema, 8 fixed check_types) ---------- */
 
-type CheckStatus = "pending" | "passed" | "failed" | "skipped";
-type CheckItem = {
+export type CheckStatus = "pending" | "passed" | "failed" | "skipped";
+export type CheckItem = {
   check_type: string;
   label: string;
-  ltc_only?: boolean;
+  helper: string;
   status: CheckStatus;
-  checked_by: string;
-  checked_at: string;
+  checked_by: string | null;
+  checked_at: string | null;
   notes: string;
 };
 
-const CHECK_DEFS: Array<{ check_type: string; label: string; ltc_only?: boolean }> = [
-  { check_type: "carrier_confirmed", label: "Carrier Confirmed" },
-  { check_type: "rates_loaded", label: "Rates Loaded" },
-  { check_type: "benefit_classes_created", label: "Benefit Classes Created", ltc_only: true },
-  { check_type: "enrollment_window_created", label: "Enrollment Window Created" },
-  { check_type: "fee_schedule_configured", label: "Fee Schedule Configured" },
-  { check_type: "klaviyo_list_linked", label: "Klaviyo List Linked" },
-  { check_type: "contacts_added", label: "Contacts Added" },
-  { check_type: "microsite_verified", label: "Microsite Verified" },
+// Fixed natural-onboarding display order. Do NOT reorder.
+const CHECK_DEFS: Array<{ check_type: string; label: string; helper: string }> = [
+  { check_type: "carrier_confirmed", label: "Carrier Confirmed", helper: "Carrier agreement and product confirmed for this organization" },
+  { check_type: "rates_loaded", label: "Rates Loaded", helper: "Rate cells imported from carrier proposal into benefit classes" },
+  { check_type: "plan_details_reviewed", label: "Plan Details Reviewed", helper: "Plan description, riders, and benefit details verified" },
+  { check_type: "contacts_verified", label: "Contacts Verified", helper: "Organization contacts (signatory, billing, HR) added and confirmed" },
+  { check_type: "payment_config_set", label: "Payment Config Set", helper: "Employer payment method type and billing configuration confirmed" },
+  { check_type: "enrollment_window_created", label: "Enrollment Window Created", helper: "At least one enrollment window exists. Required before window can open." },
+  { check_type: "microsite_verified", label: "Microsite Verified", helper: "Enrollment microsite URL live and tested" },
+  { check_type: "test_enrollment_completed", label: "Test Enrollment Completed", helper: "End-to-end test enrollment submitted and verified" },
 ];
 
-function seedChecks(orgId: string, product: "DI" | "LTC"): CheckItem[] {
-  const defs = CHECK_DEFS.filter((d) => !d.ltc_only || product === "LTC");
+export function seedChecks(orgId: string, _product: "DI" | "LTC"): CheckItem[] {
+  // Always 8, identical schema across DI/LTC.
   if (orgId === "org_9") {
-    // Ironwood Robotics: 4 passed, rest pending
-    return defs.map((d, i) => i < 4
-      ? { ...d, status: "passed" as CheckStatus, checked_by: "Jamie Chen", checked_at: "2026-06-08 14:22", notes: "" }
-      : { ...d, status: "pending" as CheckStatus, checked_by: "", checked_at: "", notes: "" });
+    // Ironwood Robotics: mid-onboarding — 3 passed, 1 failed, rest pending
+    return CHECK_DEFS.map((d, i) => {
+      if (i < 3) return { ...d, status: "passed" as CheckStatus, checked_by: "Jamie Chen", checked_at: "Jun 8, 2026 2:22 PM", notes: "" };
+      if (i === 3) return { ...d, status: "failed" as CheckStatus, checked_by: "Jamie Chen", checked_at: "Jun 9, 2026 10:14 AM", notes: "Awaiting signatory confirmation from HR — escalated to Maria." };
+      return { ...d, status: "pending" as CheckStatus, checked_by: null, checked_at: null, notes: "" };
+    });
   }
-  // Default (active orgs like Acme): all passed
-  return defs.map((d) => ({
-    ...d, status: "passed" as CheckStatus, checked_by: "Jamie Chen", checked_at: "2025-01-14 09:30", notes: "",
+  if (orgId === "org_6") {
+    // Foxtail: 6 passed, 2 pending (microsite + test enrollment)
+    return CHECK_DEFS.map((d, i) => i < 6
+      ? { ...d, status: "passed" as CheckStatus, checked_by: "Jamie Chen", checked_at: "Jun 5, 2026 11:00 AM", notes: "" }
+      : { ...d, status: "pending" as CheckStatus, checked_by: null, checked_at: null, notes: "" });
+  }
+  // Default (active orgs): all passed
+  return CHECK_DEFS.map((d) => ({
+    ...d, status: "passed" as CheckStatus, checked_by: "Jamie Chen", checked_at: "Jan 14, 2025 9:30 AM", notes: "",
   }));
 }
 
-function statusTone(s: CheckStatus): "ok" | "bad" | "info" | "neutral" {
-  if (s === "passed") return "ok";
-  if (s === "failed") return "bad";
-  if (s === "skipped") return "neutral";
-  return "neutral";
+export type AggregateStatus = { kind: "complete" | "in_progress" | "blocked"; passedOrSkipped: number; failed: number };
+export function computeAggregate(checks: CheckItem[]): AggregateStatus {
+  const failed = checks.filter((c) => c.status === "failed").length;
+  const passedOrSkipped = checks.filter((c) => c.status === "passed" || c.status === "skipped").length;
+  if (failed > 0) return { kind: "blocked", passedOrSkipped, failed };
+  if (passedOrSkipped === checks.length) return { kind: "complete", passedOrSkipped, failed };
+  return { kind: "in_progress", passedOrSkipped, failed };
 }
 
-function CheckIcon({ status }: { status: CheckStatus }) {
-  const base = "h-4 w-4";
-  if (status === "passed") return <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-green-600 text-white"><Check className={base} /></span>;
-  if (status === "failed") return <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-red-600 text-white"><XIcon className={base} /></span>;
-  if (status === "skipped") return <span className="inline-flex items-center justify-center h-5 w-5 rounded border border-black/30 text-black/60"><SkipForward className={base} /></span>;
-  return <span className="inline-flex items-center justify-center h-5 w-5 rounded border border-black/30 text-black/30"><Circle className={base} /></span>;
+const STATUS_META: Record<CheckStatus, { dot: string; chipBg: string; chipText: string; label: string }> = {
+  pending: { dot: "bg-gray-300", chipBg: "bg-gray-100", chipText: "text-gray-700", label: "pending" },
+  passed: { dot: "bg-green-600", chipBg: "bg-green-100", chipText: "text-green-800", label: "passed" },
+  failed: { dot: "bg-red-600", chipBg: "bg-red-100", chipText: "text-red-800", label: "failed" },
+  skipped: { dot: "bg-amber-500", chipBg: "bg-amber-100", chipText: "text-amber-800", label: "skipped" },
+};
+
+function StatusIcon({ status }: { status: CheckStatus }) {
+  const base = "h-3.5 w-3.5";
+  if (status === "passed") return <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-green-600 text-white"><Check className={base} /></span>;
+  if (status === "failed") return <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-600 text-white"><XIcon className={base} /></span>;
+  if (status === "skipped") return <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-amber-500 text-white"><Minus className={base} /></span>;
+  return <span className="inline-flex items-center justify-center h-5 w-5 rounded-full border border-gray-300 text-transparent"><Circle className={base} /></span>;
 }
 
-function OnboardingChecklist({ orgId, orgStatus, product, isAdmin }: { orgId: string; orgStatus: string; product: "DI" | "LTC"; isAdmin: boolean }) {
-  const [checks, setChecks] = useState<CheckItem[]>(() => seedChecks(orgId, product));
-  const [expanded, setExpanded] = useState(orgStatus !== "active");
+function StatusChip({ status }: { status: CheckStatus }) {
+  const m = STATUS_META[status];
+  return <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${m.chipBg} ${m.chipText}`}>
+    <span className={`h-1.5 w-1.5 rounded-full ${m.dot}`} />{m.label}
+  </span>;
+}
 
-  useEffect(() => {
-    setChecks(seedChecks(orgId, product));
-    setExpanded(orgStatus !== "active");
-  }, [orgId, orgStatus, product]);
+function nowFormatted(): string {
+  const d = new Date();
+  return d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
 
-  const showCollapsed = orgStatus === "active" && !expanded;
+function StatusDropdown({ value, pendingValue, onSelect }: { value: CheckStatus; pendingValue: CheckStatus | null; onSelect: (s: CheckStatus) => void }) {
+  const [open, setOpen] = useState(false);
+  const display = pendingValue ?? value;
+  const m = STATUS_META[display];
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-medium ${m.chipBg} ${m.chipText} ${pendingValue ? "border-dashed border-blue-500" : "border-black/15"} hover:opacity-90`}
+        title={pendingValue ? "Unsaved change — notes required" : "Change status"}
+      >
+        <span className={`h-1.5 w-1.5 rounded-full ${m.dot}`} />
+        {m.label}
+        <ChevronDown className="h-3 w-3 opacity-60" />
+      </button>
+      {open ? (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 mt-1 z-20 w-36 bg-white border border-black/15 rounded shadow-md py-1">
+            {(["pending", "passed", "failed", "skipped"] as CheckStatus[]).map((s) => {
+              const sm = STATUS_META[s];
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => { setOpen(false); onSelect(s); }}
+                  className={`w-full flex items-center gap-2 px-2 py-1 text-xs text-left hover:bg-black/5 ${s === display ? "bg-black/[0.03]" : ""}`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${sm.dot}`} />
+                  <span className={sm.chipText}>{sm.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
 
-  const total = checks.length;
-  const passed = checks.filter((c) => c.status === "passed").length;
-  const nonSkipped = checks.filter((c) => c.status !== "skipped");
-  const allPassed = nonSkipped.length > 0 && nonSkipped.every((c) => c.status === "passed");
-  const pct = total === 0 ? 0 : Math.round((passed / total) * 100);
+const CURRENT_USER_NAME = "Guy";
+
+function CheckRow({
+  c, idx, onChange, readOnly,
+}: {
+  c: CheckItem;
+  idx: number;
+  onChange: (idx: number, patch: Partial<CheckItem>) => void;
+  readOnly: boolean;
+}) {
+  const [pendingStatus, setPendingStatus] = useState<CheckStatus | null>(null);
+  const [draftNotes, setDraftNotes] = useState(c.notes);
+  useEffect(() => { setDraftNotes(c.notes); }, [c.notes]);
+
+  const isGating = c.check_type === "enrollment_window_created";
+  const gatingActive = isGating && c.status !== "passed";
+  const isFailed = c.status === "failed";
+  const requiresNotes = pendingStatus === "failed" || pendingStatus === "skipped";
+  const canSavePending = requiresNotes && draftNotes.trim().length >= 10;
+
+  const handleSelect = (newStatus: CheckStatus) => {
+    if (readOnly) return;
+    if (newStatus === c.status && !pendingStatus) return;
+    if (newStatus === "passed" || newStatus === "pending") {
+      setPendingStatus(null);
+      onChange(idx, {
+        status: newStatus,
+        checked_by: newStatus === "pending" ? null : CURRENT_USER_NAME,
+        checked_at: newStatus === "pending" ? null : nowFormatted(),
+      });
+      return;
+    }
+    // failed or skipped — hold until notes saved
+    setPendingStatus(newStatus);
+  };
+
+  const handleSavePending = () => {
+    if (!pendingStatus || !canSavePending) return;
+    onChange(idx, {
+      status: pendingStatus,
+      checked_by: CURRENT_USER_NAME,
+      checked_at: nowFormatted(),
+      notes: draftNotes.trim(),
+    });
+    setPendingStatus(null);
+  };
+
+  const handleNotesBlur = () => {
+    if (pendingStatus) return; // explicit Save flow
+    if (draftNotes === c.notes) return;
+    onChange(idx, { notes: draftNotes });
+  };
+
+  const helperClass = gatingActive
+    ? "text-[11px] font-semibold text-amber-700"
+    : "text-[11px] italic text-black/55";
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-semibold text-gray-900">Onboarding Checklist</h2>
-        {orgStatus === "active" ? (
-          <div className="flex items-center gap-3">
-            <Pill tone="ok">Onboarding: Complete</Pill>
-            <button type="button" className="text-xs text-blue-600 hover:underline" onClick={() => setExpanded((v) => !v)}>
-              {expanded ? "Hide checklist" : "Show checklist"}
-            </button>
+    <li className="py-3">
+      <div className="flex items-start gap-3">
+        <div className="pt-0.5"><StatusIcon status={c.status} /></div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-gray-900">{c.label}</span>
+            <StatusChip status={c.status} />
+            <div className="ml-auto">
+              <StatusDropdown value={c.status} pendingValue={pendingStatus} onSelect={handleSelect} />
+            </div>
           </div>
-        ) : null}
-      </div>
-
-      {showCollapsed ? null : (
-        <Card className="p-4 max-w-3xl">
-          <ul className="divide-y divide-black/10">
-            {checks.map((c, idx) => (
-              <li key={c.check_type} className="py-3">
-                <div className="flex items-start gap-3">
-                  <div className="pt-0.5"><CheckIcon status={c.status} /></div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-gray-900">{c.label}</span>
-                      <Pill tone={statusTone(c.status)}>{c.status}</Pill>
-                      {c.ltc_only ? <span className="text-[10px] uppercase tracking-wider text-black/40">LTC</span> : null}
-                    </div>
-                    <div className="mt-1 text-xs text-black/60 flex items-center gap-3">
-                      <span>Checked by: <span className="text-black/80">{c.checked_by || "—"}</span></span>
-                      <span>At: <span className="text-black/80">{c.checked_at || "—"}</span></span>
-                    </div>
-                    <textarea
-                      rows={1}
-                      placeholder="Notes…"
-                      defaultValue={c.notes}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setChecks((prev) => prev.map((p, i) => i === idx ? { ...p, notes: v } : p));
-                      }}
-                      className="mt-2 w-full px-2 py-1 text-xs border border-black/15 rounded resize-y min-h-[28px]"
-                    />
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-4 pt-3 border-t border-black/10">
-            <div className="flex items-center justify-between text-xs text-black/70 mb-1">
-              <span>{passed} of {total} checks complete</span>
-              <span className="font-medium">{pct}%</span>
+          <div className={`mt-0.5 ${helperClass}`}>{c.helper}</div>
+          {gatingActive ? (
+            <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+              <Lock className="h-3 w-3" />
+              <span>Enrollment windows cannot be opened until this check passes.</span>
             </div>
-            <div className="h-2 w-full bg-black/10 rounded overflow-hidden">
-              <div className="h-full bg-green-600 transition-all" style={{ width: `${pct}%` }} />
+          ) : null}
+          {c.checked_at ? (
+            <div className="mt-1 text-[11px] text-black/55">
+              Checked by: <span className="text-black/75">{c.checked_by}</span> · {c.checked_at}
             </div>
-            {isAdmin && orgStatus !== "active" ? (
-              <div className="mt-3 flex justify-end">
-                <Btn variant="primary" disabled={!allPassed}>Mark Onboarding Complete</Btn>
+          ) : null}
+
+          <div className="mt-2">
+            {requiresNotes ? (
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-red-700 mb-0.5">
+                Notes (required, min 10 chars)
+              </label>
+            ) : null}
+            <div className="flex gap-2 items-start">
+              <textarea
+                rows={requiresNotes || isFailed ? 2 : 1}
+                placeholder="Notes…"
+                value={draftNotes}
+                disabled={readOnly}
+                onChange={(e) => setDraftNotes(e.target.value)}
+                onBlur={handleNotesBlur}
+                className={`flex-1 px-2 py-1 text-xs border rounded resize-y min-h-[28px] ${
+                  requiresNotes
+                    ? "border-red-500 ring-1 ring-red-200"
+                    : isFailed
+                      ? "border-red-200 bg-red-50/60"
+                      : "border-black/15"
+                }`}
+              />
+              {pendingStatus ? (
+                <button
+                  type="button"
+                  onClick={handleSavePending}
+                  disabled={!canSavePending}
+                  className={`shrink-0 px-2.5 py-1 text-xs rounded font-medium ${
+                    canSavePending
+                      ? "bg-[#0a3d3e] text-white hover:bg-[#0c4a4b]"
+                      : "bg-black/10 text-black/40 cursor-not-allowed"
+                  }`}
+                >
+                  Save
+                </button>
+              ) : null}
+            </div>
+            {requiresNotes && draftNotes.trim().length > 0 && draftNotes.trim().length < 10 ? (
+              <div className="mt-0.5 text-[10px] text-red-700">
+                {10 - draftNotes.trim().length} more character{10 - draftNotes.trim().length === 1 ? "" : "s"} required.
               </div>
             ) : null}
           </div>
-        </Card>
-      )}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function OnboardingChecklist({
+  checks, setChecks, readOnly,
+}: {
+  checks: CheckItem[];
+  setChecks: React.Dispatch<React.SetStateAction<CheckItem[]>>;
+  readOnly: boolean;
+}) {
+  const [hideCompleted, setHideCompleted] = useState(false);
+
+  const handleChange = (idx: number, patch: Partial<CheckItem>) => {
+    setChecks((prev) => prev.map((p, i) => i === idx ? { ...p, ...patch } : p));
+  };
+
+  const total = checks.length; // always 8
+  const aggregate = computeAggregate(checks);
+  const passedOrSkipped = aggregate.passedOrSkipped;
+  const pct = total === 0 ? 0 : Math.round((passedOrSkipped / total) * 100);
+  const barColor = pct === 100 ? "bg-green-600" : pct > 0 ? "bg-teal-600" : "bg-gray-300";
+
+  const visibleChecks = hideCompleted
+    ? checks.filter((c) => c.status !== "passed" && c.status !== "skipped")
+    : checks;
+
+  const aggregateChip = aggregate.kind === "complete"
+    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-green-100 text-green-800">Onboarding: Complete</span>
+    : aggregate.kind === "blocked"
+      ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-red-100 text-red-800">Onboarding: Blocked</span>
+      : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-teal-100 text-teal-800">Onboarding: In Progress</span>;
+
+  return (
+    <div id="onboarding-checklist" className="scroll-mt-4">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-base font-semibold text-gray-900">Onboarding Checklist</h2>
+        <div className="flex items-center gap-3">
+          {aggregateChip}
+          <button
+            type="button"
+            className="text-xs text-blue-600 hover:underline"
+            onClick={() => setHideCompleted((v) => !v)}
+          >
+            {hideCompleted ? "Show all" : "Hide completed"}
+          </button>
+        </div>
+      </div>
+
+      <Card className="p-4 max-w-3xl">
+        {visibleChecks.length === 0 ? (
+          <div className="py-6 text-center text-xs text-black/50">All onboarding checks complete.</div>
+        ) : (
+          <ul className="divide-y divide-black/10">
+            {visibleChecks.map((c) => {
+              const realIdx = checks.findIndex((x) => x.check_type === c.check_type);
+              return (
+                <CheckRow key={c.check_type} c={c} idx={realIdx} onChange={handleChange} readOnly={readOnly} />
+              );
+            })}
+          </ul>
+        )}
+
+        <div className="mt-4 pt-3 border-t border-black/10">
+          <div className="flex items-center justify-between text-xs text-black/70 mb-1">
+            <span>
+              {passedOrSkipped} of {total} checks complete
+              {aggregate.failed > 0 ? <span className="ml-1 text-red-700 font-medium">· {aggregate.failed} blocked</span> : null}
+            </span>
+            <span className="font-medium">{pct}%</span>
+          </div>
+          <div className="h-2 w-full bg-black/10 rounded overflow-hidden">
+            <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      </Card>
     </div>
+  );
+}
+
+// Header chip that scrolls to the checklist section.
+export function ReadyToEnrollChip({ aggregate }: { aggregate: AggregateStatus }) {
+  const total = 8;
+  const handleClick = () => {
+    const el = document.getElementById("onboarding-checklist");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const common = "inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border cursor-pointer hover:opacity-90";
+  if (aggregate.kind === "complete") {
+    return (
+      <button type="button" onClick={handleClick} className={`${common} bg-green-50 border-green-300 text-green-800`}>
+        <Check className="h-3 w-3" /> Ready to enroll
+      </button>
+    );
+  }
+  if (aggregate.kind === "blocked") {
+    return (
+      <button type="button" onClick={handleClick} className={`${common} bg-red-50 border-red-300 text-red-800`}>
+        <XIcon className="h-3 w-3" /> Onboarding blocked
+      </button>
+    );
+  }
+  return (
+    <button type="button" onClick={handleClick} className={`${common} bg-teal-50 border-teal-300 text-teal-800`}>
+      <Circle className="h-3 w-3" /> Onboarding: {aggregate.passedOrSkipped}/{total}
+    </button>
   );
 }
 
