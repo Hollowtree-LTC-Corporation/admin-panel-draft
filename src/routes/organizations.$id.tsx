@@ -41,10 +41,7 @@ const WINDOW_TYPES: Array<{ value: string; label: string }> = [
   { value: "new_joiner", label: "New Joiner" },
   { value: "special", label: "Special" },
 ];
-const SPONSOR_TYPES: Array<{ value: string; label: string }> = [
-  { value: "employer", label: "Employer" },
-  { value: "affiliate", label: "Affiliate" },
-];
+// SPONSOR_TYPES removed — sponsor_type is now persisted indirectly via SPONSOR_SHAPES below.
 // Sponsor Shape is a derived UI concept — it's NOT a column on enrollment_windows.
 // It's computed from (sponsor_type, affiliate_organization_id) and persisted by
 // writing both fields together. These labels are the canonical user-facing strings.
