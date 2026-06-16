@@ -1899,7 +1899,7 @@ function LtcSchedulesSection() {
               </thead>
               <tbody>
                 {rows.map((s) => (
-                  <tr key={s.id} className="border-t border-black/5 hover:bg-stone-50 cursor-pointer"
+                  <tr key={s.id} id={`sched-${s.id}`} className="border-t border-black/5 hover:bg-stone-50 cursor-pointer"
                     onClick={() => setDrawer({ open: true, id: s.id })}>
                     <td className="px-3 py-2 font-medium text-[#0a3d3e] underline">{s.schedule_name}</td>
                     <td className="px-3 py-2">{scheduleTypeChip(s.schedule_type)}</td>
