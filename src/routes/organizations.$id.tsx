@@ -635,21 +635,25 @@ function OrgDetail() {
 
 
 
-      <Drawer open={bcDrawer.state.open} onClose={bcDrawer.close} title={bcDrawer.state.mode === "create" ? "New Benefit Class" : "Edit Benefit Class"}>
-        <Field label="Name"><Input defaultValue={bcDrawer.state.data?.name ?? ""} /></Field>
-        <Field label="GI Offer (cents)"><Input defaultValue={String(bcDrawer.state.data?.gi_offer_cents ?? "")} /></Field>
-        <Field label="Bronze (cents)"><Input defaultValue={String(bcDrawer.state.data?.bronze ?? "")} /></Field>
-        <Field label="Silver (cents)"><Input defaultValue={String(bcDrawer.state.data?.silver ?? "")} /></Field>
-        <Field label="Gold (cents) — must equal GI Offer"><Input defaultValue={String(bcDrawer.state.data?.gold ?? "")} /></Field>
-        <Field label="Platinum (cents)"><Input defaultValue={String(bcDrawer.state.data?.platinum ?? "")} /></Field>
-        <Field label="Diamond (cents)"><Input defaultValue={String(bcDrawer.state.data?.diamond ?? "")} /></Field>
-        <div className="flex items-center gap-2 mb-3">
-          <Switch defaultChecked={bcDrawer.state.data?.is_default} /> <span className="text-xs text-black/70">Default for org</span>
-        </div>
-        <div className="flex gap-2 mt-4">
-          <Btn variant="primary" disabled={!can("benefit_classes", "update")}>Save</Btn>
-          <Btn onClick={bcDrawer.close}>Cancel</Btn>
-        </div>
+      <Drawer
+        open={bcDrawer.state.open}
+        onClose={bcDrawer.close}
+        title={
+          bcDrawer.state.mode === "create"
+            ? "New Benefit Class"
+            : `Edit Benefit Class: ${bcDrawer.state.data?.name ?? ""}`
+        }
+      >
+        {bcDrawer.state.open ? (
+          <BenefitClassDrawerBody
+            mode={bcDrawer.state.mode === "edit" ? "edit" : "create"}
+            initial={bcDrawer.state.data}
+            classes={classes}
+            orgName={org.name}
+            onClose={bcDrawer.close}
+            canSave={can("benefit_classes", bcDrawer.state.mode === "edit" ? "update" : "create")}
+          />
+        ) : null}
       </Drawer>
     </div>
   );
