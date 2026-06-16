@@ -276,8 +276,7 @@ function synthesize(org: typeof ORGS[number]) {
   const cca = org.cca_group;
   const product = org.product as "DI" | "LTC";
   const suffix = defaultMicrositeSuffix(product);
-  // Sprinkle one non-standard microsite to exercise fallback path
-  const micrositeUrl = idx === 4 ? `https://enroll.example.com/${org.id}` : `https://${slug}${suffix}`;
+  const micrositeUrl = `https://${slug}${suffix}`;
   return {
     ...org,
     domain: `${slug}.example.com`,
