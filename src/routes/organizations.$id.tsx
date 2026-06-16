@@ -1006,6 +1006,12 @@ function SetupTab({ org, product, readOnly, isAdmin, checks, setChecks }: { org:
         <LinksRefsSection org={org} product={product} readOnly={readOnly} variant="integration" />
         <SystemRefsSection org={org} product={product} variant="integration" />
       </div>
+
+      <BucketHeader
+        label="Onboarding Readiness"
+        subtitle="Gating checklist confirming this organization is ready to enroll. Required before an enrollment window can open."
+      />
+      <OnboardingChecklist checks={checks} setChecks={setChecks} readOnly={readOnly || !isAdmin} />
     </div>
   );
 }
