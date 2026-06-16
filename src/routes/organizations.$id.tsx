@@ -267,7 +267,7 @@ function synthesize(org: typeof ORGS[number]) {
     supported_languages: idx % 4 === 0 ? ["en", "es"] : (idx === 3 ? ["en", "es", "zh"] : ["en"]),
     // Coverage / Billing
     contribution_type: cca ? "voluntary" : "employer_paid",
-    pay_mode: "Monthly",
+    available_premium_structures: (product === "LTC" ? (idx % 3 === 0 ? ["lifetime","10_pay"] : ["lifetime"]) : ["lifetime"]) as PremiumStructure[],
     tpa_fee_cents: cca ? 2000 : 800,
     service_fee_retained_cents: cca ? 500 : null,
     tpa_fee_name: cca ? "CCA Membership Fee" : "Processing Fee",
