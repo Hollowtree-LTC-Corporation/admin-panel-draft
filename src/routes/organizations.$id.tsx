@@ -1814,7 +1814,7 @@ function PaymentProcessingSection({ org, readOnly }: { org: OrgDetail; readOnly:
   const [achFirst, setAchFirst] = useState(String(org.ach_first_fee_cents));
   const [achSub, setAchSub] = useState(String(org.ach_subsequent_fee_cents));
   const [achPenalty, setAchPenalty] = useState(String(org.failed_ach_penalty_cents));
-  const [penaltyMode, setPenaltyMode] = useState<"flat" | "percentage">(org.failed_card_penalty_mode);
+  const [penaltyMode, setPenaltyMode] = useState<"flat" | "percent">(org.failed_card_penalty_mode);
   const [penaltyFlat, setPenaltyFlat] = useState(String(org.failed_card_penalty_value_cents ?? ""));
   const [penaltyBps, setPenaltyBps] = useState(String(org.failed_card_penalty_pct_bps ?? ""));
   const [retry, setRetry] = useState(String(org.free_retry_count));
@@ -1883,9 +1883,9 @@ function PaymentProcessingSection({ org, readOnly }: { org: OrgDetail; readOnly:
         <RField label="Failed Card Penalty Mode">
           {e.editing
             ? (
-              <select className={inputCls} value={penaltyMode} onChange={(ev) => setPenaltyMode(ev.target.value as "flat" | "percentage")}>
+              <select className={inputCls} value={penaltyMode} onChange={(ev) => setPenaltyMode(ev.target.value as "flat" | "percent")}>
                 <option value="flat">Flat</option>
-                <option value="percentage">Percentage</option>
+                <option value="percent">Percentage</option>
               </select>
             )
             : (org.failed_card_penalty_mode === "flat" ? "Flat" : "Percentage")}
