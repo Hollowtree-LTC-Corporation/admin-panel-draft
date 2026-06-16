@@ -47,10 +47,46 @@ function Dashboard() {
   const activePremium = inds.filter((i) => i.coverage_status === "active").reduce((sum, i) => sum + i.monthly_premium_cents, 0);
   const numOrgs = new Set(inds.map((i) => i.org_id)).size;
 
-  const stageCounts = STAGES.map((s) => ({
-    stage: s,
-    n: inds.filter((i) => i.stage === s).length,
-  }));
+  // DI funnel stages (Airtable-aligned). LTC keeps the legacy microsite stages.
+  const DI_FUNNEL_STAGES = [
+    "Choosing a Plan",
+    "Plan Selected - Confirming Information",
+    "At Checkout",
+    "Adding Payment Method",
+    "Payment Method Added - Purchase Completed",
+  ] as const;
+  type DiBucket = (typeof DI_FUNNEL_STAGES)[number] | "canceled" | "test" | "transitioning";
+  const diBucketFor = (ind: (typeof inds)[number], idx: number): DiBucket => {
+    if (ind.coverage_status === "canceled") return "canceled";
+    if (idx % 17 === 3) return "test";
+    if (idx % 19 === 5) return "transitioning";
+    switch (ind.stage) {
+      case "invited":
+      case "education":
+      case "selecting_plan":
+        return "Choosing a Plan";
+      case "medical_questions":
+        // DI is Guaranteed Issue — fold this legacy bucket into the prior step.
+        return "Plan Selected - Confirming Information";
+      case "checkout":
+        return idx % 2 === 0 ? "At Checkout" : "Adding Payment Method";
+      case "completed":
+        return "Payment Method Added - Purchase Completed";
+      default:
+        return "Choosing a Plan";
+    }
+  };
+
+  const isDI = product === "DI";
+  const diBuckets = isDI ? inds.map((ind, idx) => diBucketFor(ind, idx)) : [];
+  const diExcluded = {
+    canceled: diBuckets.filter((b) => b === "canceled").length,
+    test: diBuckets.filter((b) => b === "test").length,
+    transitioning: diBuckets.filter((b) => b === "transitioning").length,
+  };
+  const stageCounts: Array<{ stage: string; n: number }> = isDI
+    ? DI_FUNNEL_STAGES.map((s) => ({ stage: s, n: diBuckets.filter((b) => b === s).length }))
+    : STAGES.map((s) => ({ stage: s, n: inds.filter((i) => i.stage === s).length }));
   const maxStage = Math.max(...stageCounts.map((c) => c.n), 1);
 
   const collected = inds.reduce((sum, i) => sum + i.monthly_premium_cents, 0);
@@ -178,8 +214,12 @@ function Dashboard() {
           {stageCounts.map((c) => {
             const pct = (c.n / maxStage) * 100;
             return (
-              <div key={c.stage} className="flex items-center gap-2 text-xs">
-                <div className="w-36 text-black/70">{c.stage.replace(/_/g, " ")}</div>
+              <div
+                key={c.stage}
+                className="flex items-center gap-2 text-xs cursor-pointer hover:bg-[#f7f3eb]/60 rounded px-1 -mx-1"
+                onClick={() => navigate({ to: "/individuals" })}
+              >
+                <div className="w-56 text-black/70">{isDI ? c.stage : c.stage.replace(/_/g, " ")}</div>
                 <div className="flex-1 h-5 bg-black/5 rounded overflow-hidden">
                   <div
                     className="h-full bg-[#0a3d3e] flex items-center justify-end pr-2 text-white text-[10px] font-medium"
@@ -193,8 +233,15 @@ function Dashboard() {
             );
           })}
         </div>
-        <div className="text-[10px] text-black/40 mt-2">
-          Funnel reflects the enrollment microsite stages, distinct from coverage lifecycle.
+        {isDI ? (
+          <div className="text-[10px] text-black/55 mt-2">
+            Excluded from funnel: {diExcluded.canceled} canceled · {diExcluded.test} test leads · {diExcluded.transitioning} transitioning
+          </div>
+        ) : null}
+        <div className="text-[10px] text-black/40 mt-1">
+          {isDI
+            ? "Funnel reflects DI enrollment stages. Canceled, test, and transitioning records excluded."
+            : "Funnel reflects the enrollment microsite stages, distinct from coverage lifecycle."}
         </div>
       </Card>
 
