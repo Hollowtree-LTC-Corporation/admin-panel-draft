@@ -787,13 +787,7 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
 
       <div className="mt-4 pt-4 border-t border-black/10">
         <div className="text-[10px] uppercase tracking-wider text-black/50 mb-2">SSN</div>
-        {editing ? (
-          <input placeholder={i.ssn_on_file ? `•••-••-${i.ssn_last4}` : "9 digits"} className={`${inputCls} max-w-xs`} />
-        ) : (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-black/5 text-black/70">
-            <Lock className="h-3 w-3" /> {i.ssn_on_file ? `SSN on file (••• •• ${i.ssn_last4})` : "No SSN"}
-          </span>
-        )}
+        <SsnField individualId={i.id} ssnOnFile={i.ssn_on_file} last4={i.ssn_last4} editing={editing} />
       </div>
 
       {editing && <SectionActions onCancel={() => setEditing(false)} onSave={onSave} />}
