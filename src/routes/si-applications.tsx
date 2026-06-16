@@ -218,11 +218,11 @@ function QueueTab() {
             { key: "upgrade_submitted_at", label: "Submitted" },
             { key: "days_in_review", label: "Days in Review" },
             { key: "upgrade_carrier_decision", label: "Status" },
+            { key: null, label: "Action" },
           ]}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}
           onToggle={sort.toggle}
-          extraEnd={<th className="px-2 py-1 text-left font-medium text-[11px]">Action</th>}
         />
         <tbody>
           {rows.length === 0 ? (
@@ -691,7 +691,7 @@ function LogRow({ e }: { e: PhiAuditEntry }) {
       <TCell>{e.actor_name}</TCell>
       <TCell>{e.action === "view_phi" ? "Viewed PHI" : "Exported PHI"}</TCell>
       <TCell>{e.new_values.individual_name}</TCell>
-      <TCell title={e.new_values.reason}>{short}</TCell>
+      <TCell><span title={e.new_values.reason}>{short}</span></TCell>
       <TCell className="text-[11px] text-black/60">{e.new_values.fields_viewed.join(", ")}</TCell>
     </TRow>
   );
