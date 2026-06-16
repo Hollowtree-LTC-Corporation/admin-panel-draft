@@ -896,19 +896,21 @@ function SpouseSection({ i, linked, linkedDetail, readOnly }: { i: Detail; linke
 }
 
 function UpgradeSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
+  // Hide for GI enrollees with no buy-up interest; show for SI or any GI who expressed interest
   const hasActivity = i.interested_upgrading || i.applied_for_upgrade;
-  if (!hasActivity) return null;
+  if (i.issue_type === "GI" && !i.interested_upgrading) return null;
+  if (!hasActivity && i.issue_type !== "SI") return null;
   const [editing, setEditing] = useState(false);
   return (
-    <SectionCard title="Upgrade" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
+    <SectionCard title="SI Buy-up" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={3}>
-        <RField label="Interested in Upgrading" value={i.interested_upgrading ? "yes" : "no"} />
-        <RField label="Applied for Upgrade" value={i.applied_for_upgrade ? "yes" : "no"} />
-        <RField label="Employee Upgrade Option" value={i.employee_upgrade_option ?? "—"} />
-        <RField label="Pre-Upgrade Premium" value={i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"} />
-        <RField label="Upgrade Submitted At" value={fmtDate(i.upgrade_submitted_at)} />
-        <RField label="Upgrade Carrier Decision" value={i.upgrade_carrier_decision ?? "—"} />
-        <RField label="Upgrade Carrier Decision At" value={fmtDate(i.upgrade_carrier_decision_at)} />
+        <RField label="Interested in SI Buy-up" value={i.interested_upgrading ? "yes" : "no"} />
+        <RField label="SI Application Submitted" value={i.applied_for_upgrade ? "yes" : "no"} />
+        <RField label="SI Buy-up Option Selected" value={i.employee_upgrade_option ?? "—"} />
+        <RField label="Pre-Buy-up Premium" value={i.pre_upgrade_premium_cents != null ? formatCents(i.pre_upgrade_premium_cents) : "—"} />
+        <RField label="SI Application Submitted At" value={fmtDate(i.upgrade_submitted_at)} />
+        <RField label="Carrier Decision" value={titleCase(i.upgrade_carrier_decision)} />
+        <RField label="Carrier Decision At" value={fmtDate(i.upgrade_carrier_decision_at)} />
       </Grid>
       {editing && <SectionActions onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />}
     </SectionCard>
