@@ -41,16 +41,28 @@ const WINDOW_TYPES: Array<{ value: string; label: string }> = [
   { value: "new_joiner", label: "New Joiner" },
   { value: "special", label: "Special" },
 ];
-const SPONSOR_TYPES: Array<{ value: string; label: string }> = [
+// SPONSOR_TYPES removed — sponsor_type is now persisted indirectly via SPONSOR_SHAPES below.
+// Sponsor Shape is a derived UI concept — it's NOT a column on enrollment_windows.
+// It's computed from (sponsor_type, affiliate_organization_id) and persisted by
+// writing both fields together. These labels are the canonical user-facing strings.
+type SponsorShape = "employer" | "employer_affiliate" | "affiliate_only";
+const SPONSOR_SHAPES: Array<{ value: SponsorShape; label: string }> = [
   { value: "employer", label: "Employer" },
-  { value: "affiliate", label: "Affiliate" },
+  { value: "employer_affiliate", label: "Employer + Affiliate" },
+  { value: "affiliate_only", label: "Affiliate Only" },
 ];
+function sponsorShapeLabel(s: SponsorShape): string {
+  return SPONSOR_SHAPES.find((o) => o.value === s)?.label ?? s;
+}
+function getSponsorShape(w: { sponsor_type: string; affiliate: string | null }): SponsorShape {
+  if (w.sponsor_type === "affiliate") return "affiliate_only";
+  return w.affiliate ? "employer_affiliate" : "employer";
+}
 const WINDOW_STATUSES: Array<{ value: string; label: string }> = [
   { value: "upcoming", label: "Upcoming" },
   { value: "open", label: "Open" },
   { value: "closed", label: "Closed" },
 ];
-const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.carrier_name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
 // v14 schema follow-up: confirm canonical enum w/ ops, then add CHECK
 const BENEFIT_SYSTEMS: Array<{ value: string; label: string }> = [
   { value: "heritage_online", label: "Heritage Online" },
@@ -67,6 +79,34 @@ const AFFILIATE_ORG_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "aff_foxtail", label: "Foxtail Alumni Assoc" },
   { value: "aff_member_foundation", label: "CCA Member Foundation" },
 ];
+// Relational carrier options — sourced from carriers table, filtered by product.
+// In prod this is a SELECT from carriers WHERE product = ?; here we extend the
+// dummy CARRIERS list with the additional LTC carriers referenced in windows.
+const EXTRA_LTC_CARRIERS: Array<{ value: string; label: string }> = [
+  { value: "car_northstar", label: "Northstar Mutual" },
+  { value: "car_pacific_reserve", label: "Pacific Reserve Life" },
+  { value: "car_heritage_ltc", label: "Heritage LTC Group" },
+  { value: "car_sequoia", label: "Sequoia Care Partners" },
+];
+function carrierOptionsForProduct(
+  product: "DI" | "LTC",
+  recentlyUsedNames: string[] = [],
+): Array<{ value: string; label: string }> {
+  const fromTable = CARRIERS
+    .filter((c) => c.product === product)
+    .map((c) => ({ value: c.id, label: c.carrier_name }));
+  const all = product === "LTC" ? [...fromTable, ...EXTRA_LTC_CARRIERS] : fromTable;
+  const dedup = Array.from(new Map(all.map((o) => [o.value, o])).values());
+  const recentSet = new Set(recentlyUsedNames);
+  const recent = dedup
+    .filter((o) => recentSet.has(o.label))
+    .sort((a, b) => recentlyUsedNames.indexOf(a.label) - recentlyUsedNames.indexOf(b.label));
+  const rest = dedup
+    .filter((o) => !recentSet.has(o.label))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  return [...recent, ...rest];
+}
+// carrierIdFromName helper removed — lookup now lives inside WindowDrawerBody.
 const BROKER_TYPES = ["Broker","IMO","Internal"] as const;
 type BrokerType = typeof BROKER_TYPES[number];
 type BrokerRecord = {
@@ -579,49 +619,20 @@ function OrgDetail() {
       </Drawer>
 
       <Drawer open={windowDrawer.state.open} onClose={windowDrawer.close} title={windowDrawer.state.mode === "create" ? "New Enrollment Window" : "Edit Window"}>
-        {(() => {
-          const wd = windowDrawer.state.data;
-          const isEdit = windowDrawer.state.mode === "edit";
-          const wStatus = wd?.status;
-          const locked = isEdit && (wStatus === "open" || wStatus === "closed");
-          return (
-            <>
-              {locked && wStatus === "open" && (
-                <div className="mb-3 px-3 py-2 rounded border border-amber-300 bg-amber-50 text-[12px] text-amber-900">
-                  This window is currently <strong>open</strong>. Sponsor configuration, dates, and carrier are locked while enrollment is active. Changes here would affect enrollees already in flight.
-                </div>
-              )}
-              {locked && wStatus === "closed" && (
-                <div className="mb-3 px-3 py-2 rounded border border-stone-300 bg-stone-50 text-[12px] text-stone-700">
-                  This window is <strong>closed</strong>. Historical record — fields are read-only for audit integrity.
-                </div>
-              )}
-              <Field label="Window Type"><DSelect defaultValue={wd?.window_type ?? "initial"} options={WINDOW_TYPES} disabled={locked} /></Field>
-              <Field label="Sponsor Type"><DSelect defaultValue={wd?.sponsor_type ?? "employer"} options={SPONSOR_TYPES} disabled={locked} /></Field>
-              {(wd?.sponsor_type === "affiliate" || wd?.affiliate) && (
-                <Field label="Affiliate Org"><DSelect defaultValue={wd?.affiliate ?? AFFILIATE_ORG_OPTIONS[0].value} options={AFFILIATE_ORG_OPTIONS} disabled={locked} /></Field>
-              )}
-              <Field label="Start Date"><Input defaultValue={wd?.start ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" disabled={locked} /></Field>
-              <Field label="End Date"><Input defaultValue={wd?.end ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" disabled={locked} /></Field>
-              <Field label="Default Effective Date"><Input defaultValue={wd?.effective ?? ""} disabled={locked} /></Field>
-              <Field label="Carrier"><DSelect defaultValue={wd?.carrier ?? CARRIER_NAMES[0]} options={CARRIER_NAMES} disabled={locked} /></Field>
-              <Field label="Status"><DSelect defaultValue={wd?.status ?? "upcoming"} options={WINDOW_STATUSES} disabled={locked} /></Field>
-              <div className="mb-3">
-                <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">GI Eligible</div>
-                <div className="flex items-center gap-2">
-                  <Switch defaultChecked={wd?.gi_eligible ?? true} disabled={locked} />
-                  <span className="text-xs text-black/60">Guaranteed-issue pricing (no medical underwriting)</span>
-                </div>
-              </div>
-              <Field label="Notes"><Input defaultValue={wd?.notes ?? ""} disabled={locked} /></Field>
-              <div className="flex gap-2 mt-4">
-                {!locked && <Btn variant="primary" disabled={!can("enrollment_windows", "update")}>Save</Btn>}
-                <Btn onClick={windowDrawer.close}>{locked ? "Close" : "Cancel"}</Btn>
-              </div>
-            </>
-          );
-        })()}
+        {windowDrawer.state.open && (
+          <WindowDrawerBody
+            wd={windowDrawer.state.data}
+            isEdit={windowDrawer.state.mode === "edit"}
+            currentOrgId={org.id}
+            product={product}
+            allWindows={DUMMY_WINDOWS}
+            canSave={can("enrollment_windows", "update")}
+            onClose={windowDrawer.close}
+          />
+        )}
       </Drawer>
+
+
 
 
       <Drawer open={bcDrawer.state.open} onClose={bcDrawer.close} title={bcDrawer.state.mode === "create" ? "New Benefit Class" : "Edit Benefit Class"}>
@@ -729,6 +740,209 @@ function DSelect({ defaultValue, options, disabled }: { defaultValue?: string; o
   );
 }
 
+/* ---------- Enrollment Window Drawer Body ---------- */
+
+type WindowRow = typeof DUMMY_WINDOWS[number];
+
+function WindowDrawerBody({
+  wd, isEdit, currentOrgId, product, allWindows, canSave, onClose,
+}: {
+  wd: WindowRow | undefined;
+  isEdit: boolean;
+  currentOrgId: string;
+  product: "DI" | "LTC";
+  allWindows: WindowRow[];
+  canSave: boolean;
+  onClose: () => void;
+}) {
+  const initialShape: SponsorShape = wd ? getSponsorShape(wd) : "employer";
+  const [shape, setShape] = useState<SponsorShape>(initialShape);
+  const [affiliateId, setAffiliateId] = useState<string>(
+    wd?.affiliate
+      ? AFFILIATE_ORG_OPTIONS.find((o) => o.label === wd.affiliate)?.value ?? ""
+      : "",
+  );
+  const [orgId, setOrgId] = useState<string>(
+    wd?.org_id ?? (initialShape === "affiliate_only" ? "" : currentOrgId),
+  );
+
+  const wStatus = wd?.status;
+  const locked = isEdit && (wStatus === "open" || wStatus === "closed");
+
+  const recentNames = Array.from(
+    new Set(allWindows.filter((w) => w.carrier).map((w) => w.carrier as string)),
+  );
+  const carrierOptions = carrierOptionsForProduct(product, recentNames);
+  const initialCarrierId = wd?.carrier
+    ? carrierOptions.find((o) => o.label === wd.carrier)?.value ?? carrierOptions[0]?.value ?? ""
+    : carrierOptions[0]?.value ?? "";
+  const [carrierId, setCarrierId] = useState<string>(initialCarrierId);
+
+  const orgOptions = ORGS
+    .filter((o) => o.product === product)
+    .map((o) => ({ value: o.id, label: o.name }));
+
+  const affiliateRequired = shape !== "employer";
+  const orgRequired = shape !== "affiliate_only";
+  const showAffiliate = shape !== "employer";
+
+  const affiliateError = affiliateRequired && !affiliateId
+    ? "Affiliate organization required for co-sponsored windows."
+    : null;
+  const orgError = orgRequired && !orgId
+    ? "Sponsoring organization required."
+    : null;
+
+  const persistedSponsorType = shape === "affiliate_only" ? "affiliate" : "employer";
+  const persistedAffiliateId = shape === "employer" ? null : (affiliateId || null);
+
+  return (
+    <>
+      {locked && wStatus === "open" && (
+        <div className="mb-3 px-3 py-2 rounded border border-amber-300 bg-amber-50 text-[12px] text-amber-900">
+          This window is currently <strong>open</strong>. Sponsor configuration, dates, and carrier are locked while enrollment is active. Changes here would affect enrollees already in flight.
+        </div>
+      )}
+      {locked && wStatus === "closed" && (
+        <div className="mb-3 px-3 py-2 rounded border border-stone-300 bg-stone-50 text-[12px] text-stone-700">
+          This window is <strong>closed</strong>. Historical record — fields are read-only for audit integrity.
+        </div>
+      )}
+
+      <Field label="Window Type"><DSelect defaultValue={wd?.window_type ?? "initial"} options={WINDOW_TYPES} disabled={locked} /></Field>
+
+      <div className="mb-3">
+        <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">Sponsor Shape</div>
+        <div className="inline-flex rounded border border-black/15 overflow-hidden">
+          {SPONSOR_SHAPES.map((s) => {
+            const active = shape === s.value;
+            return (
+              <button
+                key={s.value}
+                type="button"
+                disabled={locked}
+                onClick={() => {
+                  setShape(s.value);
+                  if (s.value === "affiliate_only") setOrgId("");
+                  else if (!orgId) setOrgId(currentOrgId);
+                  if (s.value === "employer") setAffiliateId("");
+                }}
+                className={`px-3 py-1 text-xs border-r last:border-r-0 border-black/15 ${
+                  active ? "bg-stone-800 text-white" : "bg-white text-black/70 hover:bg-stone-50"
+                } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">
+          Organization {orgRequired && <span className="text-red-600">*</span>}
+        </div>
+        <select
+          value={orgId}
+          disabled={locked}
+          onChange={(e) => setOrgId(e.target.value)}
+          className={`w-full px-2 py-1 text-sm border rounded ${
+            orgError ? "border-red-400" : "border-black/15"
+          } ${locked ? "bg-stone-50 text-black/60 cursor-not-allowed" : "bg-white"}`}
+        >
+          <option value="">— Select organization —</option>
+          {orgOptions.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        {orgError && <div className="text-[11px] text-red-600 mt-1">{orgError}</div>}
+        {!orgRequired && !orgError && (
+          <div className="text-[11px] text-black/50 mt-1">
+            Optional — affiliate-only windows may not have a sponsoring employer.
+          </div>
+        )}
+      </div>
+
+      {showAffiliate && (
+        <div className="mb-3">
+          <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">
+            Affiliate <span className="text-red-600">*</span>
+          </div>
+          <select
+            value={affiliateId}
+            disabled={locked}
+            onChange={(e) => setAffiliateId(e.target.value)}
+            className={`w-full px-2 py-1 text-sm border rounded ${
+              affiliateError ? "border-red-400" : "border-black/15"
+            } ${locked ? "bg-stone-50 text-black/60 cursor-not-allowed" : "bg-white"}`}
+          >
+            <option value="">— Select affiliate —</option>
+            {AFFILIATE_ORG_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {affiliateError && <div className="text-[11px] text-red-600 mt-1">{affiliateError}</div>}
+        </div>
+      )}
+
+      <Field label="Start Date"><Input defaultValue={wd?.start ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" disabled={locked} /></Field>
+      <Field label="End Date"><Input defaultValue={wd?.end ?? ""} placeholder="YYYY-MM-DD (blank for new_joiner)" disabled={locked} /></Field>
+      <Field label="Default Effective Date"><Input defaultValue={wd?.effective ?? ""} disabled={locked} /></Field>
+
+      <div className="mb-3">
+        <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">
+          Carrier <span className="text-red-600">*</span>
+        </div>
+        <select
+          value={carrierId}
+          disabled={locked}
+          onChange={(e) => setCarrierId(e.target.value)}
+          className={`w-full px-2 py-1 text-sm border border-black/15 rounded ${
+            locked ? "bg-stone-50 text-black/60 cursor-not-allowed" : "bg-white"
+          }`}
+        >
+          {carrierOptions.map((o) => {
+            const isRecent = recentNames.includes(o.label);
+            return (
+              <option key={o.value} value={o.value}>
+                {o.label}{isRecent ? "  · recent" : ""}
+              </option>
+            );
+          })}
+        </select>
+        <div className="text-[10px] text-black/40 mt-1 font-mono truncate">carrier_id: {carrierId || "—"}</div>
+      </div>
+
+      <Field label="Status"><DSelect defaultValue={wd?.status ?? "upcoming"} options={WINDOW_STATUSES} disabled={locked} /></Field>
+      <div className="mb-3">
+        <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">GI Eligible</div>
+        <div className="flex items-center gap-2">
+          <Switch defaultChecked={wd?.gi_eligible ?? true} disabled={locked} />
+          <span className="text-xs text-black/60">Guaranteed-issue pricing (no medical underwriting)</span>
+        </div>
+      </div>
+      <Field label="Notes"><Input defaultValue={wd?.notes ?? ""} disabled={locked} /></Field>
+
+      {!locked && (
+        <div className="text-[10px] text-black/40 mt-2 font-mono">
+          → writes: sponsor_type={persistedSponsorType}, affiliate_organization_id={persistedAffiliateId ?? "null"}
+        </div>
+      )}
+
+      <div className="flex gap-2 mt-4">
+        {!locked && (
+          <Btn variant="primary" disabled={!canSave || !!affiliateError || !!orgError}>
+            Save
+          </Btn>
+        )}
+        <Btn onClick={onClose}>{locked ? "Close" : "Cancel"}</Btn>
+      </div>
+    </>
+  );
+}
+
+
+
 /* =============================================================
    CONFIG TAB — section-card layout
 ============================================================= */
@@ -807,13 +1021,14 @@ function LifecycleTab({
           <Btn variant="primary" disabled={!canCreate} onClick={onNew}>+ New Window</Btn>
         </div>
         <TableShell>
-          <THead cols={["Type", "Sponsor", "Start", "End", "Default Effective", "Status", "GI", "Carrier", "Notes", ""]} />
+          <THead cols={["Type", "Sponsor Shape", "Sponsor", "Start", "End", "Default Effective", "Status", "GI", "Carrier", "Notes", ""]} />
           <tbody>
             {windows.map((w) => {
               const isAlwaysOpen = w.window_type === "new_joiner";
-              const sponsor = w.sponsor_type === "affiliate"
-                ? <span className="text-black/70 italic">{w.affiliate} <span className="ml-1 text-[10px] uppercase tracking-wider text-black/40">(affiliate-sponsored)</span></span>
-                : w.affiliate
+              const shape = getSponsorShape(w);
+              const sponsor = shape === "affiliate_only"
+                ? <span className="text-black/70 italic">{w.affiliate}</span>
+                : shape === "employer_affiliate"
                   ? <span>{orgName}<span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-stone-100 text-stone-700 border border-stone-200">+ {w.affiliate}</span></span>
                   : <span>{orgName}</span>;
               const locked = w.status === "open" || w.status === "closed";
@@ -821,6 +1036,7 @@ function LifecycleTab({
               return (
                 <TRow key={w.id} onClick={canEdit ? () => onEdit(w) : undefined}>
                   <TCell className="capitalize font-medium">{w.window_type.replace("_", " ")}</TCell>
+                  <TCell className="text-black/70">{sponsorShapeLabel(shape)}</TCell>
                   <TCell>{sponsor}</TCell>
                   <TCell>{isAlwaysOpen ? <span className="text-black/40 italic">Always Open</span> : w.start}</TCell>
                   <TCell>{isAlwaysOpen ? <span className="text-black/40 italic">Always Open</span> : w.end}</TCell>
