@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Users, DollarSign, Percent } from "lucide-react";
+import { Users, DollarSign, Percent, ChevronDown, ChevronRight } from "lucide-react";
 import { Card, Stat, PageHeader, Pill, TableShell, THead, TRow, TCell } from "@/components/wireframe/Bits";
 import { useStore } from "@/lib/wireframe/store";
 import { INDIVIDUALS, ORGS, STAGES, COVERAGE_STATUSES, formatCents } from "@/lib/wireframe/data";
@@ -33,6 +33,8 @@ function Dashboard() {
   const { product } = useStore();
   const navigate = useNavigate();
   const [orgFilter, setOrgFilter] = useState<string>("all");
+  const [upgradeOpen, setUpgradeOpen] = useState<boolean>(true);
+  const [spousalOpen, setSpousalOpen] = useState<boolean>(true);
 
   const productOrgs = ORGS.filter((o) => o.product === product);
   const allInds = INDIVIDUALS.filter((i) => i.product === product);
@@ -88,6 +90,79 @@ function Dashboard() {
     ? DI_FUNNEL_STAGES.map((s) => ({ stage: s, n: diBuckets.filter((b) => b === s).length }))
     : STAGES.map((s) => ({ stage: s, n: inds.filter((i) => i.stage === s).length }));
   const maxStage = Math.max(...stageCounts.map((c) => c.n), 1);
+
+  // ===== LTC three-funnel buckets =====
+  const isLTC = product === "LTC";
+  const LTC_MAIN_STAGES = [
+    "Logged in",
+    "Starting Application",
+    "Selecting Plan",
+    "Beneficiary Form",
+    "At CheckOut",
+    "Adding Payment Method",
+    "Coverage Approved",
+  ] as const;
+  const LTC_UPGRADE_STAGES = [
+    "Upsell Survey",
+    "Interested in Personal Upgrade",
+    "At More Coverage",
+    "Choosing Upgrade Option",
+    "Answering Medical Questions For Upgrade",
+    "Upgrade Checkout",
+    "Applied For Upgrade",
+  ] as const;
+  const LTC_SPOUSAL_STAGES = [
+    "Interested in Spouse Coverage",
+    "Choosing Spousal Pricing",
+    "Spousal Coverage - Eligibility Questions",
+    "Spousal Coverage - Confirming Details, Health Questions",
+    "Spousal Coverage - Designee, Ben and other info",
+    "Spousal Coverage - Checkout",
+  ] as const;
+
+  const mapMainStage = (s: string, idx: number): (typeof LTC_MAIN_STAGES)[number] => {
+    switch (s) {
+      case "invited": return "Logged in";
+      case "education": return "Starting Application";
+      case "selecting_plan": return "Selecting Plan";
+      case "medical_questions": return "Beneficiary Form";
+      case "checkout": return idx % 2 === 0 ? "At CheckOut" : "Adding Payment Method";
+      case "completed": return "Coverage Approved";
+      default: return "Logged in";
+    }
+  };
+
+  const ltcSpouseInds = isLTC ? inds.filter((i) => i.relationship_type === "spouse") : [];
+  const ltcBuyupInds = isLTC ? inds.filter((i) => i.issue_type === "SI" && i.relationship_type !== "spouse") : [];
+  const ltcMainInds = isLTC
+    ? inds.filter((i) => i.relationship_type !== "spouse" && i.issue_type !== "SI")
+    : [];
+
+  const ltcMainCounts = LTC_MAIN_STAGES.map((s) => ({
+    stage: s,
+    n: ltcMainInds.filter((ind, idx) => mapMainStage(ind.stage, idx) === s).length,
+  }));
+  const ltcUpgradeCounts = LTC_UPGRADE_STAGES.map((s, sIdx) => ({
+    stage: s,
+    n: ltcBuyupInds.filter((_, idx) => idx % LTC_UPGRADE_STAGES.length === sIdx).length,
+  }));
+  const ltcSpousalCounts = LTC_SPOUSAL_STAGES.map((s, sIdx) => ({
+    stage: s,
+    n: ltcSpouseInds.filter((_, idx) => idx % LTC_SPOUSAL_STAGES.length === sIdx).length,
+  }));
+  const upsellNotInterested = Math.max(1, Math.floor(ltcBuyupInds.length * 0.3));
+  const multiInterest = Math.min(ltcSpouseInds.length, Math.max(1, Math.floor(ltcBuyupInds.length * 0.25)));
+
+  const ltcMaxMain = Math.max(...ltcMainCounts.map((c) => c.n), 1);
+  const ltcMaxUpgrade = Math.max(...ltcUpgradeCounts.map((c) => c.n), 1);
+  const ltcMaxSpousal = Math.max(...ltcSpousalCounts.map((c) => c.n), 1);
+
+  // Enrolled Lives breakdown (LTC)
+  const enrolledForBreakdown = inds.filter((i) => ["active", "purchased", "in_progress"].includes(i.coverage_status));
+  const ltcEmployees = enrolledForBreakdown.filter((i) => i.relationship_type !== "spouse").length;
+  const ltcSpouses = enrolledForBreakdown.filter((i) => i.relationship_type === "spouse").length;
+  const ltcGI = enrolledForBreakdown.filter((i) => i.issue_type === "GI").length;
+  const ltcSI = enrolledForBreakdown.filter((i) => i.issue_type === "SI").length;
 
   const collected = inds.reduce((sum, i) => sum + i.monthly_premium_cents, 0);
   const expected = Math.round(collected * 1.08);
@@ -162,6 +237,12 @@ function Dashboard() {
               <div className="text-[10px] uppercase tracking-wider text-black/50">Enrolled Lives</div>
               <div className="text-2xl font-semibold">{enrolledLives}</div>
               <div className="text-[11px] text-black/40">across {numOrgs} organizations</div>
+              {isLTC ? (
+                <>
+                  <div className="text-[11px] text-black/55 mt-0.5">{ltcEmployees} employees · {ltcSpouses} spouses</div>
+                  <div className="text-[11px] text-black/55">{ltcGI} GI · {ltcSI} SI</div>
+                </>
+              ) : null}
             </div>
           </Card>
           <Card className="p-3 flex items-center gap-3">
@@ -205,45 +286,161 @@ function Dashboard() {
         </Card>
       </div>
 
-      {/* Enrollment Funnel */}
+      {/* Enrollment Progress / Funnel */}
       <div className="text-[11px] uppercase tracking-wider text-black/55 font-semibold mb-2">
-        Enrollment Funnel (stage)
+        {isLTC ? "Enrollment Progress (stage)" : "Enrollment Funnel (stage)"}
       </div>
-      <Card className="p-3 mb-5">
-        <div className="space-y-1.5">
-          {stageCounts.map((c) => {
-            const pct = (c.n / maxStage) * 100;
-            return (
-              <div
-                key={c.stage}
-                className="flex items-center gap-2 text-xs cursor-pointer hover:bg-[#f7f3eb]/60 rounded px-1 -mx-1"
-                onClick={() => navigate({ to: "/individuals" })}
-              >
-                <div className="w-56 text-black/70">{isDI ? c.stage : c.stage.replace(/_/g, " ")}</div>
-                <div className="flex-1 h-5 bg-black/5 rounded overflow-hidden">
-                  <div
-                    className="h-full bg-[#0a3d3e] flex items-center justify-end pr-2 text-white text-[10px] font-medium"
-                    style={{ width: `${Math.max(pct, c.n > 0 ? 6 : 0)}%` }}
-                  >
-                    {c.n > 0 ? c.n : ""}
+      {isLTC ? (
+        <Card className="p-3 mb-5">
+          {/* Section A — Main funnel */}
+          <div className="text-[11px] font-semibold text-black/70 mb-1.5">Main enrollment funnel</div>
+          <div className="space-y-1.5">
+            {ltcMainCounts.map((c) => {
+              const pct = (c.n / ltcMaxMain) * 100;
+              return (
+                <div
+                  key={c.stage}
+                  className="flex items-center gap-2 text-xs cursor-pointer hover:bg-[#f7f3eb]/60 rounded px-1 -mx-1"
+                  onClick={() => navigate({ to: "/individuals" })}
+                >
+                  <div className="w-64 text-black/70">{c.stage}</div>
+                  <div className="flex-1 h-5 bg-black/5 rounded overflow-hidden">
+                    <div
+                      className="h-full bg-[#0a3d3e] flex items-center justify-end pr-2 text-white text-[10px] font-medium"
+                      style={{ width: `${Math.max(pct, c.n > 0 ? 6 : 0)}%` }}
+                    >
+                      {c.n > 0 ? c.n : ""}
+                    </div>
                   </div>
+                  <div className="w-10 text-right text-black/60 tabular-nums">{c.n}</div>
                 </div>
-                <div className="w-10 text-right text-black/60 tabular-nums">{c.n}</div>
-              </div>
-            );
-          })}
-        </div>
-        {isDI ? (
-          <div className="text-[10px] text-black/55 mt-2">
-            Excluded from funnel: {diExcluded.canceled} canceled · {diExcluded.test} test leads · {diExcluded.transitioning} transitioning
+              );
+            })}
           </div>
-        ) : null}
-        <div className="text-[10px] text-black/40 mt-1">
-          {isDI
-            ? "Funnel reflects DI enrollment stages. Canceled, test, and transitioning records excluded."
-            : "Funnel reflects the enrollment microsite stages, distinct from coverage lifecycle."}
-        </div>
-      </Card>
+
+          {/* Section B — Upgrade sub-funnel */}
+          <div className="mt-4 pt-3 border-t border-black/10 pl-2 border-l-2 border-l-[#0a3d3e]/20">
+            <button
+              type="button"
+              onClick={() => setUpgradeOpen((v) => !v)}
+              className="w-full flex items-center gap-1 text-[11px] font-semibold text-black/70 mb-1.5"
+            >
+              {upgradeOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              Upgrade sub-funnel (SI buy-up)
+            </button>
+            {upgradeOpen ? (
+              <>
+                <div className="space-y-1">
+                  {ltcUpgradeCounts.map((c) => {
+                    const pct = (c.n / ltcMaxUpgrade) * 100;
+                    return (
+                      <div
+                        key={c.stage}
+                        className="flex items-center gap-2 text-[11px] cursor-pointer hover:bg-[#f7f3eb]/60 rounded px-1 -mx-1"
+                        onClick={() => navigate({ to: "/individuals" })}
+                      >
+                        <div className="w-64 text-black/65">{c.stage}</div>
+                        <div className="flex-1 h-4 bg-black/5 rounded overflow-hidden">
+                          <div
+                            className="h-full bg-[#0a3d3e]/80 flex items-center justify-end pr-2 text-white text-[10px] font-medium"
+                            style={{ width: `${Math.max(pct, c.n > 0 ? 6 : 0)}%` }}
+                          >
+                            {c.n > 0 ? c.n : ""}
+                          </div>
+                        </div>
+                        <div className="w-10 text-right text-black/55 tabular-nums">{c.n}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="text-[10px] text-black/55 mt-1.5">
+                  Upsell Survey Completed - Not Interested: {upsellNotInterested}
+                </div>
+              </>
+            ) : null}
+          </div>
+
+          {/* Section C — Spousal sub-funnel */}
+          <div className="mt-3 pt-3 border-t border-black/10 pl-2 border-l-2 border-l-[#0a3d3e]/20">
+            <button
+              type="button"
+              onClick={() => setSpousalOpen((v) => !v)}
+              className="w-full flex items-center gap-1 text-[11px] font-semibold text-black/70 mb-1.5"
+            >
+              {spousalOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              Spousal coverage sub-funnel
+            </button>
+            {spousalOpen ? (
+              <div className="space-y-1">
+                {ltcSpousalCounts.map((c) => {
+                  const pct = (c.n / ltcMaxSpousal) * 100;
+                  return (
+                    <div
+                      key={c.stage}
+                      className="flex items-center gap-2 text-[11px] cursor-pointer hover:bg-[#f7f3eb]/60 rounded px-1 -mx-1"
+                      onClick={() => navigate({ to: "/individuals" })}
+                    >
+                      <div className="w-64 text-black/65">{c.stage}</div>
+                      <div className="flex-1 h-4 bg-black/5 rounded overflow-hidden">
+                        <div
+                          className="h-full bg-[#0a3d3e]/80 flex items-center justify-end pr-2 text-white text-[10px] font-medium"
+                          style={{ width: `${Math.max(pct, c.n > 0 ? 6 : 0)}%` }}
+                        >
+                          {c.n > 0 ? c.n : ""}
+                        </div>
+                      </div>
+                      <div className="w-10 text-right text-black/55 tabular-nums">{c.n}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="text-[10px] text-black/55 mt-3">
+            Multi-interest: {multiInterest} interested in both spouse + upgrade
+          </div>
+          <div className="text-[10px] text-black/40 mt-1">
+            LTC tracks three enrollment paths. Main funnel is GI base coverage. Upgrade and spousal are SI sub-funnels.
+          </div>
+        </Card>
+      ) : (
+        <Card className="p-3 mb-5">
+          <div className="space-y-1.5">
+            {stageCounts.map((c) => {
+              const pct = (c.n / maxStage) * 100;
+              return (
+                <div
+                  key={c.stage}
+                  className="flex items-center gap-2 text-xs cursor-pointer hover:bg-[#f7f3eb]/60 rounded px-1 -mx-1"
+                  onClick={() => navigate({ to: "/individuals" })}
+                >
+                  <div className="w-56 text-black/70">{isDI ? c.stage : c.stage.replace(/_/g, " ")}</div>
+                  <div className="flex-1 h-5 bg-black/5 rounded overflow-hidden">
+                    <div
+                      className="h-full bg-[#0a3d3e] flex items-center justify-end pr-2 text-white text-[10px] font-medium"
+                      style={{ width: `${Math.max(pct, c.n > 0 ? 6 : 0)}%` }}
+                    >
+                      {c.n > 0 ? c.n : ""}
+                    </div>
+                  </div>
+                  <div className="w-10 text-right text-black/60 tabular-nums">{c.n}</div>
+                </div>
+              );
+            })}
+          </div>
+          {isDI ? (
+            <div className="text-[10px] text-black/55 mt-2">
+              Excluded from funnel: {diExcluded.canceled} canceled · {diExcluded.test} test leads · {diExcluded.transitioning} transitioning
+            </div>
+          ) : null}
+          <div className="text-[10px] text-black/40 mt-1">
+            {isDI
+              ? "Funnel reflects DI enrollment stages. Canceled, test, and transitioning records excluded."
+              : "Funnel reflects the enrollment microsite stages, distinct from coverage lifecycle."}
+          </div>
+        </Card>
+      )}
 
       {/* Payment Health */}
       <div className="grid grid-cols-4 gap-3 mb-5">
