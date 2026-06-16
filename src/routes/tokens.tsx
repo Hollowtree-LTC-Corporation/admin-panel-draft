@@ -334,7 +334,7 @@ function View() {
                   {spouseTag(l.individual_id)}
                 </TCell>
                 <TCell>{l.token_class ? <Pill tone={CLASS_TONE[l.token_class]}>{CLASS_LABEL[l.token_class]}</Pill> : <span className="text-black/30">—</span>}</TCell>
-                <TCell className="text-black/60 max-w-[260px] truncate" title={l.user_agent}>{l.user_agent.length > 40 ? l.user_agent.slice(0, 40) + "…" : l.user_agent}</TCell>
+                <TCell className="text-black/60 max-w-[260px] truncate"><span title={l.user_agent}>{l.user_agent.length > 40 ? l.user_agent.slice(0, 40) + "…" : l.user_agent}</span></TCell>
               </TRow>
             ))}
           </tbody>
