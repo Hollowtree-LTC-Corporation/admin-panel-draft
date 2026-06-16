@@ -30,13 +30,15 @@ export function Stat({ label, value, hint }: { label: string; value: ReactNode; 
   );
 }
 
-export function Pill({ tone = "neutral", children }: { tone?: "neutral" | "ok" | "warn" | "bad" | "info"; children: ReactNode }) {
+export function Pill({ tone = "neutral", children }: { tone?: "neutral" | "ok" | "warn" | "bad" | "info" | "purple" | "amber"; children: ReactNode }) {
   const toneClass = {
     neutral: "bg-black/5 text-black/70",
     ok: "bg-emerald-100 text-emerald-800",
     warn: "bg-amber-100 text-amber-800",
     bad: "bg-rose-100 text-rose-800",
     info: "bg-sky-100 text-sky-800",
+    purple: "bg-purple-100 text-purple-800",
+    amber: "bg-amber-200 text-amber-900",
   }[tone];
   return <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${toneClass}`}>{children}</span>;
 }
