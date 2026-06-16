@@ -925,6 +925,7 @@ function View() {
       <StatementDrawerView
         open={stmtDrawer.open}
         stmt={selectedStmt}
+        product={product}
         onClose={() => setStmtDrawer({ open: false, id: null })}
         onApprove={(s) => setApproveStmt(s)}
         onMarkPaid={(s) => setPaidStmt(s)}
