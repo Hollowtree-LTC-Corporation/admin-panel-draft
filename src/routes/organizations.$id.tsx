@@ -1147,6 +1147,7 @@ function IdentitySection({ org, product, statusValue, isAdmin, readOnly, summary
             {SitusCityField}
             {EligibleLivesField}
             {!org.cca_group && PolicyOwnerField}
+            {ContributionTypeField}
           </>
         ) : (
           <>
