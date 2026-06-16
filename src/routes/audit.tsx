@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronRight, ChevronDown, Copy, ExternalLink, ShieldAlert, Lock, Shield, Eye, EyeOff, FileSearch, Download, X } from "lucide-react";
+import { ChevronRight, ChevronDown, Copy, ExternalLink, ShieldAlert, Lock, Shield, Eye, EyeOff, FileSearch, Download, X, Bot } from "lucide-react";
 import { PageHeader, Pill, Btn } from "@/components/wireframe/Bits";
 import { AUDIT_LOG, type AuditEntry, type AuditAction } from "@/lib/wireframe/data";
 import { useStore } from "@/lib/wireframe/store";
@@ -10,12 +10,12 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/audit")({ component: View });
 
 // ---------- helpers ----------
-const ACTION_META: Record<AuditAction, { label: string; chip: string; border: string; dot: string; isPhi: boolean }> = {
-  create:      { label: "create",      chip: "bg-emerald-100 text-emerald-800", border: "",                          dot: "bg-emerald-500", isPhi: false },
-  update:      { label: "update",      chip: "bg-sky-100 text-sky-800",         border: "",                          dot: "bg-sky-500",     isPhi: false },
-  soft_delete: { label: "soft_delete", chip: "bg-rose-100 text-rose-800",       border: "",                          dot: "bg-rose-500",    isPhi: false },
-  view_phi:    { label: "view_phi",    chip: "bg-orange-100 text-orange-800",   border: "border-l-[3px] border-l-orange-500", dot: "bg-orange-500", isPhi: true },
-  export_phi:  { label: "export_phi",  chip: "bg-red-100 text-red-900",         border: "border-l-[3px] border-l-red-700",    dot: "bg-red-700",    isPhi: true },
+const ACTION_META: Record<AuditAction, { label: string; chip: string; border: string; dot: string; isPhi: boolean; textColor: string }> = {
+  create:      { label: "create",      chip: "bg-emerald-100 text-emerald-800", border: "",                                dot: "bg-emerald-500", isPhi: false, textColor: "text-emerald-700" },
+  update:      { label: "update",      chip: "bg-sky-100 text-sky-800",         border: "",                                dot: "bg-sky-500",     isPhi: false, textColor: "text-sky-700" },
+  soft_delete: { label: "soft_delete", chip: "bg-rose-100 text-rose-800",       border: "",                                dot: "bg-rose-500",    isPhi: false, textColor: "text-rose-700" },
+  view_phi:    { label: "view_phi",    chip: "bg-orange-100 text-orange-800",   border: "border-l-[3px] border-l-orange-600", dot: "bg-orange-500", isPhi: true,  textColor: "text-orange-700" },
+  export_phi:  { label: "export_phi",  chip: "bg-rose-100 text-rose-950",       border: "border-l-[3px] border-l-rose-700",   dot: "bg-rose-700",    isPhi: true,  textColor: "text-rose-800" },
 };
 const ALL_ACTIONS: AuditAction[] = ["create", "update", "soft_delete", "view_phi", "export_phi"];
 
@@ -229,8 +229,8 @@ function View() {
             <div key={a} className="inline-flex items-center gap-1.5">
               <span className={`inline-block h-1.5 w-1.5 rounded-full ${zero ? "bg-black/15" : meta.dot}`} />
               <span className={`font-mono ${zero ? "text-black/30" : "text-black/70"}`}>{a}:</span>
-              <span className={`font-medium ${zero ? "text-black/30" : "text-black/80"}`}>{n}</span>
-              {meta.isPhi && !zero ? <ShieldAlert className="h-3 w-3 text-amber-600" /> : null}
+              <span className={`font-medium ${zero ? "text-black/30" : meta.textColor}`}>{n}</span>
+              {meta.isPhi && !zero ? <ShieldAlert className={`h-3 w-3 ${a === "view_phi" ? "text-orange-600" : "text-rose-700"}`} /> : null}
             </div>
           );
         })}
@@ -378,7 +378,7 @@ function ActionDropdown({ value, onChange }: { value: AuditAction | "all"; onCha
                 onClick={() => { onChange(a); setOpen(false); }}
                 className={`w-full text-left px-2 py-1 hover:bg-[#f7f3eb] inline-flex items-center gap-2 ${value === a ? "bg-[#f7f3eb] font-medium" : ""}`}
               >
-                <Shield className="h-3 w-3 text-amber-600" />
+                <Shield className={`h-3 w-3 ${a === "view_phi" ? "text-orange-600" : "text-rose-700"}`} />
                 {a}
               </button>
             ))}
@@ -448,7 +448,16 @@ function RowAndDiff({
             {meta.label}
           </span>
         </td>
-        <td className="px-3 py-2" title={`User ID: ${row.actor_id}`}>{row.actor_name}</td>
+        <td className="px-3 py-2" title={`User ID: ${row.actor_id}`}>
+          {row.actor_name === "System" ? (
+            <span className="inline-flex items-center gap-1 text-black/40 italic">
+              <Bot className="h-3 w-3" />
+              System
+            </span>
+          ) : (
+            row.actor_name
+          )}
+        </td>
         <td className="px-3 py-2 text-right text-black/40">
           {isOpen ? <ChevronDown className="h-3.5 w-3.5 inline" /> : <ChevronRight className="h-3.5 w-3.5 inline" />}
         </td>
