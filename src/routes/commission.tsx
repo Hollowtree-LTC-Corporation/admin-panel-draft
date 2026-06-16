@@ -282,6 +282,65 @@ function PolicyTotalChip({ total }: { total: number }) {
 }
 
 // ---------------------------------------------------------------------------
+// LTC schedule helpers
+// ---------------------------------------------------------------------------
+function scheduleTypeChip(t: ScheduleType) {
+  const tone: Record<ScheduleType, string> = {
+    heaped: "bg-purple-100 text-purple-800",
+    flat: "bg-sky-100 text-sky-800",
+    level: "bg-teal-100 text-teal-800",
+  };
+  return <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium capitalize ${tone[t]}`}>{t}</span>;
+}
+function stateChip(s: string | null) {
+  if (!s) return <span className="text-[11px] text-black/50">All states</span>;
+  if (s === "NY") return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">NY only</span>;
+  return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-black/5 text-black/70">{s} only</span>;
+}
+function tiersFor(scheduleId: string) {
+  return COMMISSION_RATE_TIERS.filter((t) => t.schedule_id === scheduleId).sort((a, b) => a.year_from - b.year_from);
+}
+function tierPreview(scheduleId: string): string {
+  const tiers = tiersFor(scheduleId);
+  if (tiers.length === 0) return "—";
+  const fmt = (t: { year_from: number; year_to: number | null; pct: number }) => {
+    if (t.year_to === null || t.year_to >= 99) return `${t.pct}% Y${t.year_from}+`;
+    if (t.year_to === t.year_from) return `${t.pct}% Y${t.year_from}`;
+    return `${t.pct}% Y${t.year_from}–${t.year_to}`;
+  };
+  if (tiers.length === 1) {
+    const t = tiers[0];
+    if ((t.year_to === null || t.year_to >= 99) && t.year_from === 1) return `${t.pct}% all years`;
+  }
+  if (tiers.length <= 4) return tiers.map(fmt).join(" → ");
+  return `${tiers.slice(0, 3).map(fmt).join(" → ")} … (${tiers.length} tiers)`;
+}
+function policyYearFor(effectiveDate: string, periodStart: string): number {
+  const a = new Date(effectiveDate + "T00:00:00");
+  const b = new Date(periodStart + "T00:00:00");
+  const months = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth());
+  return Math.max(1, Math.floor(months / 12) + 1);
+}
+function matchTier(scheduleId: string, year: number) {
+  return tiersFor(scheduleId).find((t) => year >= t.year_from && (t.year_to === null || year <= t.year_to));
+}
+function carrierProductLabel(cpId: string): string {
+  const cp = CARRIER_PRODUCTS.find((p) => p.id === cpId);
+  if (!cp) return cpId;
+  const c = CARRIERS.find((x) => x.id === cp.carrier_id);
+  return `${c?.name ?? "—"} — ${cp.product_name}`;
+}
+function deriveScheduleForPolicy(policyId: string): CarrierCommissionSchedule | null {
+  const pol = POLICIES.find((p) => p.id === policyId);
+  if (!pol) return null;
+  // explicit assignment first
+  if (pol.commission_schedule_id) {
+    const s = CARRIER_COMMISSION_SCHEDULES.find((x) => x.id === pol.commission_schedule_id);
+    if (s) return s;
+  }
+  // fall back to default for carrier_product
+  return CARRIER_COMMISSION_SCHEDULES.find((s) => s.carrier_product_id === pol.carrier_product_id && s.is_default) ?? null;
+}
 // Main view
 // ---------------------------------------------------------------------------
 const LAST_ATTIO_SYNC = "2025-10-15T11:56:00Z";
