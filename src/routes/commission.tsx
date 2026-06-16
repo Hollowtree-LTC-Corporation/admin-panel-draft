@@ -1586,7 +1586,7 @@ function AddPayeeModal({ partnerId, partners, onCancel, onAdd }: {
     : (partners.find((p) => p.id === payeeRefId)?.name ?? "");
 
   return (
-    <Modal title={`Add payee row — ${partner.partner_name ?? partner.name}`} onCancel={onCancel}
+    <Modal title={`Add payee row — ${partner.name}`} onCancel={onCancel}
       footer={
         <>
           <Btn onClick={onCancel}>Cancel</Btn>
