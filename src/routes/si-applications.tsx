@@ -131,10 +131,10 @@ function QueueTab() {
       if (k === "days_in_review") return daysBetween(a.upgrade_submitted_at, a.upgrade_carrier_decision_at ?? undefined);
       return (a as unknown as Record<string, string | number>)[k];
     });
-  }, [search, status, carrier, org, resp, dir, tier, sort]);
+  }, [search, status, carrier, org, resp, dir, tier, rep, sort]);
 
-  const active = search !== "" || status !== "all" || carrier !== "all" || org !== "all" || resp !== "all" || dir !== "all" || tier !== "all" || !sort.isDefault;
-  const clearAll = () => { setSearch(""); setStatus("all"); setCarrier("all"); setOrg("all"); setResp("all"); setDir("all"); setTier("all"); sort.reset(); };
+  const active = search !== "" || status !== "all" || carrier !== "all" || org !== "all" || resp !== "all" || dir !== "all" || tier !== "all" || rep !== "all" || !sort.isDefault;
+  const clearAll = () => { setSearch(""); setStatus("all"); setCarrier("all"); setOrg("all"); setResp("all"); setDir("all"); setTier("all"); setRep("all"); sort.reset(); };
 
   const counts = useMemo(() => {
     const now = Date.now();
