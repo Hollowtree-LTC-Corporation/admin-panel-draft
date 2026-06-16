@@ -673,22 +673,125 @@ export const ENROLLMENT_WINDOWS: EnrollmentWindow[] = [
   { id: "ew_5", org_id: "org_1", org_name: "Acme Widgets Co", affiliate_org_id: null, affiliate_org: null, window_type: "new_joiner", start_date: null, end_date: null, default_effective_date: null, status: "open", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "Always open. Per-individual deadlines computed from hire date.", channel_partners: [] },
 ];
 
-export const MAGIC_TOKENS = [
-  { id: "mt_1", individual_id: "ind_1", individual_name: "Test Person 1", token_class: "enrollment", status: "active", expires_at: "2025-12-31", use_count: 0, last_used_at: null },
-  { id: "mt_2", individual_id: "ind_5", individual_name: "Test Person 5", token_class: "portal", status: "active", expires_at: "2026-01-15", use_count: 3, last_used_at: "2025-06-01" },
-  { id: "mt_3", individual_id: "ind_9", individual_name: "Test Person 9", token_class: "enrollment", status: "expired", expires_at: "2025-04-01", use_count: 1, last_used_at: "2025-03-22" },
-  { id: "mt_4", individual_id: "ind_12", individual_name: "Test Person 12", token_class: "portal", status: "active", expires_at: "2026-02-10", use_count: 7, last_used_at: "2025-06-05" },
-  { id: "mt_sep_ind_11", individual_id: "ind_11", individual_name: "Test Person 11", token_class: "portal", status: "active", expires_at: "2025-10-15", use_count: 0, last_used_at: null },
+// v14 magic_tokens — 14 columns; raw token never exposed in UI.
+export type MagicTokenClass = "enrollment" | "portal";
+export type MagicTokenStatus = "active" | "revoked" | "expired";
+export type MagicToken = {
+  id: string;
+  individual_id: string;
+  individual_name: string;
+  token_class: MagicTokenClass;
+  status: MagicTokenStatus;
+  expires_at: string; // ISO timestamp
+  created_at: string;
+  last_used_at: string | null;
+  use_count: number;
+  revoked_at: string | null;
+  revoked_by: string | null;
+  revocation_reason: string | null;
+  portal_destination: "hollowtree" | "cca" | null;
+};
+
+function _hash64(seed: string): string {
+  // Deterministic pseudo-SHA256 (hex 64-char) for wireframe display only.
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  let out = "";
+  let v = h;
+  for (let i = 0; i < 8; i++) {
+    v = Math.imul(v ^ (i * 2654435761), 16777619) >>> 0;
+    out += v.toString(16).padStart(8, "0");
+  }
+  return out.slice(0, 64);
+}
+
+const _MT_SEED: Array<Partial<MagicToken> & { individual_id: string; token_class: MagicTokenClass; status: MagicTokenStatus; expires_at: string; created_at: string }> = [
+  { individual_id: "ind_1",  token_class: "enrollment", status: "active",  expires_at: "2026-08-15T23:59:59Z", created_at: "2026-05-01T10:12:00Z", use_count: 0, last_used_at: null, portal_destination: null },
+  { individual_id: "ind_3",  token_class: "portal",     status: "active",  expires_at: "2027-03-04T12:00:00Z", created_at: "2026-03-04T12:00:00Z", use_count: 11, last_used_at: "2026-06-12T08:42:00Z", portal_destination: "hollowtree" },
+  { individual_id: "ind_5",  token_class: "portal",     status: "active",  expires_at: "2027-01-15T09:00:00Z", created_at: "2026-01-15T09:00:00Z", use_count: 3, last_used_at: "2026-06-01T14:10:00Z", portal_destination: "hollowtree" },
+  { individual_id: "ind_6",  token_class: "enrollment", status: "active",  expires_at: "2026-09-30T23:59:59Z", created_at: "2026-04-22T16:30:00Z", use_count: 2, last_used_at: "2026-06-08T19:01:00Z", portal_destination: null },
+  // Status drift: expires_at in the past but status still 'active' (sweep pending).
+  { individual_id: "ind_8",  token_class: "enrollment", status: "active",  expires_at: "2026-05-30T23:59:59Z", created_at: "2026-03-15T11:45:00Z", use_count: 4, last_used_at: "2026-05-28T20:13:00Z", portal_destination: null },
+  { individual_id: "ind_9",  token_class: "enrollment", status: "expired", expires_at: "2025-04-01T23:59:59Z", created_at: "2025-02-20T09:00:00Z", use_count: 1, last_used_at: "2025-03-22T08:14:00Z", portal_destination: null },
+  { individual_id: "ind_11", token_class: "portal",     status: "active",  expires_at: "2026-10-15T23:59:59Z", created_at: "2025-10-15T14:30:00Z", use_count: 0, last_used_at: null, portal_destination: "hollowtree" },
+  { individual_id: "ind_12", token_class: "portal",     status: "active",  expires_at: "2027-02-10T09:00:00Z", created_at: "2026-02-10T09:00:00Z", use_count: 7, last_used_at: "2026-06-05T17:55:00Z", portal_destination: "hollowtree" },
+  { individual_id: "ind_13", token_class: "portal",     status: "revoked", expires_at: "2027-04-01T10:00:00Z", created_at: "2026-04-01T10:00:00Z", use_count: 2, last_used_at: "2026-05-02T11:22:00Z", revoked_at: "2026-05-30T15:08:00Z", revoked_by: "Guy (admin)", revocation_reason: "Enrollee reported phishing attempt — unauthorized access from unrecognized IP.", portal_destination: "hollowtree" },
+  { individual_id: "ind_14", token_class: "portal",     status: "active",  expires_at: "2027-05-22T10:00:00Z", created_at: "2026-05-22T10:00:00Z", use_count: 1, last_used_at: "2026-06-10T07:09:00Z", portal_destination: "cca" },
+  { individual_id: "ind_17", token_class: "enrollment", status: "revoked", expires_at: "2026-07-15T23:59:59Z", created_at: "2026-05-10T13:00:00Z", use_count: 0, last_used_at: null, revoked_at: "2026-06-02T10:00:00Z", revoked_by: "Ops User 1", revocation_reason: "Enrollee requested re-issue after losing device.", portal_destination: null },
+  { individual_id: "ind_22", token_class: "portal",     status: "expired", expires_at: "2026-01-08T10:00:00Z", created_at: "2025-01-08T10:00:00Z", use_count: 12, last_used_at: "2025-12-30T19:00:00Z", portal_destination: "hollowtree" },
 ];
 
-export const TOKEN_AUDIT_LOG = Array.from({ length: 12 }, (_, i) => ({
-  id: `tal_${i + 1}`,
-  ts: `2025-06-0${(i % 9) + 1}T1${i % 9}:22:00Z`,
-  token_hash: `hash_${"abcdef".repeat(2)}${i}`,
-  ip: `192.168.${i % 255}.${(i * 7) % 255}`,
-  user_agent: "Mozilla/5.0 (wireframe)",
-  result: i % 4 === 0 ? "rejected" : "accepted",
-}));
+export const MAGIC_TOKENS: MagicToken[] = _MT_SEED.map((s, i) => {
+  const ind = INDIVIDUALS.find((x) => x.id === s.individual_id);
+  return {
+    id: `mt_${i + 1}`,
+    individual_id: s.individual_id,
+    individual_name: ind?.full_name ?? s.individual_id,
+    token_class: s.token_class,
+    status: s.status,
+    expires_at: s.expires_at,
+    created_at: s.created_at,
+    last_used_at: s.last_used_at ?? null,
+    use_count: s.use_count ?? 0,
+    revoked_at: s.revoked_at ?? null,
+    revoked_by: s.revoked_by ?? null,
+    revocation_reason: s.revocation_reason ?? null,
+    portal_destination: s.portal_destination ?? null,
+  };
+});
+
+// v14 token_audit_log — 9 columns. SHA-256 hex hash; outcome is 6-value enum.
+export type TokenAuditOutcome = "success" | "invalid_token" | "revoked" | "expired" | "class_mismatch" | "rate_limited";
+export type TokenAuditEntry = {
+  id: string;
+  token_id: string | null;
+  individual_id: string | null;
+  individual_name: string | null;
+  token_class: MagicTokenClass | null;
+  attempted_token_hash: string;
+  outcome: TokenAuditOutcome;
+  ip_address: string;
+  user_agent: string;
+  created_at: string;
+};
+
+const _UA_SAMPLES = [
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
+  "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+  "curl/8.4.0",
+];
+
+const _OUTCOMES: TokenAuditOutcome[] = ["success", "success", "success", "success", "invalid_token", "expired", "revoked", "class_mismatch", "rate_limited", "success"];
+
+export const TOKEN_AUDIT_LOG: TokenAuditEntry[] = Array.from({ length: 38 }, (_, i) => {
+  const outcome = _OUTCOMES[i % _OUTCOMES.length];
+  // Most rows resolve to a real token; invalid_token rows do not.
+  const resolves = outcome !== "invalid_token";
+  const token = resolves ? MAGIC_TOKENS[i % MAGIC_TOKENS.length] : null;
+  const day = (i % 14) + 1;
+  const hour = (i * 3) % 24;
+  const minute = (i * 7) % 60;
+  const ts = `2026-06-${String(day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00Z`;
+  // Repeated attempts on the same hash for one suspicious series.
+  const hashSeed = i === 4 || i === 11 || i === 24 ? "shared-bad-token-seed" : `${token?.id ?? "unknown"}-${i}`;
+  return {
+    id: `tal_${i + 1}`,
+    token_id: token?.id ?? null,
+    individual_id: token?.individual_id ?? null,
+    individual_name: token?.individual_name ?? null,
+    token_class: token?.token_class ?? null,
+    attempted_token_hash: _hash64(hashSeed),
+    outcome,
+    ip_address: `${10 + (i % 240)}.${(i * 13) % 255}.${(i * 7) % 255}.${(i * 3) % 255}`,
+    user_agent: _UA_SAMPLES[i % _UA_SAMPLES.length],
+    created_at: ts,
+  };
+});
 
 export const AUDIT_LOG = Array.from({ length: 20 }, (_, i) => ({
   id: `al_${i + 1}`,
