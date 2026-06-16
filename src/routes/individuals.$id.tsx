@@ -253,7 +253,7 @@ function IndividualDetail() {
           </div>
           <div className="flex gap-2">
             <Btn disabled={readOnly} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Edit</Btn>
-            <Btn variant="danger" disabled={!can("individuals", "delete")} onClick={() => setDeactivateOpen(true)}>Deactivate</Btn>
+            <Btn variant="danger" disabled={!can("individuals", "delete")} onClick={() => setDeactivateOpen(true)}>Cancel Coverage</Btn>
           </div>
         </div>
         <div className="grid grid-cols-8 gap-2">
@@ -262,14 +262,18 @@ function IndividualDetail() {
             onClick={i.org_id ? () => navigate({ to: "/organizations/$id", params: { id: i.org_id! } }) : undefined} />
           <SummaryChip label="Coverage Status" value={<Badge map={COVERAGE_BADGE} value={i.coverage_status} />} />
           <SummaryChip label="Current Stage" value={<Badge map={STAGE_BADGE} value={i.stage} />} />
+          {isLTC && (
+            <SummaryChip label="Issue Type" value={<IssueTypeBadge value={i.issue_type} />} />
+          )}
+          {isLTC && (
+            <SummaryChip label="Benefit Class" value={i.benefit_class_name || "—"} />
+          )}
           <SummaryChip label="Last Payment"
             value={<span className="inline-flex items-center gap-1">{paymentBadge(i.last_payment_status, i.retry_count)}<span className="text-[11px] text-black/50">{fmtDate(i.last_charge_date)}</span></span>}
             onClick={() => navigate({ to: "/payment-ledger" })} />
           <SummaryChip label="Monthly Premium" value={formatCents(i.monthly_premium_cents)} />
           <SummaryChip label="Balance" value={formatCents(balanceCents)} tone={balanceNeg ? "bad" : "ok"}
             onClick={() => navigate({ to: "/enrollee-balance" })} />
-          <SummaryChip label="Enrollment Window" value={i.org_id ? "annual · 2025-09" : "—"}
-            onClick={i.org_id ? () => navigate({ to: "/organizations/$id", params: { id: i.org_id! } }) : undefined} />
           <SummaryChip label="Billing Group" value={bg?.name ?? i.billing_group_id}
             onClick={() => navigate({ to: "/billing-groups" })} />
         </div>
