@@ -797,6 +797,8 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
 
 function UnderwritingSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
+  // GI enrollees don't fill medical questions (per 2026-06-14 decision). Tobacco lives on Coverage & Plan.
+  if (i.issue_type === "GI") return null;
   return (
     <SectionCard title="Underwriting" editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
