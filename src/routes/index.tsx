@@ -33,6 +33,8 @@ function Dashboard() {
   const { product } = useStore();
   const navigate = useNavigate();
   const [orgFilter, setOrgFilter] = useState<string>("all");
+  const [upgradeOpen, setUpgradeOpen] = useState<boolean>(true);
+  const [spousalOpen, setSpousalOpen] = useState<boolean>(true);
 
   const productOrgs = ORGS.filter((o) => o.product === product);
   const allInds = INDIVIDUALS.filter((i) => i.product === product);
