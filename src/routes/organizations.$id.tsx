@@ -63,7 +63,11 @@ function useBrokers(): BrokerRecord[] {
 const INBOUND_TYPES = ["Broker Referral","Direct","Partner Referral","Inbound"];
 const PRODUCT_TEMPLATE_VARIANTS = ["base","eob_only","restoration_only","eob_and_restoration"];
 const CONTRIBUTION_TYPES = ["voluntary","buy_up","employer_paid"];
-const PAY_MODES = ["Monthly","10-Pay"];
+const PREMIUM_STRUCTURES = ["lifetime","10_pay"] as const;
+type PremiumStructure = typeof PREMIUM_STRUCTURES[number];
+function premiumStructureLabel(s: PremiumStructure): string {
+  return s === "lifetime" ? "Lifetime" : "10-Pay";
+}
 
 function defaultMicrositeSuffix(product: "DI" | "LTC"): string {
   return product === "DI" ? ".hollowtree.co" : ".hollowtreeltc.com";
@@ -263,7 +267,7 @@ function synthesize(org: typeof ORGS[number]) {
     supported_languages: idx % 4 === 0 ? ["en", "es"] : (idx === 3 ? ["en", "es", "zh"] : ["en"]),
     // Coverage / Billing
     contribution_type: cca ? "voluntary" : "employer_paid",
-    pay_mode: "Monthly",
+    available_premium_structures: (product === "LTC" ? (idx % 3 === 0 ? ["lifetime","10_pay"] : ["lifetime"]) : ["lifetime"]) as PremiumStructure[],
     tpa_fee_cents: cca ? 2000 : 800,
     service_fee_retained_cents: cca ? 500 : null,
     tpa_fee_name: cca ? "CCA Membership Fee" : "Processing Fee",
@@ -1344,6 +1348,31 @@ function LTCProductPlanSection({ org, readOnly }: { org: OrgDetail; readOnly: bo
           <RField label="Duration">{e.editing ? <input className={inputCls} defaultValue={org.duration} /> : org.duration}</RField>
           <RField label="Min Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.min_age} /> : org.min_age}</RField>
           <RField label="Max Age">{e.editing ? <input className={inputCls} type="number" defaultValue={org.max_age} /> : org.max_age}</RField>
+        </div>
+        <div className="mt-4">
+          <RField label="Available Premium Structures">
+            {e.editing ? (
+              <div className="flex flex-col gap-1.5">
+                {PREMIUM_STRUCTURES.map((s) => (
+                  <label key={s} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" defaultChecked={org.available_premium_structures.includes(s)} />
+                    <span>{premiumStructureLabel(s)}</span>
+                  </label>
+                ))}
+                <div className="text-[11px] text-black/55 italic mt-0.5">
+                  Which premium calculation structures employees can choose from. 10-Pay compresses premiums into 120 monthly payments. All billing is monthly.
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {org.available_premium_structures.length === 0
+                  ? <Empty />
+                  : org.available_premium_structures.map((s) => (
+                      <Pill key={s} tone="neutral">{premiumStructureLabel(s)}</Pill>
+                    ))}
+              </div>
+            )}
+          </RField>
         </div>
       </div>
 
