@@ -10,7 +10,9 @@ import {
 } from "@/components/wireframe/Bits";
 import {
   CHANNEL_PARTNERS, POLICY_SPLITS_INITIAL, POLICIES, formatCents,
+  CARRIER_COMMISSION_SCHEDULES, COMMISSION_RATE_TIERS, CARRIER_PRODUCTS, CARRIERS,
   type PayeeType, type PaymentMethodSetting, type SplitSource,
+  type CarrierCommissionSchedule, type ScheduleType,
 } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import {
