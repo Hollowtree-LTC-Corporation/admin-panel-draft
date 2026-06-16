@@ -1743,3 +1743,371 @@ function RemoveDefaultModal({ row, activeCount, onCancel, onConfirm }: {
     </Modal>
   );
 }
+
+// ===========================================================================
+// LTC Section 4 — Carrier Commission Schedules
+// ===========================================================================
+type SchedDraft = {
+  id: string;
+  carrier_product_id: string;
+  schedule_name: string;
+  schedule_type: ScheduleType;
+  state_code: string;
+  is_default: boolean;
+  effective_from: string;
+  effective_to: string;
+  notes: string;
+  tiers: Array<{ key: string; year_from: number; year_to: number | null; pct: number }>;
+};
+
+function ltcCarrierProducts() {
+  return CARRIER_PRODUCTS.filter((p) => p.line_of_business === "LTC");
+}
+
+function LtcSchedulesSection() {
+  const [schedules, setSchedules] = useState<CarrierCommissionSchedule[]>(CARRIER_COMMISSION_SCHEDULES);
+  const [tiers, setTiers] = useState(COMMISSION_RATE_TIERS);
+  const [fProduct, setFProduct] = useState<string>("all");
+  const [fType, setFType] = useState<ScheduleType | "all">("all");
+  const [fState, setFState] = useState<"all" | "ny" | "std">("all");
+  const [fDefaultOnly, setFDefaultOnly] = useState(false);
+  const [drawer, setDrawer] = useState<{ open: boolean; id: string | null; create?: boolean }>({ open: false, id: null });
+
+  const filtered = useMemo(() => schedules.filter((s) => {
+    if (fProduct !== "all" && s.carrier_product_id !== fProduct) return false;
+    if (fType !== "all" && s.schedule_type !== fType) return false;
+    if (fState === "ny" && s.state_code !== "NY") return false;
+    if (fState === "std" && s.state_code !== null) return false;
+    if (fDefaultOnly && !s.is_default) return false;
+    return true;
+  }), [schedules, fProduct, fType, fState, fDefaultOnly]);
+
+  const grouped = useMemo(() => {
+    const g: Record<string, CarrierCommissionSchedule[]> = {};
+    for (const s of filtered) (g[s.carrier_product_id] ??= []).push(s);
+    return Object.entries(g).sort(([a], [b]) => a.localeCompare(b));
+  }, [filtered]);
+
+  const ltcProducts = ltcCarrierProducts();
+  const stmtsBySchedule = (sid: string) => 0; // placeholder; statement snapshots don't store schedule_id in seed
+
+  function makeDefault(id: string) {
+    setSchedules((rs) => {
+      const target = rs.find((r) => r.id === id);
+      if (!target) return rs;
+      return rs.map((r) => {
+        if (r.carrier_product_id !== target.carrier_product_id) return r;
+        return { ...r, is_default: r.id === id };
+      });
+    });
+    toast.success("Promoted to default. Previous default demoted.");
+  }
+
+  return (
+    <>
+      <SectionTitle>Carrier Commission Schedules</SectionTitle>
+      <div className="text-xs text-black/50 mb-2">
+        What each carrier product pays in commission, by year band. Multiple schedules per product (heaped vs flat vs level). One default per carrier product. State-specific variants supported (NY).
+      </div>
+      <FilterRow>
+        <FilterCombobox value={fProduct} onChange={setFProduct} placeholder="All carrier products"
+          options={ltcProducts.map((p) => ({ value: p.id, label: carrierProductLabel(p.id) }))} />
+        <FilterSelect value={fType} onChange={setFType} allLabel="All types"
+          options={[{value:"heaped"},{value:"flat"},{value:"level"}]} />
+        <FilterSelect value={fState} onChange={setFState} allLabel="All states"
+          options={[{value:"ny",label:"NY only"},{value:"std",label:"Standard only"}]} />
+        <label className="inline-flex items-center gap-1 text-xs ml-1">
+          <input type="checkbox" checked={fDefaultOnly} onChange={(e) => setFDefaultOnly(e.target.checked)} />
+          Show defaults only
+        </label>
+        <ClearFiltersLink show={fProduct !== "all" || fType !== "all" || fState !== "all" || fDefaultOnly}
+          onClick={() => { setFProduct("all"); setFType("all"); setFState("all"); setFDefaultOnly(false); }} />
+        <ExportCsvButton filteredCount={filtered.length} totalCount={schedules.length} resourceLabel="carrier commission schedules" />
+        <div className="ml-auto">
+          <Btn variant="primary" onClick={() => setDrawer({ open: true, id: null, create: true })}>
+            <Plus className="h-3 w-3" /> New Schedule
+          </Btn>
+        </div>
+      </FilterRow>
+      <div className="space-y-3">
+        {grouped.map(([cpId, rows]) => (
+          <div key={cpId} className="bg-white border border-black/10 rounded-md overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 bg-[#f7f3eb] border-b border-black/10">
+              <div className="text-sm font-semibold text-[#0a3d3e]">{carrierProductLabel(cpId)}</div>
+              <div className="text-[11px] text-black/50">{rows.length} schedule{rows.length === 1 ? "" : "s"}</div>
+            </div>
+            <table className="w-full text-xs">
+              <thead className="text-[10px] uppercase tracking-wider text-black/50">
+                <tr>{["Schedule Name","Type","State","Effective","Tier Preview","Default","Actions"].map((c) => (
+                  <th key={c} className="text-left font-medium px-3 py-1.5">{c}</th>))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((s) => (
+                  <tr key={s.id} className="border-t border-black/5 hover:bg-stone-50 cursor-pointer"
+                    onClick={() => setDrawer({ open: true, id: s.id })}>
+                    <td className="px-3 py-2 font-medium text-[#0a3d3e] underline">{s.schedule_name}</td>
+                    <td className="px-3 py-2">{scheduleTypeChip(s.schedule_type)}</td>
+                    <td className="px-3 py-2">{stateChip(s.state_code)}</td>
+                    <td className="px-3 py-2">{fmtDate(s.effective_from)} — {s.effective_to ? fmtDate(s.effective_to) : <span className="text-emerald-700">current</span>}</td>
+                    <td className="px-3 py-2 font-mono text-[11px]">{tierPreview(s.id)}</td>
+                    <td className="px-3 py-2">
+                      {s.is_default
+                        ? <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-800">Default</span>
+                        : <span className="text-black/30">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                      <button className="text-[11px] text-black/60 hover:text-black mr-3 inline-flex items-center gap-1"
+                        onClick={() => setDrawer({ open: true, id: s.id })}>
+                        <Pencil className="h-3 w-3" /> Edit
+                      </button>
+                      {!s.is_default && (
+                        <button className="text-[11px] text-[#0a3d3e] hover:underline"
+                          onClick={() => makeDefault(s.id)}>
+                          Make default
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+        {grouped.length === 0 && (
+          <div className="bg-white border border-black/10 rounded-md p-6 text-center text-xs text-black/40">
+            No schedules match the current filters.
+          </div>
+        )}
+      </div>
+
+      {drawer.open && (
+        <ScheduleDrawer
+          schedule={drawer.id ? schedules.find((s) => s.id === drawer.id) ?? null : null}
+          tiers={tiers}
+          allSchedules={schedules}
+          onClose={() => setDrawer({ open: false, id: null })}
+          onSave={(sched, newTiers) => {
+            setSchedules((rs) => {
+              const exists = rs.some((r) => r.id === sched.id);
+              let next = exists ? rs.map((r) => r.id === sched.id ? sched : r) : [...rs, sched];
+              if (sched.is_default) {
+                next = next.map((r) =>
+                  r.carrier_product_id === sched.carrier_product_id && r.id !== sched.id ? { ...r, is_default: false } : r
+                );
+              }
+              return next;
+            });
+            setTiers((ts) => [
+              ...ts.filter((t) => t.schedule_id !== sched.id),
+              ...newTiers,
+            ]);
+            setDrawer({ open: false, id: null });
+            toast.success(exists(schedules, sched.id) ? "Schedule updated. Existing approved/paid statements unaffected." : "Schedule created.");
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function exists(arr: CarrierCommissionSchedule[], id: string) {
+  return arr.some((s) => s.id === id);
+}
+
+// ===========================================================================
+// Drawer D — Schedule + Tiers
+// ===========================================================================
+function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
+  schedule: CarrierCommissionSchedule | null;
+  tiers: typeof COMMISSION_RATE_TIERS;
+  allSchedules: CarrierCommissionSchedule[];
+  onClose: () => void;
+  onSave: (sched: CarrierCommissionSchedule, tiers: typeof COMMISSION_RATE_TIERS) => void;
+}) {
+  const ltcProducts = ltcCarrierProducts();
+  const isNew = !schedule;
+  const initialTiers = schedule ? tiersFor(schedule.id) : [{ id: `crt_new_1`, schedule_id: "new", year_from: 1, year_to: null as number | null, pct: 0 }];
+  const [draft, setDraft] = useState<SchedDraft>({
+    id: schedule?.id ?? `ccs_new_${Date.now()}`,
+    carrier_product_id: schedule?.carrier_product_id ?? (ltcProducts[0]?.id ?? ""),
+    schedule_name: schedule?.schedule_name ?? "",
+    schedule_type: schedule?.schedule_type ?? "heaped",
+    state_code: schedule?.state_code ?? "",
+    is_default: schedule?.is_default ?? false,
+    effective_from: schedule?.effective_from ?? new Date().toISOString().slice(0, 10),
+    effective_to: schedule?.effective_to ?? "",
+    notes: "",
+    tiers: initialTiers.map((t, i) => ({ key: `${t.id}_${i}`, year_from: t.year_from, year_to: t.year_to === 99 ? null : t.year_to, pct: t.pct })),
+  });
+
+  const otherDefault = allSchedules.find((s) => s.carrier_product_id === draft.carrier_product_id && s.is_default && s.id !== draft.id);
+  const onlySchedule = allSchedules.filter((s) => s.carrier_product_id === draft.carrier_product_id && s.id !== draft.id).length === 0;
+
+  // Validation
+  const sorted = [...draft.tiers].sort((a, b) => a.year_from - b.year_from);
+  let overlap = false;
+  let gap: number | null = null;
+  for (let i = 0; i < sorted.length; i++) {
+    const cur = sorted[i];
+    const nxt = sorted[i + 1];
+    if (cur.year_to !== null && cur.year_from > cur.year_to) overlap = true;
+    if (nxt) {
+      const curEnd = cur.year_to ?? Infinity;
+      if (nxt.year_from <= curEnd) overlap = true;
+      else if (nxt.year_from > curEnd + 1 && gap === null) gap = curEnd + 1;
+    }
+  }
+  const allClosed = sorted.length > 0 && sorted.every((t) => t.year_to !== null);
+  const canSave = draft.schedule_name.trim().length > 0 && draft.carrier_product_id && !overlap && draft.tiers.every((t) => t.pct >= 0 && t.year_from >= 1);
+
+  function updateTier(idx: number, patch: Partial<SchedDraft["tiers"][number]>) {
+    setDraft((d) => ({ ...d, tiers: d.tiers.map((t, i) => i === idx ? { ...t, ...patch } : t) }));
+  }
+
+  function handleSave() {
+    const sched: CarrierCommissionSchedule = {
+      id: draft.id,
+      carrier_product_id: draft.carrier_product_id,
+      carrier_product_name: CARRIER_PRODUCTS.find((p) => p.id === draft.carrier_product_id)?.product_name ?? "",
+      schedule_name: draft.schedule_name.trim(),
+      schedule_type: draft.schedule_type,
+      state_code: draft.state_code.trim() || null,
+      is_default: onlySchedule ? true : draft.is_default,
+      effective_from: draft.effective_from,
+      effective_to: draft.effective_to || null,
+    };
+    const newTiers = draft.tiers.map((t, i) => ({
+      id: `${draft.id}_t${i}`,
+      schedule_id: draft.id,
+      year_from: Number(t.year_from),
+      year_to: t.year_to === null ? 99 : Number(t.year_to),
+      pct: Number(t.pct),
+    }));
+    onSave(sched, newTiers);
+  }
+
+  return (
+    <Drawer open onClose={onClose} title={isNew ? "New Commission Schedule" : `Edit — ${schedule?.schedule_name}`}>
+      <SectionHeader>Schedule</SectionHeader>
+      <Field label="Carrier Product">
+        <select value={draft.carrier_product_id} onChange={(e) => setDraft({ ...draft, carrier_product_id: e.target.value })}
+          className="px-2 py-1 text-sm border border-black/15 rounded w-full">
+          {ltcProducts.map((p) => <option key={p.id} value={p.id}>{carrierProductLabel(p.id)}</option>)}
+        </select>
+      </Field>
+      <Field label="Schedule Name">
+        <input value={draft.schedule_name} onChange={(e) => setDraft({ ...draft, schedule_name: e.target.value })}
+          placeholder="e.g., Trustmark UL Heaped 100/5"
+          className="px-2 py-1 text-sm border border-black/15 rounded w-full" />
+      </Field>
+      <Field label="Schedule Type">
+        <select value={draft.schedule_type} onChange={(e) => setDraft({ ...draft, schedule_type: e.target.value as ScheduleType })}
+          className="px-2 py-1 text-sm border border-black/15 rounded w-full">
+          <option value="heaped">Heaped</option>
+          <option value="flat">Flat</option>
+          <option value="level">Level</option>
+        </select>
+      </Field>
+      <Field label="State Code">
+        <input value={draft.state_code} onChange={(e) => setDraft({ ...draft, state_code: e.target.value.toUpperCase() })}
+          placeholder="Blank = all states. 'NY' for NY-specific."
+          className="px-2 py-1 text-sm border border-black/15 rounded w-full" />
+      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Effective From">
+          <input type="date" value={draft.effective_from} onChange={(e) => setDraft({ ...draft, effective_from: e.target.value })}
+            className="px-2 py-1 text-sm border border-black/15 rounded w-full" />
+        </Field>
+        <Field label="Effective To">
+          <input type="date" value={draft.effective_to} onChange={(e) => setDraft({ ...draft, effective_to: e.target.value })}
+            className="px-2 py-1 text-sm border border-black/15 rounded w-full" />
+        </Field>
+      </div>
+      <Field label="Notes">
+        <textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+          className="px-2 py-1 text-sm border border-black/15 rounded w-full" rows={2} />
+      </Field>
+
+      <SectionHeader>Default</SectionHeader>
+      <label className="inline-flex items-center gap-2 text-xs">
+        <input type="checkbox" disabled={onlySchedule} checked={onlySchedule ? true : draft.is_default}
+          onChange={(e) => setDraft({ ...draft, is_default: e.target.checked })} />
+        Make this the default schedule for this carrier product
+      </label>
+      {onlySchedule && (
+        <div className="text-[11px] text-black/50 mt-1">Only schedule for this product — must be default.</div>
+      )}
+      {draft.is_default && otherDefault && (
+        <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mt-2">
+          This will demote the current default ({otherDefault.schedule_name}) automatically.
+        </div>
+      )}
+
+      <SectionHeader>Rate Tiers</SectionHeader>
+      <Card className="p-2 mb-2">
+        <table className="w-full text-xs">
+          <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
+            <tr>{["From Year","To Year","Rate %",""].map((c) => (<th key={c} className="text-left font-medium px-2 py-1">{c}</th>))}</tr>
+          </thead>
+          <tbody>
+            {draft.tiers.map((t, i) => (
+              <tr key={t.key} className="border-t border-black/5">
+                <td className="px-2 py-1"><input type="number" min={1} value={t.year_from} onChange={(e) => updateTier(i, { year_from: Number(e.target.value) })} className="px-1 py-0.5 text-xs border border-black/15 rounded w-16" /></td>
+                <td className="px-2 py-1">
+                  <input type="number" min={1} value={t.year_to ?? ""} placeholder="∞"
+                    onChange={(e) => updateTier(i, { year_to: e.target.value === "" ? null : Number(e.target.value) })}
+                    className="px-1 py-0.5 text-xs border border-black/15 rounded w-16" />
+                </td>
+                <td className="px-2 py-1"><input type="number" min={0} step={0.5} value={t.pct} onChange={(e) => updateTier(i, { pct: Number(e.target.value) })} className="px-1 py-0.5 text-xs border border-black/15 rounded w-20" />%</td>
+                <td className="px-2 py-1 text-right">
+                  <button className="text-[11px] text-rose-600 hover:underline" onClick={() => setDraft((d) => ({ ...d, tiers: d.tiers.filter((_, j) => j !== i) }))}>
+                    <Trash2 className="h-3 w-3 inline" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="px-2 py-1">
+          <button className="text-[11px] text-[#0a3d3e] hover:underline inline-flex items-center gap-1"
+            onClick={() => setDraft((d) => ({ ...d, tiers: [...d.tiers, { key: `new_${Date.now()}`, year_from: (d.tiers.at(-1)?.year_to ?? 0) + 1, year_to: null, pct: 0 }] }))}>
+            <Plus className="h-3 w-3" /> Add Tier
+          </button>
+        </div>
+      </Card>
+      {overlap && (
+        <div className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded p-2 mb-2">
+          Overlapping or invalid year ranges. Fix before saving.
+        </div>
+      )}
+      {gap !== null && (
+        <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mb-2">
+          Gap in coverage: Year {gap} has no defined rate. Statements for that policy year will fail to derive a rate.
+        </div>
+      )}
+      {allClosed && (
+        <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mb-2">
+          All tiers have a closed end year. Add a perpetual tier (blank To Year) or commissions stop after the last band.
+        </div>
+      )}
+
+      {!isNew && (
+        <div className="text-[11px] text-black/60 bg-stone-50 border border-black/10 rounded p-2 mb-2">
+          Changes do NOT propagate to existing approved or paid statements. Draft statements re-derive on regeneration. Past commission_pct snapshots are preserved.
+        </div>
+      )}
+
+      <SectionHeader>Usage</SectionHeader>
+      <div className="text-[11px] text-black/60">
+        {POLICIES.filter((p) => p.commission_schedule_id === draft.id).length} polic
+        {POLICIES.filter((p) => p.commission_schedule_id === draft.id).length === 1 ? "y" : "ies"} reference this schedule.
+      </div>
+
+      <div className="flex justify-end gap-2 mt-4">
+        <Btn onClick={onClose}>Cancel</Btn>
+        <Btn variant="primary" onClick={handleSave} disabled={!canSave}>Save</Btn>
+      </div>
+    </Drawer>
+  );
+}
