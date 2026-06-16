@@ -36,7 +36,7 @@ function formatDate(d: string | null | undefined): string {
 import { INDIVIDUALS, ORGS, formatCents } from "@/lib/wireframe/data";
 
 function formatFaceAmount(cents: number): string {
-  return `$${Math.round(cents / 100000)}K`;
+  return `$${Math.round(cents / 100).toLocaleString()}`;
 }
 function ridersFor(orgId: string): string {
   const o = ORGS.find((x) => x.id === orgId);
@@ -46,6 +46,13 @@ function ridersFor(orgId: string): string {
   if (eob) return "EOB";
   if (br) return "BR";
   return "—";
+}
+function benefitClassFor(n: number): string { return n % 2 === 0 ? "All Employees" : "Management"; }
+function premiumStructureFor(n: number): "lifetime" | "ten_pay" { return n % 4 === 0 ? "ten_pay" : "lifetime"; }
+function premiumStructureLabel(v: string): string { return v === "ten_pay" ? "10-Pay" : "Lifetime"; }
+function issueTypeFor(i: { issue_type?: string | null; relationship_type?: string | null }): "GI" | "SI" {
+  if (i.issue_type === "GI" || i.issue_type === "SI") return i.issue_type;
+  return i.relationship_type === "spouse" ? "SI" : "GI";
 }
 
 function paymentBadge(status: string | null, retry: number) {
