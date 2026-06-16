@@ -209,6 +209,7 @@ function IndividualsView() {
             { key: null, label: "Premium Structure" },
             { key: "face_amount_cents", label: "Face Amount" },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
+            { key: "assigned_rep", label: "Assigned Rep" },
             { key: "last_payment_status", label: "Payment" },
           ] : [
             { key: "full_name", label: "Name" },
