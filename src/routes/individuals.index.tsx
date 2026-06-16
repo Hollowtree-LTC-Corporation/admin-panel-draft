@@ -184,15 +184,20 @@ function IndividualsView() {
       <FilterRow>
         <FilterSearch value={search} onChange={setSearch} placeholder="Search name or email…" />
         <FilterCombobox value={orgFilter} onChange={setOrgFilter} placeholder="All orgs" options={orgOptions} />
-        <FilterSelect value={coverageFilter} onChange={setCoverageFilter} allLabel="All coverage" options={COVERAGE_OPTIONS.map((v) => ({ value: v }))} />
+        <FilterSelect value={coverageFilter} onChange={setCoverageFilter} allLabel="All statuses" options={COVERAGE_OPTIONS.map((v) => ({ value: v }))} />
         <FilterSelect value={stageFilter} onChange={setStageFilter} allLabel="All stages" options={stageOptions.map((v) => ({ value: v }))} />
         {isLTC && (
-          <FilterSelect value={typeFilter} onChange={setTypeFilter} allLabel="All types" options={[{ value: "Employee" }, { value: "Spouse" }]} />
+          <>
+            <FilterSelect value={issueFilter} onChange={setIssueFilter} allLabel="All issue types" options={[{ value: "GI" }, { value: "SI" }]} />
+            <FilterSelect value={bclassFilter} onChange={setBclassFilter} allLabel="All benefit classes" options={benefitClassOptions.map((v) => ({ value: v }))} />
+          </>
         )}
         {!isLTC && (
-          <FilterSelect value={diTypeFilter} onChange={setDiTypeFilter} allLabel="All types" options={[{ value: "STD+LTD" }, { value: "LTD", label: "LTD Only" }]} />
+          <>
+            <FilterSelect value={diTypeFilter} onChange={setDiTypeFilter} allLabel="All types" options={[{ value: "STD+LTD" }, { value: "LTD", label: "LTD Only" }]} />
+            <FilterSelect value={repFilter} onChange={setRepFilter} allLabel="All reps" options={[...repOptions.map((v) => ({ value: v })), { value: "__unassigned__", label: "Unassigned" }]} />
+          </>
         )}
-        <FilterSelect value={repFilter} onChange={setRepFilter} allLabel="All reps" options={[...repOptions.map((v) => ({ value: v })), { value: "__unassigned__", label: "Unassigned" }]} />
         <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "Successful", label: "Paid" }, { value: "Failed" }, { value: "Pending" }]} />
         <ClearFiltersLink show={filtersActive} onClick={clearAll} />
         <ExportCsvButton filteredCount={filtered.length} totalCount={productRows.length} resourceLabel="individuals" />
@@ -200,15 +205,24 @@ function IndividualsView() {
 
       <TableShell>
         <SortableTHead<SortKey>
-          cols={[
+          cols={isLTC ? [
             { key: "full_name", label: "Name" },
-            ...(isLTC ? [{ key: "relationship_type" as SortKey, label: "Type" }] : []),
             { key: "org_name", label: "Org" },
-            ...(!isLTC ? [{ key: "di_type" as SortKey, label: "DI Type" }] : []),
+            { key: null, label: "Issue Type" },
+            { key: "coverage_status", label: "Coverage Status" },
+            { key: "stage", label: "Stage" },
+            { key: null, label: "Benefit Class" },
+            { key: null, label: "Premium Structure" },
+            { key: "face_amount_cents", label: "Face Amount" },
+            { key: "monthly_premium_cents", label: "Monthly Premium" },
+            { key: "last_payment_status", label: "Payment" },
+          ] : [
+            { key: "full_name", label: "Name" },
+            { key: "org_name", label: "Org" },
+            { key: "di_type", label: "DI Type" },
             { key: "coverage_status", label: "Coverage Status" },
             { key: "stage", label: "Stage" },
             { key: "plan", label: "Coverage Plan" },
-            ...(isLTC ? [{ key: "face_amount_cents" as SortKey, label: "Face Amount" }, { key: null, label: "Riders" }] : []),
             { key: "effective_date", label: "Effective Date" },
             { key: "monthly_premium_cents", label: "Monthly Premium" },
             { key: "assigned_rep", label: "Assigned Rep" },
@@ -220,38 +234,49 @@ function IndividualsView() {
         />
         <tbody>
           {filtered.map((i) => {
-            const isSpouse = i.relationship_type === "spouse";
             const unpurchased = i.coverage_status === "not_started" || i.coverage_status === "in_progress";
+            const n = parseInt(i.id.replace("ind_", ""), 10) || 1;
+            if (isLTC) {
+              const issue = issueTypeFor(i);
+              const bclass = benefitClassFor(n);
+              const ps = premiumStructureFor(n);
+              return (
+                <TRow key={i.id} onClick={() => navigate({ to: "/individuals/$id", params: { id: i.id } })}>
+                  <TCell className="font-medium">
+                    {i.full_name}
+                    <div className="text-[10px] text-black/40">{i.email}</div>
+                  </TCell>
+                  <TCell>{i.org_name}</TCell>
+                  <TCell>
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${issue === "GI" ? "bg-emerald-100 text-emerald-800" : "bg-sky-100 text-sky-800"}`}>
+                      {issue}
+                    </span>
+                  </TCell>
+                  <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
+                  <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
+                  <TCell className="text-[12px]">{bclass}</TCell>
+                  <TCell className="text-[12px]">{premiumStructureLabel(ps)}</TCell>
+                  <TCell className="text-right">{unpurchased ? "—" : formatFaceAmount(i.face_amount_cents)}</TCell>
+                  <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>
+                  <TCell>{unpurchased ? <span className="text-black/40">—</span> : paymentBadge(i.last_payment_status, i.retry_count)}</TCell>
+                </TRow>
+              );
+            }
             return (
               <TRow key={i.id} onClick={() => navigate({ to: "/individuals/$id", params: { id: i.id } })}>
                 <TCell className="font-medium">
                   {i.full_name}
                   <div className="text-[10px] text-black/40">{i.email}</div>
                 </TCell>
-                {isLTC && (
-                  <TCell>
-                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${isSpouse ? "bg-violet-100 text-violet-800" : "bg-black/5 text-black/70"}`}>
-                      {isSpouse ? "Spouse" : "Employee"}
-                    </span>
-                  </TCell>
-                )}
                 <TCell>{i.org_name}</TCell>
-                {!isLTC && (
-                  <TCell>
-                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${i.di_type === "STD+LTD" ? "bg-slate-100 text-slate-700" : "bg-slate-50 text-slate-500"}`}>
-                      {i.di_type === "STD+LTD" ? "STD+LTD" : "LTD Only"}
-                    </span>
-                  </TCell>
-                )}
+                <TCell>
+                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${i.di_type === "STD+LTD" ? "bg-slate-100 text-slate-700" : "bg-slate-50 text-slate-500"}`}>
+                    {i.di_type === "STD+LTD" ? "STD+LTD" : "LTD Only"}
+                  </span>
+                </TCell>
                 <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
                 <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
-                <TCell>{unpurchased ? "—" : (isLTC ? i.purchased_plan : i.coverage_plan)}</TCell>
-                {isLTC && (
-                  <>
-                    <TCell className="text-right">{unpurchased ? "—" : formatFaceAmount(i.face_amount_cents)}</TCell>
-                    <TCell className="text-slate-500 text-[11px]">{ridersFor(i.org_id)}</TCell>
-                  </>
-                )}
+                <TCell>{unpurchased ? "—" : i.coverage_plan}</TCell>
                 <TCell className={i.coverage_status === "in_progress" ? "text-black/40" : ""}>{formatDate(i.effective_date)}</TCell>
                 <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>
                 <TCell>{i.assigned_rep ?? <span className="text-black/40">Unassigned</span>}</TCell>
@@ -264,6 +289,7 @@ function IndividualsView() {
           )}
         </tbody>
       </TableShell>
+
 
       <Drawer open={createDrawer.state.open} onClose={createDrawer.close} title="New Individual">
         <div className="space-y-3">
