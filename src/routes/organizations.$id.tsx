@@ -276,7 +276,7 @@ function synthesize(org: typeof ORGS[number]) {
     ...org,
     domain: `${slug}.example.com`,
     industry: ["professional_services","healthcare","manufacturing","transportation","education","hospitality"][idx % 6],
-    org_type: cca ? "CPA Firm" : (idx % 3 === 0 ? "Association" : "Employer Group"),
+    org_type: cca ? "cpa_firm" : (idx % 3 === 0 ? "association" : "employer_group"),
     situs_city: ["Austin","Portland","Boston","Miami","Seattle","Chicago","Denver","Atlanta"][idx % 8],
     eligible_lives: org.individuals_count * 3,
     // DI
@@ -325,7 +325,7 @@ function synthesize(org: typeof ORGS[number]) {
     ach_first_fee_cents: 100,
     ach_subsequent_fee_cents: 50,
     failed_ach_penalty_cents: 1500,
-    failed_card_penalty_mode: "flat" as "flat" | "percentage",
+    failed_card_penalty_mode: "flat" as "flat" | "percent",
     failed_card_penalty_value_cents: 1000 as number | null,
     failed_card_penalty_pct_bps: null as number | null,
     free_retry_count: idx === 2 ? 1 : 2,
@@ -358,9 +358,9 @@ function synthesize(org: typeof ORGS[number]) {
     naic_code: "61271",
     org_website: `https://www.${slug}.example.com`,
     product_template_variant: "eob_and_restoration",
-    healthcare_company: idx % 2 === 0 ? "yes" : "no",
+    healthcare_company: idx % 2 === 0,
     benefit_duration: 6,
-    duration: "6 years",
+    benefit_system: "heritage_online",
     min_age: 18,
     max_age: 75,
     // LTC carrier/operational
@@ -368,7 +368,7 @@ function synthesize(org: typeof ORGS[number]) {
     enrollment_id_carrier: `ENR-${50000 + idx}`,
     form_number: "LTC-2024-A",
     agent_number: `AGT-${1000 + idx}`,
-    benefit_system: "Heritage Online",
+    // benefit_system set above with snake_case canonical value
     rider_codes: ["EOB-100","BR-50","WAIVER"],
     application_questions: [
       "Have you used tobacco in the past 12 months?",
