@@ -214,8 +214,12 @@ function Dashboard() {
           {stageCounts.map((c) => {
             const pct = (c.n / maxStage) * 100;
             return (
-              <div key={c.stage} className="flex items-center gap-2 text-xs">
-                <div className="w-36 text-black/70">{c.stage.replace(/_/g, " ")}</div>
+              <div
+                key={c.stage}
+                className="flex items-center gap-2 text-xs cursor-pointer hover:bg-[#f7f3eb]/60 rounded px-1 -mx-1"
+                onClick={() => navigate({ to: "/individuals" })}
+              >
+                <div className="w-56 text-black/70">{isDI ? c.stage : c.stage.replace(/_/g, " ")}</div>
                 <div className="flex-1 h-5 bg-black/5 rounded overflow-hidden">
                   <div
                     className="h-full bg-[#0a3d3e] flex items-center justify-end pr-2 text-white text-[10px] font-medium"
@@ -229,8 +233,15 @@ function Dashboard() {
             );
           })}
         </div>
-        <div className="text-[10px] text-black/40 mt-2">
-          Funnel reflects the enrollment microsite stages, distinct from coverage lifecycle.
+        {isDI ? (
+          <div className="text-[10px] text-black/55 mt-2">
+            Excluded from funnel: {diExcluded.canceled} canceled · {diExcluded.test} test leads · {diExcluded.transitioning} transitioning
+          </div>
+        ) : null}
+        <div className="text-[10px] text-black/40 mt-1">
+          {isDI
+            ? "Funnel reflects DI enrollment stages. Canceled, test, and transitioning records excluded."
+            : "Funnel reflects the enrollment microsite stages, distinct from coverage lifecycle."}
         </div>
       </Card>
 
