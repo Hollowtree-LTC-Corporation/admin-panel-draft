@@ -141,7 +141,7 @@ function IndividualsView() {
       }
       if (!isLTC && diTypeFilter !== "all" && i.di_type !== diTypeFilter) return false;
       if (paymentFilter !== "all" && i.last_payment_status !== paymentFilter) return false;
-      if (!isLTC && repFilter !== "all") {
+      if (repFilter !== "all") {
         if (repFilter === "__unassigned__") { if (i.assigned_rep) return false; }
         else if (i.assigned_rep !== repFilter) return false;
       }
