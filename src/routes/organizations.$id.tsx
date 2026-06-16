@@ -21,13 +21,52 @@ export const Route = createFileRoute("/organizations/$id")({ component: OrgDetai
 // Enum vocabularies (mirror prod CHECK constraints)
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 const INDUSTRIES = ["education","healthcare","government","manufacturing","professional_services","transportation","hospitality","other"];
-const ORG_TYPES = ["Employer Group","Association","Union","PEO","CPA Firm","P&C Firm"];
+// v14 schema follow-up: add CHECK constraint for org_type
+const ORG_TYPES: Array<{ value: string; label: string }> = [
+  { value: "employer_group", label: "Employer Group" },
+  { value: "association", label: "Association" },
+  { value: "union", label: "Union" },
+  { value: "peo", label: "PEO" },
+  { value: "cpa_firm", label: "CPA Firm" },
+  { value: "pc_firm", label: "P&C Firm" },
+];
+function orgTypeLabel(v: string | null | undefined): string {
+  return ORG_TYPES.find((o) => o.value === v)?.label ?? (v ?? "—");
+}
 const ORG_STATUSES = ["not_started","onboarding","active","closed","suspended"];
 const DI_HC_TYPES = ["MSO","Healthcare Practice","Medical Group","Dental","Other","General"];
-const WINDOW_TYPES = ["initial","annual","new_joiner","special"];
-const SPONSOR_TYPES = ["employer","affiliate"];
-const WINDOW_STATUSES = ["upcoming","open","closed"];
+const WINDOW_TYPES: Array<{ value: string; label: string }> = [
+  { value: "initial", label: "Initial" },
+  { value: "annual", label: "Annual" },
+  { value: "new_joiner", label: "New Joiner" },
+  { value: "special", label: "Special" },
+];
+const SPONSOR_TYPES: Array<{ value: string; label: string }> = [
+  { value: "employer", label: "Employer" },
+  { value: "affiliate", label: "Affiliate" },
+];
+const WINDOW_STATUSES: Array<{ value: string; label: string }> = [
+  { value: "upcoming", label: "Upcoming" },
+  { value: "open", label: "Open" },
+  { value: "closed", label: "Closed" },
+];
 const CARRIER_NAMES = [...new Set([...CARRIERS.map(c => c.carrier_name), "Sun Life", "Trustmark", "Transamerica", "MGIS"])];
+// v14 schema follow-up: confirm canonical enum w/ ops, then add CHECK
+const BENEFIT_SYSTEMS: Array<{ value: string; label: string }> = [
+  { value: "heritage_online", label: "Heritage Online" },
+  { value: "selerix", label: "Selerix" },
+  { value: "benefitfocus", label: "BenefitFocus" },
+  { value: "other", label: "Other" },
+];
+function benefitSystemLabel(v: string | null | undefined): string {
+  return BENEFIT_SYSTEMS.find((o) => o.value === v)?.label ?? (v ?? "—");
+}
+// v14 schema follow-up: relational dropdown from affiliate_organizations
+const AFFILIATE_ORG_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "aff_cca", label: "CCA" },
+  { value: "aff_foxtail", label: "Foxtail Alumni Assoc" },
+  { value: "aff_member_foundation", label: "CCA Member Foundation" },
+];
 const BROKER_TYPES = ["Broker","IMO","Internal"] as const;
 type BrokerType = typeof BROKER_TYPES[number];
 type BrokerRecord = {
