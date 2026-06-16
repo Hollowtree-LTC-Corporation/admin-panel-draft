@@ -793,16 +793,84 @@ export const TOKEN_AUDIT_LOG: TokenAuditEntry[] = Array.from({ length: 38 }, (_,
   };
 });
 
-export const AUDIT_LOG = Array.from({ length: 20 }, (_, i) => ({
-  id: `al_${i + 1}`,
-  ts: `2025-06-${String((i % 12) + 1).padStart(2, "0")}T10:${String(i * 3 % 60).padStart(2, "0")}:00Z`,
-  table: ["individuals", "organizations", "policies", "account_adjustments", "billing_groups"][i % 5],
-  record_id: `rec_${100 + i}`,
-  action: ["update", "create", "update", "soft_delete", "update"][i % 5],
-  actor: ["Guy (admin)", "Ops User 1", "Ops User 2"][i % 3],
-  before: { status: "pending" },
-  after: { status: "active" },
-}));
+export type AuditAction = "create" | "update" | "soft_delete" | "view_phi" | "export_phi";
+export type AuditEntry = {
+  id: string;
+  ts: string;
+  table: string;
+  record_id: string;
+  action: AuditAction;
+  actor: string;
+  actor_id: string;
+  actor_name: string;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+};
+
+const _AL_TABLES = [
+  "individuals", "organizations", "policies", "account_adjustments",
+  "billing_groups", "enrollment_responses", "benefit_classes",
+  "enrollment_windows", "magic_tokens", "commission_statements",
+] as const;
+const _AL_ACTORS: Array<[string, string]> = [
+  ["user_2abcDEF123", "Alex Admin"],
+  ["user_2ghiJKL456", "Jordan Ops"],
+  ["user_2mnoPQR789", "Riley Ops"],
+  ["user_2stuVWX012", "Morgan Admin"],
+  ["system", "System"],
+];
+const _AL_REASONS = [
+  "Reviewing enrollment for carrier handoff",
+  "Investigating billing discrepancy reported by enrollee",
+  "Routine compliance spot-check",
+  "Preparing renewal packet for broker",
+  "Responding to enrollee support request",
+];
+const _AL_ACTIONS: AuditAction[] = ["create", "update", "update", "update", "soft_delete", "view_phi", "view_phi", "export_phi"];
+
+export const AUDIT_LOG: AuditEntry[] = Array.from({ length: 84 }, (_, i) => {
+  const action = _AL_ACTIONS[i % _AL_ACTIONS.length];
+  const table = action === "view_phi" || action === "export_phi"
+    ? ["individuals", "enrollment_responses", "individuals"][i % 3]
+    : _AL_TABLES[i % _AL_TABLES.length];
+  const [actor_id, actor_name] = _AL_ACTORS[i % _AL_ACTORS.length];
+  const daysAgo = i % 30;
+  const d = new Date(Date.UTC(2026, 5, 16) - daysAgo * 86400000 - (i % 8) * 3600000);
+  const ts = d.toISOString();
+  const recId = action === "view_phi" || action === "export_phi"
+    ? `ind_${(i % 40) + 1}`
+    : `rec_${String(100 + i).padStart(6, "0")}-${(i * 7 % 9999).toString(16)}`;
+
+  let before: Record<string, unknown> | null = null;
+  let after: Record<string, unknown> | null = null;
+  if (action === "create") {
+    after = { id: recId, status: "pending", name: `Record ${i}`, created_at: ts };
+  } else if (action === "update") {
+    before = { status: "pending", premium_cents: 12500, updated_at: ts };
+    after = { status: "active", premium_cents: 13200, updated_at: ts };
+  } else if (action === "soft_delete") {
+    before = { id: recId, status: "active", name: `Record ${i}`, deleted_at: null };
+    after = { deleted_at: ts };
+  } else if (action === "view_phi") {
+    after = {
+      context: "Opened PHI drawer",
+      fields_viewed: ["ssn_encrypted", "date_of_birth", "address_line_1"],
+      reason: _AL_REASONS[i % _AL_REASONS.length],
+    };
+  } else if (action === "export_phi") {
+    after = {
+      export_mode: i % 2 === 0 ? "full" : "metadata_only",
+      row_count: 25 + (i % 200),
+      reason: _AL_REASONS[i % _AL_REASONS.length],
+    };
+  }
+  return {
+    id: `al_${String(i + 1).padStart(4, "0")}-${(i * 11).toString(16)}`,
+    ts, table, record_id: recId, action,
+    actor: actor_name, actor_id, actor_name,
+    before, after,
+  };
+});
 
 export type MissingSubmission = {
   id: string;
