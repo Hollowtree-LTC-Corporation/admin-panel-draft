@@ -186,6 +186,13 @@ function OrgsView() {
           </select>
         </Field>
         <Field label="Domain"><Input placeholder="acme.com" /></Field>
+        <Field label="Microsite URL">
+          <MicrositeSlugInput
+            initialSlug=""
+            suffix={product === "DI" ? ".hollowtree.co" : ".hollowtreeltc.com"}
+            existingSlugs={ORGS.filter((o) => o.product === product).map((o) => o.name.toLowerCase().replace(/[^a-z]/g, ""))}
+          />
+        </Field>
         <Field label="Eligible Lives">
           <input type="number" min={0} placeholder="50" className="w-full px-2 py-1 text-sm border border-black/15 rounded" />
         </Field>
