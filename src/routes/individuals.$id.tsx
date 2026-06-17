@@ -442,10 +442,16 @@ function CoverageStatusField({ editing, status, setStatus, allowed, current }: {
 function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void }) {
   const { editing, setEditing, status, setStatus, error, allowed, onSave, onCancel } = useCoverageEditing(i, setConfirm);
   const unfunded = i.coverage_status === "not_started" || i.coverage_status === "in_progress";
-  const premiumSum = i.std_premium + i.ltd_premium;
-  const mismatch = !unfunded && premiumSum !== i.monthly_premium_cents;
+  const premiumSumCents = (i.std_premium + i.ltd_premium) * 100;
+  const mismatch = !unfunded && premiumSumCents !== i.monthly_premium_cents;
   const DI_PLANS = ["Bronze DI", "Silver DI", "Gold DI"];
-  const DI_STAGES = ["not_started","quote_generated","link_sent","app_started","app_completed","payment_pending","enrolled","active"];
+  const DI_STAGES: Array<{ value: string; label: string }> = [
+    { value: "choosing_plan", label: "Choosing Plan" },
+    { value: "confirming_info", label: "Confirming Info" },
+    { value: "at_checkout", label: "At Checkout" },
+    { value: "adding_payment", label: "Adding Payment" },
+    { value: "purchased", label: "Purchased" },
+  ];
   return (
     <SectionCard title="Coverage & Plan · DI" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
