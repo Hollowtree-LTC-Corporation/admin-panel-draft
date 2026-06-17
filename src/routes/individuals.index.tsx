@@ -242,9 +242,18 @@ function IndividualsView() {
           <>
             <FilterSelect value={diTypeFilter} onChange={setDiTypeFilter} allLabel="All types" options={[{ value: "STD+LTD" }, { value: "LTD", label: "LTD Only" }]} />
             <FilterSelect value={repFilter} onChange={setRepFilter} allLabel="All reps" options={[...repOptions.map((v) => ({ value: v })), { value: "__unassigned__", label: "Unassigned" }]} />
+            <FilterSelect value={coverageModeFilter} onChange={setCoverageModeFilter} allLabel="All coverage modes" options={[{ value: "group", label: "Group" }, { value: "individual", label: "Individual" }]} />
+            <FilterSelect value={lifeFilter} onChange={setLifeFilter} allLabel="All life ins." options={[{ value: "enrolled", label: "Life: Enrolled" }, { value: "not_enrolled", label: "Life: Not Enrolled" }]} />
           </>
         )}
+        <FilterSelect value={employmentFilter} onChange={setEmploymentFilter} allLabel="All employment" options={[{ value: "active", label: "Active Employee" }, { value: "departed", label: "Departed" }]} />
         <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "successful", label: "Paid" }, { value: "failed", label: "Failed" }, { value: "pending", label: "Pending" }]} />
+        {!isLTC && (
+          <label className="inline-flex items-center gap-1 text-[11px] text-black/70 border border-black/15 rounded px-2 py-1 bg-white cursor-pointer">
+            <input type="checkbox" checked={convEligible} onChange={(e) => setConvEligible(e.target.checked)} className="h-3 w-3" />
+            Conversion eligible
+          </label>
+        )}
         <ClearFiltersLink show={filtersActive} onClick={clearAll} />
         <ExportCsvButton filteredCount={filtered.length} totalCount={productRows.length} resourceLabel="individuals" />
       </FilterRow>
@@ -268,6 +277,8 @@ function IndividualsView() {
             { key: "org_name", label: "Org" },
             { key: "di_type", label: "DI Type" },
             { key: "coverage_status", label: "Coverage Status" },
+            { key: null, label: "Coverage Mode" },
+            { key: null, label: "Life" },
             { key: "stage", label: "Stage" },
             { key: "plan", label: "Coverage Plan" },
             { key: "effective_date", label: "Effective Date" },
@@ -293,7 +304,12 @@ function IndividualsView() {
                     {i.full_name}
                     <div className="text-[10px] text-black/40">{i.email}</div>
                   </TCell>
-                  <TCell>{i.org_name}</TCell>
+                  <TCell>
+                    {i.org_name}
+                    {i.departed_organization_at && (
+                      <span className="ml-1.5 inline-block px-1.5 py-0.5 rounded text-[9px] font-medium bg-gray-200 text-gray-700 align-middle">Departed</span>
+                    )}
+                  </TCell>
                   <TCell>
                     <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${issue === "GI" ? "bg-emerald-100 text-emerald-800" : "bg-sky-100 text-sky-800"}`}>
                       {issue}
@@ -317,13 +333,28 @@ function IndividualsView() {
                   {i.full_name}
                   <div className="text-[10px] text-black/40">{i.email}</div>
                 </TCell>
-                <TCell>{i.org_name}</TCell>
+                <TCell>
+                  {i.org_name}
+                  {i.departed_organization_at && (
+                    <span className="ml-1.5 inline-block px-1.5 py-0.5 rounded text-[9px] font-medium bg-gray-200 text-gray-700 align-middle">Departed</span>
+                  )}
+                </TCell>
                 <TCell>
                   <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${i.di_type === "STD+LTD" ? "bg-slate-100 text-slate-700" : "bg-slate-50 text-slate-500"}`}>
                     {i.di_type === "STD+LTD" ? "STD+LTD" : "LTD Only"}
                   </span>
                 </TCell>
                 <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
+                <TCell>
+                  {i.coverage_mode === "individual"
+                    ? <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-800">Individual</span>
+                    : <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800">Group</span>}
+                </TCell>
+                <TCell>
+                  {i.life_enrolled
+                    ? <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800">Life</span>
+                    : <span className="text-black/30">—</span>}
+                </TCell>
                 <TCell><StatusBadge map={STAGE_BADGE} value={i.current_stage} /></TCell>
                 <TCell>{unpurchased ? "—" : i.coverage_plan}</TCell>
                 <TCell className={i.coverage_status === "in_progress" ? "text-black/40" : ""}>{formatDate(i.effective_date)}</TCell>
@@ -334,7 +365,7 @@ function IndividualsView() {
             );
           })}
           {filtered.length === 0 && (
-            <tr><td colSpan={12} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
+            <tr><td colSpan={13} className="px-3 py-8 text-center text-black/40 text-xs">No individuals match the current filters.</td></tr>
           )}
         </tbody>
       </TableShell>
