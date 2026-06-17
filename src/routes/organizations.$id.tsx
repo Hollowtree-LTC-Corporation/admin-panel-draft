@@ -502,37 +502,49 @@ function OrgDetail() {
       <Link to="/organizations" className="inline-flex items-center text-xs text-black/60 hover:text-black mb-2">
         <ChevronLeft className="h-3 w-3" /> Organizations
       </Link>
-      <PageHeader
-        title={
-          <span className="inline-flex items-center gap-2">
-            {org.name}
-            {product === "DI" && <ProductBadge product={org.product} />}
-            {showCcaBadge && (
-              <span
-                className="border border-emerald-500 text-emerald-700 bg-emerald-50 rounded px-2 py-0.5 text-xs font-medium"
-                title="CCA-affiliated organization. Uses CCA portal link and CCA-specific policy emails."
-              >
-                CCA
+      <div className="flex items-start gap-4 mb-4">
+        <div className="pt-1">
+          <OrgLogoEditor
+            name={org.name}
+            logoUrl={logoUrl}
+            onChange={handleLogoChange}
+            disabled={readOnly}
+          />
+        </div>
+        <div className="flex-1">
+          <PageHeader
+            title={
+              <span className="inline-flex items-center gap-2">
+                {org.name}
+                {product === "DI" && <ProductBadge product={org.product} />}
+                {showCcaBadge && (
+                  <span
+                    className="border border-emerald-500 text-emerald-700 bg-emerald-50 rounded px-2 py-0.5 text-xs font-medium"
+                    title="CCA-affiliated organization. Uses CCA portal link and CCA-specific policy emails."
+                  >
+                    CCA
+                  </span>
+                )}
+                {showEmployerContributionBadge && (
+                  <span
+                    className="border border-amber-500 text-amber-800 bg-amber-50 rounded px-2 py-0.5 text-xs font-medium uppercase tracking-wider"
+                    title={`Employer contributes to premium (${org.contribution_type === "buy_up" ? "Buy-Up" : "Employer Paid"})`}
+                  >
+                    Employer Contribution
+                  </span>
+                )}
               </span>
-            )}
-            {showEmployerContributionBadge && (
-              <span
-                className="border border-amber-500 text-amber-800 bg-amber-50 rounded px-2 py-0.5 text-xs font-medium uppercase tracking-wider"
-                title={`Employer contributes to premium (${org.contribution_type === "buy_up" ? "Buy-Up" : "Employer Paid"})`}
-              >
-                Employer Contribution
-              </span>
-            )}
-          </span>
-        }
-        subtitle={<>Organizations &rsaquo; {org.name} · <span className="text-black/40">{org.id}</span></>}
-        actions={
-          <>
-            <Btn onClick={() => editDrawer.open(orgBase, "edit")} disabled={readOnly}>Edit</Btn>
-            <Btn disabled={!can("organizations", "delete")}>Deactivate</Btn>
-          </>
-        }
-      />
+            }
+            subtitle={<>Organizations &rsaquo; {org.name} · <span className="text-black/40">{org.id}</span></>}
+            actions={
+              <>
+                <Btn onClick={() => editDrawer.open(orgBase, "edit")} disabled={readOnly}>Edit</Btn>
+                <Btn disabled={!can("organizations", "delete")}>Deactivate</Btn>
+              </>
+            }
+          />
+        </div>
+      </div>
 
       {/* Summary header */}
       <div className="grid grid-cols-5 gap-2 mb-4">
