@@ -471,7 +471,7 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
         <RField label="Monthly Benefit" value={i.monthly_benefit_cents != null ? formatCents(i.monthly_benefit_cents) : "—"} />
         <RField label="Current Stage" editing={editing}>
           {editing
-            ? <select defaultValue={i.current_stage} className={inputCls}>{DI_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+            ? <select defaultValue={i.current_stage} className={inputCls}>{DI_STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select>
             : <Badge map={STAGE_BADGE} value={i.current_stage} />}
         </RField>
         <RField label="Application Status">
