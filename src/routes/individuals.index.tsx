@@ -131,6 +131,10 @@ function IndividualsView() {
   const [repFilter, setRepFilter] = useState<string>(searchParams.rep ?? "all");
   const [issueFilter, setIssueFilter] = useState<string>(searchParams.issue ?? "all");
   const [bclassFilter, setBclassFilter] = useState<string>(searchParams.bclass ?? "all");
+  const [coverageModeFilter, setCoverageModeFilter] = useState<string>(searchParams.coverage_mode ?? "all");
+  const [lifeFilter, setLifeFilter] = useState<string>(searchParams.life ?? "all");
+  const [employmentFilter, setEmploymentFilter] = useState<string>(searchParams.employment ?? "all");
+  const [convEligible, setConvEligible] = useState<boolean>(searchParams.conv_eligible === "1");
   const sort = useSort<SortKey>("full_name", "asc");
 
   useEffect(() => {
@@ -143,13 +147,19 @@ function IndividualsView() {
     if (searchParams.rep !== undefined) setRepFilter(searchParams.rep);
     if (searchParams.issue !== undefined) setIssueFilter(searchParams.issue);
     if (searchParams.bclass !== undefined) setBclassFilter(searchParams.bclass);
-  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type, searchParams.payment, searchParams.rep, searchParams.issue, searchParams.bclass]);
+    if (searchParams.coverage_mode !== undefined) setCoverageModeFilter(searchParams.coverage_mode);
+    if (searchParams.life !== undefined) setLifeFilter(searchParams.life);
+    if (searchParams.employment !== undefined) setEmploymentFilter(searchParams.employment);
+    if (searchParams.conv_eligible !== undefined) setConvEligible(searchParams.conv_eligible === "1");
+  }, [searchParams.org, searchParams.coverage, searchParams.stage, searchParams.type, searchParams.di_type, searchParams.payment, searchParams.rep, searchParams.issue, searchParams.bclass, searchParams.coverage_mode, searchParams.life, searchParams.employment, searchParams.conv_eligible]);
 
   const productRows = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
   const stageOptions = Array.from(new Set(productRows.map((r) => r.current_stage)));
   const repOptions = Array.from(new Set(productRows.map((r) => r.assigned_rep).filter(Boolean))) as string[];
   const benefitClassOptions = ["All Employees", "Management"];
+
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -172,6 +182,20 @@ function IndividualsView() {
         if (repFilter === "__unassigned__") { if (i.assigned_rep) return false; }
         else if (i.assigned_rep !== repFilter) return false;
       }
+      if (!isLTC && coverageModeFilter !== "all" && i.coverage_mode !== coverageModeFilter) return false;
+      if (!isLTC && lifeFilter !== "all") {
+        if (lifeFilter === "enrolled" && !i.life_enrolled) return false;
+        if (lifeFilter === "not_enrolled" && i.life_enrolled) return false;
+      }
+      if (employmentFilter !== "all") {
+        const departed = !!i.departed_organization_at;
+        if (employmentFilter === "active" && departed) return false;
+        if (employmentFilter === "departed" && !departed) return false;
+      }
+      if (!isLTC && convEligible) {
+        if (i.coverage_mode !== "group") return false;
+        if (!i.conversion_eligible_date || i.conversion_eligible_date > todayISO) return false;
+      }
       return true;
     });
     return sort.applySort(rows, (r, k) => {
@@ -179,12 +203,13 @@ function IndividualsView() {
       if (k === "relationship_type") return r.relationship_type === "spouse" ? "Spouse" : "Employee";
       return (r as unknown as Record<string, string | number>)[k];
     });
-  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, paymentFilter, repFilter, issueFilter, bclassFilter, sort, isLTC]);
+  }, [productRows, search, orgFilter, coverageFilter, stageFilter, typeFilter, diTypeFilter, paymentFilter, repFilter, issueFilter, bclassFilter, coverageModeFilter, lifeFilter, employmentFilter, convEligible, todayISO, sort, isLTC]);
 
-  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || paymentFilter !== "all" || repFilter !== "all" || issueFilter !== "all" || bclassFilter !== "all" || !sort.isDefault;
+  const filtersActive = search !== "" || orgFilter !== "all" || coverageFilter !== "all" || stageFilter !== "all" || typeFilter !== "all" || diTypeFilter !== "all" || paymentFilter !== "all" || repFilter !== "all" || issueFilter !== "all" || bclassFilter !== "all" || coverageModeFilter !== "all" || lifeFilter !== "all" || employmentFilter !== "all" || convEligible || !sort.isDefault;
 
   const clearAll = () => {
     setSearch(""); setOrgFilter("all"); setCoverageFilter("all"); setStageFilter("all"); setTypeFilter("all"); setDiTypeFilter("all"); setPaymentFilter("all"); setRepFilter("all"); setIssueFilter("all"); setBclassFilter("all");
+    setCoverageModeFilter("all"); setLifeFilter("all"); setEmploymentFilter("all"); setConvEligible(false);
     sort.reset();
     navigate({ to: "/individuals", search: {} });
   };
