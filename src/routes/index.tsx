@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Users, DollarSign, Percent, ChevronDown, ChevronRight } from "lucide-react";
 import { Card, Stat, PageHeader, Pill, TableShell, THead, TRow, TCell } from "@/components/wireframe/Bits";
 import { useStore } from "@/lib/wireframe/store";
-import { INDIVIDUALS, ORGS, STAGES, COVERAGE_STATUSES, formatCents } from "@/lib/wireframe/data";
+import { INDIVIDUALS, ORGS, LTC_STAGES, COVERAGE_STATUSES, formatCents } from "@/lib/wireframe/data";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
 
