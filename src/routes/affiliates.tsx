@@ -31,36 +31,12 @@ export function AffiliateLogo({
   affiliate,
   size = 32,
 }: {
-  affiliate: Pick<AffiliateOrganization, "name" | "logo_url">;
+  affiliate: Pick<AffiliateOrganization, "name">;
   size?: number;
 }) {
   const px = `${size}px`;
   const radius = size >= 48 ? "rounded-md" : "rounded";
-  const iconSize = Math.max(12, Math.round(size * 0.5));
   const baseStyle = { width: px, height: px, minWidth: px } as const;
-
-  if (affiliate.logo_url) {
-    if (affiliate.logo_url.startsWith("icon:")) {
-      const which = affiliate.logo_url.slice(5);
-      const Icon = which === "shield" ? Shield : which === "handshake" ? Handshake : which === "building" ? Building2 : ImageIcon;
-      return (
-        <div
-          style={baseStyle}
-          className={`${radius} bg-white border border-black/10 flex items-center justify-center text-[#0a3d3e]`}
-        >
-          <Icon style={{ width: iconSize, height: iconSize }} strokeWidth={1.75} />
-        </div>
-      );
-    }
-    return (
-      <img
-        src={affiliate.logo_url}
-        alt={`${affiliate.name} logo`}
-        style={baseStyle}
-        className={`${radius} object-cover border border-black/10`}
-      />
-    );
-  }
   const fontSize = Math.max(9, Math.round(size * 0.36));
   return (
     <div
