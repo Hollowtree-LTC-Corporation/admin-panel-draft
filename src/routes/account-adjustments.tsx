@@ -68,7 +68,7 @@ function View() {
         <FilterSearch value={search} onChange={setSearch} placeholder="Search individual or email…" />
         <FilterCombobox value={ind} onChange={setInd} placeholder="All individuals" options={indOptions} />
         <FilterSelect value={type} onChange={setType} allLabel="All types" options={[
-          { value: "premium_correction" }, { value: "penalty_waiver" }, { value: "refund" }, { value: "write_off" },
+          { value: "premium_correction", label: "Premium Correction" }, { value: "penalty_waiver", label: "Penalty Waiver" }, { value: "refund", label: "Refund" }, { value: "write_off", label: "Write-off" }, { value: "other", label: "Other" },
         ]} />
         <FilterCombobox value={approver} onChange={setApprover} placeholder="All approvers" options={approvers} />
         <ClearFiltersLink show={active} onClick={clearAll} />
