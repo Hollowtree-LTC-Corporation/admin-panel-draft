@@ -367,14 +367,14 @@ function PolicyDrawer({
       setDefaultsPartner(null);
       return;
     }
-    setDefaultsPartner(partner.name);
+    setDefaultsPartner(partner.partner_name);
     setDraftSplits([
       { id: `nsp_h`, policy_id: draft.id, payee_type: "house", payee_name: "Hollowtree", split_pct: 45, payment_method: "hollowtree_paid", source: "default", effective_to: null },
       { id: `nsp_r`, policy_id: draft.id, payee_type: "internal_rep", payee_name: "Guy Livingstone", split_pct: 10, payment_method: "hollowtree_paid", source: "default", effective_to: null },
-      { id: `nsp_c`, policy_id: draft.id, payee_type: "channel_partner", payee_name: partner.name, split_pct: 40, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+      { id: `nsp_c`, policy_id: draft.id, payee_type: "channel_partner", payee_name: partner.partner_name, split_pct: 40, payment_method: "hollowtree_paid", source: "default", effective_to: null },
       { id: `nsp_o`, policy_id: draft.id, payee_type: "override", payee_name: "Gallagher", split_pct: 5, payment_method: "carrier_direct", source: "default", effective_to: null },
     ]);
-    toast.success(`Defaults loaded from ${partner.name}`);
+    toast.success(`Defaults loaded from ${partner.partner_name}`);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.organization_id, isCreate]);
 
@@ -906,7 +906,7 @@ function PayeeNameSelect({ type, value, onChange }: { type: PayeeType; value: st
     return (
       <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-1 py-0.5 text-xs border border-black/15 rounded bg-white">
         <option value="">Select partner…</option>
-        {opts.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+        {opts.map((p) => <option key={p.id} value={p.partner_name}>{p.partner_name}</option>)}
       </select>
     );
   }
