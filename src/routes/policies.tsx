@@ -55,9 +55,10 @@ const fmtDateTime = (iso: string | null) => {
   return d.toLocaleString("en-US", { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 };
 
-const fmtDollars = (cents: number | null | undefined) => {
-  if (cents == null) return "—";
-  return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+// These policy columns (original_monthly_premium, ltc_bronze..diamond) are stored as whole dollars.
+const fmtDollars = (dollars: number | null | undefined) => {
+  if (dollars == null) return "—";
+  return `$${dollars.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
