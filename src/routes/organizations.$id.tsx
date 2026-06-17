@@ -516,7 +516,6 @@ function OrgDetail() {
             title={
               <span className="inline-flex items-center gap-2">
                 {org.name}
-                {product === "DI" && <ProductBadge product={org.product} />}
                 {showCcaBadge && (
                   <span
                     className="border border-emerald-500 text-emerald-700 bg-emerald-50 rounded px-2 py-0.5 text-xs font-medium"
