@@ -106,10 +106,10 @@ function View() {
                   <option value="reviewing">reviewing</option>
                   <option value="resolved">resolved</option>
                 </select>
-                <div className="mt-1"><Pill tone={m.status === "resolved" ? "ok" : m.status === "reviewing" ? "info" : "warn"}>{m.status}</Pill></div>
+                <div className="mt-1"><Pill tone={m.status === "not_an_employee" ? "ok" : m.status === "employee_added" ? "info" : "warn"}>{m.status}</Pill></div>
               </TCell>
-              <TCell>{m.status === "new" ? "—" : (m.reviewed_by ?? "—")}</TCell>
-              <TCell>{m.status === "new" ? "—" : (m.reviewed_at ?? "—")}</TCell>
+              <TCell>{m.status === "unreviewed" ? "—" : (m.reviewed_by ?? "—")}</TCell>
+              <TCell>{m.status === "unreviewed" ? "—" : (m.reviewed_at ?? "—")}</TCell>
             </TRow>
           ))}
         </tbody>

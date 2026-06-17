@@ -359,7 +359,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
         rows: INDIVIDUALS.filter((i) => i.coverage_status === "in_progress").slice(0, 25).map((i, idx) => ({
           individual: i.full_name,
           org: i.org_name,
-          stage: (i as { current_stage?: string }).stage ?? "—",
+          stage: (i as { current_stage?: string }).current_stage ?? "—",
           days: 14 + (idx * 3) % 40,
           owner: i.assigned_rep ?? "—",
         })),

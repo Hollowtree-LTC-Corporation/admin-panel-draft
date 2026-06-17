@@ -79,7 +79,7 @@ function toDraft(w: EnrollmentWindow): Draft {
 function View() {
   const can = usePermission();
   const { product, affiliates, setAffiliates } = useStore();
-  const activeAffiliates = useMemo(() => affiliates.filter((a) => !a.deleted_at), [affiliates]);
+  const activeAffiliates = useMemo(() => affiliates.filter((a) => !a.is_active === false), [affiliates]);
   const addAffiliate = (a: AffiliateOrganization): string => {
     const id = `aff_${Date.now()}`;
     const rec: AffiliateOrganization = { ...a, id };
@@ -250,7 +250,7 @@ function WindowForm({
   const [partnersOpen, setPartnersOpen] = useState(draft.channel_partners.length > 0);
   const [inlineOpen, setInlineOpen] = useState(false);
   const [inlineName, setInlineName] = useState("");
-  const [inlineType, setInlineType] = useState<AffiliateType>("industry_association");
+  const [inlineType, setInlineType] = useState<AffiliateType>("association");
   const update = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft({ ...draft, [k]: v });
 
   const SPONSOR_OPTIONS: Array<{ value: SponsorShape; label: string }> = [
@@ -330,7 +330,7 @@ function WindowForm({
                     >
                       <option value="cca">CCA (Clinicians Care Association)</option>
                       <option value="union">Union</option>
-                      <option value="industry_association">Association</option>
+                      <option value="association">Association</option>
                       <option value="employer_trust">Employer Trust</option>
                       <option value="other">Other</option>
                     </select>
@@ -360,13 +360,13 @@ function WindowForm({
                               is_external: !isTrust,
                               legal_entity_status: null,
                               notes: "",
-                              deleted_at: null,
+                              is_active: true,
                               logo_url: null,
                             });
                             update("affiliate_organization_id", id);
                             setInlineOpen(false);
                             setInlineName("");
-                            setInlineType("industry_association");
+                            setInlineType("association");
                           }}
                         >
                           Save

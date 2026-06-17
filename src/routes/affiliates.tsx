@@ -147,13 +147,13 @@ function View() {
 
   const deactivate = () => {
     if (!confirm(`Deactivate "${draft.name}"? It will no longer appear in selectors.`)) return;
-    setAffiliates((prev) => prev.map((a) => a.id === draft.id ? { ...a, deleted_at: new Date().toISOString() } : a));
+    setAffiliates((prev) => prev.map((a) => a.id === draft.id ? { ...a, is_active: false } : a));
     setDrawerOpen(false);
   };
 
   const reactivate = () => {
-    setAffiliates((prev) => prev.map((a) => a.id === draft.id ? { ...a, deleted_at: null } : a));
-    setDraft({ ...draft, deleted_at: null });
+    setAffiliates((prev) => prev.map((a) => a.id === draft.id ? { ...a, is_active: true } : a));
+    setDraft({ ...draft, is_active: true });
   };
 
   return (

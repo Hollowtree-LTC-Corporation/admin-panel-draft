@@ -119,7 +119,7 @@ function View() {
     }).filter((p) => {
       if (s && !(p.org_name.toLowerCase().includes(s) || p.id.toLowerCase().includes(s) || (p.policy_number ?? "").toLowerCase().includes(s) || (p.policy_name ?? "").toLowerCase().includes(s))) return false;
       if (org !== "all" && p.organization_id !== org) return false;
-      if (status !== "all" && p.status !== status) return false;
+      if (status !== "all" && p.enrollment_status !== status) return false;
       if (ownerType !== "all" && p.policy_owner_type !== ownerType) return false;
       if (cp !== "all" && p.carrier_product_id !== cp) return false;
       return true;
@@ -232,7 +232,7 @@ function View() {
               <TCell>{p.policy_name ?? <span className="text-black/30">—</span>}</TCell>
               <TCell className="font-medium">{p.org_name}</TCell>
               <TCell>{p.carrier_product_name}</TCell>
-              <TCell><StatusChip s={p.status} /></TCell>
+              <TCell><StatusChip s={p.enrollment_status} /></TCell>
               <TCell>{fmtDate(p.initial_effective_date)}</TCell>
               {product === "DI" ? (
                 <>
@@ -305,8 +305,8 @@ function emptyPolicy(product: "DI" | "LTC"): Policy {
     account_manager: null,
     google_drive_folder: null,
     original_enrollee_count: null,
-    original_monthly_premium_cents: null,
-    ltc_bronze_cents: null, ltc_silver_cents: null, ltc_gold_cents: null, ltc_platinum_cents: null, ltc_diamond_cents: null,
+    original_monthly_premium: null,
+    ltc_bronze: null, ltc_silver: null, ltc_gold: null, ltc_platinum: null, ltc_diamond: null,
   };
 }
 
@@ -400,7 +400,7 @@ function PolicyDrawer({
   const missing = !draft.organization_id ? "Select an organization"
     : !draft.policy_name?.trim() ? "Enter a policy name"
     : !draft.carrier_product_id ? "Select a carrier product"
-    : !draft.status ? "Select a status"
+    : !draft.enrollment_status ? "Select a status"
     : !draft.policy_owner_type ? "Select a policy owner type"
     : !draft.initial_effective_date ? "Set the effective date"
     : draftSplits.length === 0 ? "Add at least one commission split"
@@ -537,10 +537,10 @@ function PolicyDrawer({
 
       <Field label="Status *">
         {readOnly || isEdit ? (
-          <div className="py-1"><StatusChip s={draft.status} /></div>
+          <div className="py-1"><StatusChip s={draft.enrollment_status} /></div>
         ) : (
           <select
-            value={draft.status}
+            value={draft.enrollment_status}
             onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value as PolicyStatus }))}
             className={inputCls}
           >
@@ -670,16 +670,16 @@ function PolicyDrawer({
               <Field label="Enrollment Snapshot">
                 <div className="text-xs text-black/70 grid grid-cols-2 gap-2 py-1">
                   <div><span className="text-black/50">Original enrollees:</span> {draft.original_enrollee_count ?? "—"}</div>
-                  <div><span className="text-black/50">Original monthly premium:</span> {fmtDollars(draft.original_monthly_premium_cents)}</div>
+                  <div><span className="text-black/50">Original monthly premium:</span> {fmtDollars(draft.original_monthly_premium)}</div>
                 </div>
               </Field>
               <Field label="Face Amount Tiers (snapshot)">
                 <div className="text-xs text-black/70 grid grid-cols-5 gap-2 py-1">
-                  <div><div className="text-black/50">Bronze</div>{fmtDollars(draft.ltc_bronze_cents)}</div>
-                  <div><div className="text-black/50">Silver</div>{fmtDollars(draft.ltc_silver_cents)}</div>
-                  <div><div className="text-black/50">Gold</div>{fmtDollars(draft.ltc_gold_cents)}</div>
-                  <div><div className="text-black/50">Platinum</div>{fmtDollars(draft.ltc_platinum_cents)}</div>
-                  <div><div className="text-black/50">Diamond</div>{fmtDollars(draft.ltc_diamond_cents)}</div>
+                  <div><div className="text-black/50">Bronze</div>{fmtDollars(draft.ltc_bronze)}</div>
+                  <div><div className="text-black/50">Silver</div>{fmtDollars(draft.ltc_silver)}</div>
+                  <div><div className="text-black/50">Gold</div>{fmtDollars(draft.ltc_gold)}</div>
+                  <div><div className="text-black/50">Platinum</div>{fmtDollars(draft.ltc_platinum)}</div>
+                  <div><div className="text-black/50">Diamond</div>{fmtDollars(draft.ltc_diamond)}</div>
                 </div>
               </Field>
             </>

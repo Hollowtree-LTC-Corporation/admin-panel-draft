@@ -1139,7 +1139,7 @@ function PartnerDrawerView({ open, partner, defaults, statements, onClose }: {
           <SectionHeader>Header</SectionHeader>
           <div className="flex items-start justify-between mb-3">
             <div>
-              <div className="text-lg font-semibold">{partner.name}</div>
+              <div className="text-lg font-semibold">{partner.partner_name}</div>
               <div className="flex items-center gap-2 mt-1">
                 <PartnerTypeBadge t={partner.partner_type_v2} />
                 <EntityCell et={partner.partner_entity_type} />
@@ -1705,14 +1705,14 @@ function AddPayeeModal({ partnerId, partners, onCancel, onAdd }: {
     : (partners.find((p) => p.id === payeeRefId)?.name ?? "");
 
   return (
-    <Modal title={`Add payee row — ${partner.name}`} onCancel={onCancel}
+    <Modal title={`Add payee row — ${partner.partner_name}`} onCancel={onCancel}
       footer={
         <>
           <Btn onClick={onCancel}>Cancel</Btn>
           <Btn variant="primary" disabled={rate_pct <= 0 || rate_pct > 100} onClick={() => onAdd({
             id: `csd_new_${Date.now()}`,
             channel_partner_id: partnerId,
-            channel_partner_name: partner.name,
+            channel_partner_name: partner.partner_name,
             payee_type: payeeType,
             payee_ref_id: payeeType === "house" ? null : payeeRefId,
             payee_name: payeeName,
