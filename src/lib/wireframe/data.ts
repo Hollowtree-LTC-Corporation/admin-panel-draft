@@ -19,23 +19,81 @@ export const ORGS = [
 export const LTC_FACE_TIERS_CENTS = [2500000, 5000000, 7500000, 10000000, 15000000, 20000000, 25000000]; // $25K..$250K
 
 export const BENEFIT_CLASSES = [
-  { id: "bc_1", org_id: "org_3", name: "Class A — Full Time", gi_offer_cents: 200000, bronze: 50000, silver: 100000, gold: 150000, platinum: 200000, diamond: 250000, is_default: true },
-  { id: "bc_2", org_id: "org_3", name: "Class B — Part Time", gi_offer_cents: 100000, bronze: 25000, silver: 50000, gold: 75000, platinum: 100000, diamond: 125000, is_default: false },
-  { id: "bc_3", org_id: "org_5", name: "Default Class", gi_offer_cents: 150000, bronze: 50000, silver: 75000, gold: 100000, platinum: 150000, diamond: 200000, is_default: true },
+  { id: "bc_1", organization_id: "org_3", name: "Class A — Full Time", gi_offer_cents: 200000, bronze: 50000, silver: 100000, gold: 150000, platinum: 200000, diamond: 250000, is_default: true },
+  { id: "bc_2", organization_id: "org_3", name: "Class B — Part Time", gi_offer_cents: 100000, bronze: 25000, silver: 50000, gold: 75000, platinum: 100000, diamond: 125000, is_default: false },
+  { id: "bc_3", organization_id: "org_5", name: "Default Class", gi_offer_cents: 150000, bronze: 50000, silver: 75000, gold: 100000, platinum: 150000, diamond: 200000, is_default: true },
 ];
 
 export const COVERAGE_STATUSES = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"] as const;
-export const STAGES = ["invited", "education", "selecting_plan", "medical_questions", "checkout", "completed"] as const;
-// 25 realistic (coverage_status, current_stage) pairings; cycled for >25 rows.
-const COVERAGE_STAGE_PAIRS: Array<[typeof COVERAGE_STATUSES[number], typeof STAGES[number]]> = [
-  ["not_started", "invited"], ["not_started", "invited"], ["not_started", "invited"],
-  ["in_progress", "education"], ["in_progress", "selecting_plan"], ["in_progress", "medical_questions"], ["in_progress", "checkout"], ["in_progress", "education"],
-  ["purchased", "completed"], ["purchased", "completed"], ["purchased", "completed"],
-  ["active", "completed"], ["active", "completed"], ["active", "completed"], ["active", "completed"], ["active", "completed"], ["active", "completed"], ["active", "completed"], ["active", "completed"],
-  ["suspended", "completed"], ["suspended", "completed"], ["suspended", "completed"],
-  ["canceled", "invited"], ["canceled", "selecting_plan"],
-  ["lapsed", "completed"],
+
+// Canonical DI current_stage CHECK values (5).
+export const DI_STAGES = ["choosing_plan", "confirming_info", "at_checkout", "adding_payment", "purchased"] as const;
+export type DIStage = typeof DI_STAGES[number];
+export const DI_STAGE_LABELS: Record<DIStage, string> = {
+  choosing_plan: "Choosing Plan",
+  confirming_info: "Confirming Info",
+  at_checkout: "At Checkout",
+  adding_payment: "Adding Payment",
+  purchased: "Purchased",
+};
+
+// Canonical LTC current_stage CHECK values (21).
+export const LTC_STAGES = [
+  // Core flow (5)
+  "starting_application", "selecting_plan", "beneficiary_form", "at_checkout", "adding_payment",
+  // Post-purchase (5)
+  "upsell_survey", "interested_spouse", "interested_upgrade", "interested_both", "at_more_coverage",
+  // Spousal sub-funnel (5)
+  "choosing_spousal_pricing", "spouse_eligibility", "spouse_confirming_details", "spouse_designee", "spouse_checkout",
+  // Upgrade sub-funnel (6)
+  "choosing_upgrade", "upgrade_medical", "upgrade_checkout", "upgrade_applied", "upgrade_approved", "upgrade_denied",
+] as const;
+export type LTCStage = typeof LTC_STAGES[number];
+export const LTC_STAGE_LABELS: Record<LTCStage, string> = {
+  starting_application: "Starting Application",
+  selecting_plan: "Selecting Plan",
+  beneficiary_form: "Beneficiary Form",
+  at_checkout: "At Checkout",
+  adding_payment: "Adding Payment",
+  upsell_survey: "Upsell Survey",
+  interested_spouse: "Interested: Spouse",
+  interested_upgrade: "Interested: Upgrade",
+  interested_both: "Interested: Both",
+  at_more_coverage: "At More Coverage",
+  choosing_spousal_pricing: "Choosing Spousal Pricing",
+  spouse_eligibility: "Spouse Eligibility",
+  spouse_confirming_details: "Spouse Confirming Details",
+  spouse_designee: "Spouse Designee",
+  spouse_checkout: "Spouse Checkout",
+  choosing_upgrade: "Choosing Upgrade",
+  upgrade_medical: "Upgrade Medical",
+  upgrade_checkout: "Upgrade Checkout",
+  upgrade_applied: "Upgrade Applied",
+  upgrade_approved: "Upgrade Approved",
+  upgrade_denied: "Upgrade Denied",
+};
+
+// 25 realistic (coverage_status, DI current_stage) pairings; cycled for >25 rows.
+// For LTC individuals, the DI stage is remapped to the LTC equivalent below.
+const COVERAGE_STAGE_PAIRS: Array<[typeof COVERAGE_STATUSES[number], DIStage]> = [
+  ["not_started", "choosing_plan"], ["not_started", "choosing_plan"], ["not_started", "choosing_plan"],
+  ["in_progress", "choosing_plan"], ["in_progress", "confirming_info"], ["in_progress", "confirming_info"], ["in_progress", "at_checkout"], ["in_progress", "adding_payment"],
+  ["purchased", "purchased"], ["purchased", "purchased"], ["purchased", "purchased"],
+  ["active", "purchased"], ["active", "purchased"], ["active", "purchased"], ["active", "purchased"], ["active", "purchased"], ["active", "purchased"], ["active", "purchased"], ["active", "purchased"],
+  ["suspended", "purchased"], ["suspended", "purchased"], ["suspended", "purchased"],
+  ["canceled", "choosing_plan"], ["canceled", "confirming_info"],
+  ["lapsed", "purchased"],
 ];
+// Map a DI canonical stage to the closest LTC canonical stage.
+function diToLtcStage(s: DIStage): LTCStage {
+  switch (s) {
+    case "choosing_plan": return "selecting_plan";
+    case "confirming_info": return "beneficiary_form";
+    case "at_checkout": return "at_checkout";
+    case "adding_payment": return "adding_payment";
+    case "purchased": return "at_more_coverage";
+  }
+}
 const PLANS_DI = ["Bronze DI", "Silver DI", "Gold DI"];
 const PLANS_LTC = ["Bronze LTC", "Silver LTC", "Gold LTC", "Platinum LTC", "Diamond LTC"];
 
@@ -49,7 +107,7 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
   const isSpouse = isLTC && n in SPOUSE_PAIRS;
   const pair = COVERAGE_STAGE_PAIRS[i % COVERAGE_STAGE_PAIRS.length];
   const cov = pair[0];
-  // hasPlan removed — list view handles display masking
+  const current_stage: DIStage | LTCStage = isLTC ? diToLtcStage(pair[1]) : pair[1];
   let effective_date: string | null = null;
   if (cov === "active" || cov === "suspended" || cov === "lapsed") {
     const month = (n * 3) % 16;
@@ -67,77 +125,82 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
   } else if (cov === "canceled") {
     effective_date = `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-15`;
   }
-  // Payment status by coverage_status
-  let last_payment_status: "Successful" | "Failed" | "Pending" | null = null;
+  // Payment status by coverage_status (lowercase per canonical CHECK).
+  let last_payment_status: "successful" | "failed" | "pending" | null = null;
   let retry_count = 0;
   if (cov === "active") {
     const bucket = n % 10;
-    if (bucket < 7) last_payment_status = "Successful";
-    else if (bucket < 9) { last_payment_status = "Failed"; retry_count = (n % 5) + 1; }
-    else last_payment_status = "Pending";
+    if (bucket < 7) last_payment_status = "successful";
+    else if (bucket < 9) { last_payment_status = "failed"; retry_count = (n % 5) + 1; }
+    else last_payment_status = "pending";
   } else if (cov === "suspended") {
-    last_payment_status = "Failed";
+    last_payment_status = "failed";
     retry_count = (n % 3) + 2;
   } else if (cov === "purchased") {
-    last_payment_status = n % 2 === 0 ? "Pending" : "Successful";
+    last_payment_status = n % 2 === 0 ? "pending" : "successful";
   } else if (cov === "lapsed") {
-    last_payment_status = "Failed";
+    last_payment_status = "failed";
     retry_count = 4 + (n % 3);
   } else if (cov === "canceled") {
-    last_payment_status = n % 2 === 0 ? "Successful" : null;
+    last_payment_status = n % 2 === 0 ? "successful" : null;
   }
+  const monthly_premium_cents = 2500 + (n * 137) % 8000;
   return {
     id: `ind_${n}`,
     full_name: `Test Person ${n}`,
     email: `person${n}@example.com`,
     phone: `555-0${100 + n}`,
-    org_id: org.id,
+    organization_id: org.id,
     org_name: org.name,
     product: org.product as Product,
     coverage_status: cov,
-    stage: pair[1],
+    current_stage,
     plan: isLTC ? PLANS_LTC[n % PLANS_LTC.length] : PLANS_DI[n % PLANS_DI.length],
-    monthly_premium_cents: 2500 + (n * 137) % 8000,
+    monthly_premium_cents,
     effective_date,
     billing_group_id: `bg_${(n % 8) + 1}`,
-    // DI fields
-    coverage_plan: PLANS_DI[n % PLANS_DI.length],
-    di_type: org.type_of_rate as "STD+LTD" | "LTD" | null,
+    // DI fields (null for LTC)
+    coverage_plan: isLTC ? null : PLANS_DI[n % PLANS_DI.length],
+    di_type: isLTC ? null : (org.type_of_rate as "STD+LTD" | "LTD" | null),
     monthly_benefit_cents: 300000 + (n % 5) * 50000,
     weekly_covered_benefit_cents: 80000 + (n % 4) * 10000,
+    // std_premium / ltd_premium stored as whole dollars (DI only).
+    std_premium: isLTC ? null : Math.round((monthly_premium_cents * 0.4) / 100),
+    ltd_premium: isLTC ? null : Math.round((monthly_premium_cents * 0.6) / 100),
     assigned_rep: ["Jamie Rep", "Casey Rep", "Morgan Rep"][n % 3],
-    title: ["Manager", "Engineer", "Analyst", "Director"][n % 4],
+    title: isLTC ? null : ["Manager", "Engineer", "Analyst", "Director"][n % 4],
     greeting: ["Mr.", "Ms.", "Mx."][n % 3],
+    is_union_member: isLTC ? null : (n % 7 === 0),
+    union_local_name: isLTC ? null : (n % 7 === 0 ? `Local ${100 + n}` : null),
     // LTC fields
-    purchased_plan: PLANS_LTC[n % PLANS_LTC.length],
-    upgrade_applied_for: n % 5 === 0,
+    purchased_plan: isLTC ? PLANS_LTC[n % PLANS_LTC.length] : null,
+    applied_for_upgrade: isLTC && n % 5 === 0,
     interested_upgrading: n % 3 === 0,
     interested_spousal: n % 4 === 0,
-    relationship_type: isSpouse ? "spouse" : (isLTC ? "primary" : "employee"),
+    // relationship_type is LTC-only (CHECK: primary | spouse). null for DI.
+    relationship_type: isLTC ? (isSpouse ? "spouse" : "primary") : null,
     linked_individual_id: isSpouse ? `ind_${SPOUSE_PAIRS[n]}` : null,
     face_amount_cents: LTC_FACE_TIERS_CENTS[isSpouse ? (n % 3) : 2 + (n % 5)],
-    // v13: issue type (LTC). Spouses always SI; employees with higher face amounts SI.
     issue_type: isLTC ? (isSpouse ? "SI" : (2 + (n % 5) >= 5 ? "SI" : "GI")) : null,
-    // v13: per-individual language preference (overrides org default)
-    preferred_language: n === 4 || n === 17 ? "es" : "en",
+    // DI-only per-individual language preference (overrides org default)
+    preferred_language: isLTC ? null : (n === 4 || n === 17 ? "es" : "en"),
     // Employer contribution
-    contribution_tier: ["100%", "75%", "50%", "0%"][n % 4],
-    contribution_duration_months: [12, 24, 36][n % 3],
-    contribution_active: n % 5 !== 0,
+    employer_contribution_tier: ["100%", "75%", "50%", "0%"][n % 4],
+    employer_contribution_duration_months: [12, 24, 36][n % 3],
+    employer_contribution_active: n % 5 !== 0,
+    employer_contribution_start_date: n % 5 !== 0 ? "2025-01-01" : null,
     last_payment_status,
     retry_count,
   };
 });
 
-// v14 billing_groups — payment aggregation unit, 1-2 members (solo enrollee or
-// employee+spouse sharing payment method). Created via enrollment microsite or
-// spouse separation flow. Not creatable from admin panel.
+// v14 billing_groups
 export type BillingGroupStatus = "pending" | "active" | "suspended" | "terminated";
 export type BillingGroupPMType = "ach" | "card" | "card-payment" | "apple_pay" | "apple-pay" | null;
 
 export type BillingGroup = {
   id: string;
-  name: string;
+  name: string | null;
   organization_id: string;
   primary_individual_id: string;
   status: BillingGroupStatus;
@@ -145,7 +208,6 @@ export type BillingGroup = {
   payment_method_id: string | null;
   payment_method_type: BillingGroupPMType;
   payment_method_display_label: string | null;
-  // legacy / display helpers retained for backwards-compat with other screens
   payment_method: string;
   plaid_institution: string | null;
   card_last4: string | null;
@@ -154,8 +216,6 @@ export type BillingGroup = {
   individuals_count: number;
 };
 
-// Spouses in this set have been "separated" — they have their own pending
-// billing_group instead of sharing with the primary.
 const SEPARATED_SPOUSES = new Set<string>(["ind_11"]);
 
 const _PM_SAMPLES: Array<{
@@ -175,13 +235,19 @@ const _PM_SAMPLES: Array<{
   { v14: "ach",       legacy: "ach",          label: "ACH", institution: "Citibank",         last4: null,   display: "Citibank ACH ··5566" },
 ];
 
+// Demo: a few groups have a user-set name, rest leave name=null so the list
+// view exercises the derived "{pm_type} — Group {short_id}" label fallback.
+const NAMED_GROUPS: Record<string, string> = {
+  bg_1: "Engineering Team ACH",
+  bg_3: "Wells Fargo Primary",
+  bg_5: "BoA Family Plan",
+};
+
 function _buildBillingGroups(): BillingGroup[] {
   const list: BillingGroup[] = [];
   const indToBg: Record<string, string> = {};
   let n = 0;
 
-  // First pass: shared spouses ride along on their primary's group; separated
-  // spouses + everyone else gets their own group.
   for (const ind of INDIVIDUALS) {
     if (
       ind.relationship_type === "spouse" &&
@@ -210,8 +276,8 @@ function _buildBillingGroups(): BillingGroup[] {
       : `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-${String(((n * 5) % 27) + 1).padStart(2, "0")}T10:00:00Z`;
     list.push({
       id,
-      name: `Billing Group ${n}`,
-      organization_id: ind.org_id,
+      name: NAMED_GROUPS[id] ?? null,
+      organization_id: ind.organization_id,
       primary_individual_id: ind.id,
       status,
       moov_account_id: blank ? null : `moov_${1000 + n}`,
@@ -227,7 +293,6 @@ function _buildBillingGroups(): BillingGroup[] {
     });
   }
 
-  // Re-resolve any spouse whose primary hadn't been seen yet (defensive).
   for (const ind of INDIVIDUALS) {
     if (ind.relationship_type === "spouse" && ind.linked_individual_id && !indToBg[ind.id]) {
       const primaryBg = indToBg[ind.linked_individual_id];
@@ -246,30 +311,40 @@ function _buildBillingGroups(): BillingGroup[] {
 
 export const BILLING_GROUPS: BillingGroup[] = _buildBillingGroups();
 
+// Derived display label for a billing group when name is null.
+export function billingGroupLabel(g: Pick<BillingGroup, "id" | "name" | "payment_method_type">): string {
+  if (g.name && g.name.trim()) return g.name;
+  const pm = g.payment_method_type ?? "group";
+  const short = g.id.replace(/^bg_/, "");
+  return `${pm} — Group ${short}`;
+}
+
 export const PAYMENT_LEDGER = Array.from({ length: 60 }, (_, i) => {
   const ind = INDIVIDUALS[i % INDIVIDUALS.length];
-  const org = ORGS.find((o) => o.id === ind.org_id);
-  // contribution_source: voluntary by default; employer_paid for some rows when the
-  // individual has an active employer contribution; employee_buyup for LTC SI rows
-  // (above the GI base) on a subset of rows.
+  const org = ORGS.find((o) => o.id === ind.organization_id);
   let contribution_source: "voluntary" | "employer_paid" | "employee_buyup" = "voluntary";
-  const employerEligible = ind.contribution_active && ind.contribution_tier !== "0%";
+  const employerEligible = ind.employer_contribution_active && ind.employer_contribution_tier !== "0%";
   if (employerEligible && i % 3 === 0) contribution_source = "employer_paid";
   else if (ind.product === "LTC" && ind.issue_type === "SI" && i % 4 === 1) contribution_source = "employee_buyup";
-  // coverage_type: DI only. Most rows STDLTD; orgs with type_of_rate = "LTD" → LTD.
   const coverage_type = ind.product === "DI"
     ? (org?.type_of_rate === "LTD" ? "LTD" : "STDLTD")
     : null;
+  // Status cycle now includes "reversed" as a 4th canonical CHECK value.
+  const status = ["successful", "successful", "successful", "failed", "pending", "reversed"][i % 6];
+  // event_type cycle includes "adjustment" alongside premium/fee/refund.
+  const event_type = ["premium", "premium", "premium", "fee", "refund", "adjustment"][i % 6];
+  // funding_source canonical values.
+  const funding_source = i % 3 === 0 ? "employer_account" : "employee_account";
   return {
     id: `pl_${i + 1}`,
-    date: `2025-${String((i % 12) + 1).padStart(2, "0")}-${String((i % 27) + 1).padStart(2, "0")}`,
-    individual_id: ind.id,
+    event_date: `2025-${String((i % 12) + 1).padStart(2, "0")}-${String((i % 27) + 1).padStart(2, "0")}`,
+    enrollment_id: ind.id,
     individual_name: ind.full_name,
     billing_group_id: ind.billing_group_id,
-    charge_type: ["monthly_premium", "monthly_premium", "monthly_premium", "fee", "refund"][i % 5],
+    event_type,
     amount_cents: ind.monthly_premium_cents,
-    status: ["successful", "successful", "successful", "failed", "pending"][i % 5],
-    funding_source: i % 3 === 0 ? "employer" : "employee",
+    status,
+    funding_source,
     contribution_source,
     coverage_type,
   };
@@ -283,8 +358,6 @@ export const ACCOUNT_ADJUSTMENTS = [
 ];
 
 // Carriers — schema-aligned (DI v13 / LTC v3.13 `carriers` table).
-// `product` is a wireframe-only discriminator used to filter the list view by the
-// active product toggle; the production schema does not store this on `carriers`.
 export type CarrierType =
   | "Group DI Carrier"
   | "Group LTC Carrier"
@@ -293,7 +366,7 @@ export type CarrierType =
 
 export type Carrier = {
   id: string;
-  product: Product; // wireframe-only
+  product: Product;
   attio_carrier_id: string | null;
   carrier_name: string;
   carrier_type: CarrierType;
@@ -302,7 +375,7 @@ export type Carrier = {
   billing_email: string;
   primary_contact_name: string;
   primary_contact_email: string;
-  attio_last_synced_at: string | null; // wireframe-only Sync section timestamp
+  attio_last_synced_at: string | null;
 };
 
 export const CARRIERS: Carrier[] = [
@@ -344,7 +417,6 @@ export const CARRIERS: Carrier[] = [
   },
 ];
 
-// Carrier Products — schema-aligned (`carrier_products` table).
 export type CarrierProduct = {
   id: string;
   attio_product_id: string | null;
@@ -355,7 +427,7 @@ export type CarrierProduct = {
   cca_product: boolean;
   payment_methods_allowed: string;
   active: boolean;
-  attio_last_synced_at: string | null; // wireframe-only Sync section timestamp
+  attio_last_synced_at: string | null;
 };
 
 export const CARRIER_PRODUCTS: CarrierProduct[] = [
@@ -366,8 +438,6 @@ export const CARRIER_PRODUCTS: CarrierProduct[] = [
   { id: "cp_9", attio_product_id: "att_prod_ta_ul10", carrier_id: "car_6", product_name: "UL10", product_type: "Universal Life", line_of_business: "LTC", cca_product: false, payment_methods_allowed: "ACH", active: true, attio_last_synced_at: "2025-06-10T11:30:00Z" },
 ];
 
-// LTC Carrier Constraints (1:N with carrier_product, supports versioning by date).
-// Cent-denominated fields per schema.
 export type CarrierConstraint = {
   id: string;
   carrier_product_id: string;
@@ -390,7 +460,6 @@ export const CARRIER_CONSTRAINTS: CarrierConstraint[] = [
   { id: "cc_4", carrier_product_id: "cp_9", si_max_cents: 25000000, increment: 1000000, tier_floor_cents: 5000000, round_preference_threshold_cents: 500000, effective_from: "2024-01-01", effective_to: null, verified_by: "Casey Rep", last_verified: "2025-07-20", source: "Transamerica UL10 Producer Manual", notes: "Placeholder values." },
 ];
 
-// LTC Rider Availability (per carrier_product, per state, per rider).
 export type RiderAvailability = "available" | "not_available" | "requires_state_proposal";
 export type CarrierRiderAvailability = {
   id: string;
@@ -419,6 +488,7 @@ export const CARRIER_RIDER_AVAILABILITY: CarrierRiderAvailability[] = [
   { id: "cra_9", carrier_product_id: "cp_9", state: "TX", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica TX Filing 2024", notes: "" },
 ];
 
+// 5 canonical PolicyStatus CHECK values (renamed from `status` to `enrollment_status` on Policy).
 export type PolicyStatus = "pending" | "active" | "lapsed" | "closed" | "terminated";
 export type PolicyOwnerType = "employer_group" | "affiliate";
 
@@ -426,55 +496,56 @@ export type Policy = {
   id: string;
   policy_name: string | null;
   policy_number: string | null;
-  org_id: string;
+  organization_id: string;
   org_name: string;
   carrier_product_id: string;
   product: Product;
-  status: PolicyStatus;
+  enrollment_status: PolicyStatus;
   policy_owner_type: PolicyOwnerType;
   carrier_commission_pct: number | null;
   override_pct: number | null;
   channel_partner_id: string | null;
   commission_schedule_id: string | null;
   initial_effective_date: string;
-  attio_last_synced_at: string | null;
+  attio_synced_at: string | null;
   updated_at: string;
   attio_record_id: string;
-  // LTC v14 additions
   attio_policy_id: string | null;
   account_manager: string | null;
   google_drive_folder: string | null;
   original_enrollee_count: number | null;
-  original_monthly_premium_cents: number | null;
-  ltc_bronze_cents: number | null;
-  ltc_silver_cents: number | null;
-  ltc_gold_cents: number | null;
-  ltc_platinum_cents: number | null;
-  ltc_diamond_cents: number | null;
+  // Dollar columns (whole dollars, NOT cents).
+  original_monthly_premium: number | null;
+  ltc_bronze: number | null;
+  ltc_silver: number | null;
+  ltc_gold: number | null;
+  ltc_platinum: number | null;
+  ltc_diamond: number | null;
 };
 
-const _LTC_TIERS = { ltc_bronze_cents: 5000000, ltc_silver_cents: 10000000, ltc_gold_cents: 15000000, ltc_platinum_cents: 20000000, ltc_diamond_cents: 25000000 };
-const _NO_TIERS = { ltc_bronze_cents: null, ltc_silver_cents: null, ltc_gold_cents: null, ltc_platinum_cents: null, ltc_diamond_cents: null };
+// Whole-dollar tier defaults for LTC policies.
+const _LTC_TIERS = { ltc_bronze: 50000, ltc_silver: 100000, ltc_gold: 150000, ltc_platinum: 200000, ltc_diamond: 250000 };
+const _NO_TIERS = { ltc_bronze: null, ltc_silver: null, ltc_gold: null, ltc_platinum: null, ltc_diamond: null };
 
 export const POLICIES: Policy[] = [
-  { id: "pol_1", policy_name: "Acme Widgets Group DI 2025", policy_number: "DI-AC-2025-001", org_id: "org_1", org_name: "Acme Widgets Co", carrier_product_id: "cp_1", product: "DI", status: "active", policy_owner_type: "affiliate", carrier_commission_pct: 12, override_pct: 3, channel_partner_id: "cpn_1", commission_schedule_id: null, initial_effective_date: "2025-02-01", attio_last_synced_at: "2025-06-10T14:14:00Z", updated_at: "2025-06-09T11:00:00Z", attio_record_id: "att_pol_1", attio_policy_id: "att_pol_1", account_manager: "Guy Livingstone", google_drive_folder: "https://drive.google.com/drive/folders/acme-2025", original_enrollee_count: 12, original_monthly_premium_cents: 245000, ..._NO_TIERS },
-  { id: "pol_2", policy_name: "Bluefin Logistics DI Plan", policy_number: "DI-BF-2025-002", org_id: "org_2", org_name: "Bluefin Logistics", carrier_product_id: "cp_1", product: "DI", status: "active", policy_owner_type: "employer_group", carrier_commission_pct: 10, override_pct: null, channel_partner_id: "cpn_2", commission_schedule_id: null, initial_effective_date: "2025-03-15", attio_last_synced_at: "2025-05-20T09:00:00Z", updated_at: "2025-06-12T16:30:00Z", attio_record_id: "att_pol_2", attio_policy_id: "att_pol_2", account_manager: "Casey Rep", google_drive_folder: null, original_enrollee_count: 7, original_monthly_premium_cents: 142000, ..._NO_TIERS },
-  { id: "pol_3", policy_name: "Coastal CU LTC Group", policy_number: "TM-UL205-2025-CCU", org_id: "org_3", org_name: "Coastal Credit Union", carrier_product_id: "cp_6", product: "LTC", status: "active", policy_owner_type: "employer_group", carrier_commission_pct: null, override_pct: null, channel_partner_id: "cpn_1", commission_schedule_id: "ccs_5", initial_effective_date: "2025-04-01", attio_last_synced_at: "2025-06-11T10:00:00Z", updated_at: "2025-06-08T08:00:00Z", attio_record_id: "att_pol_3", attio_policy_id: "att_pol_3", account_manager: "Guy Livingstone", google_drive_folder: "https://drive.google.com/drive/folders/coastal-ltc", original_enrollee_count: 9, original_monthly_premium_cents: 187500, ..._LTC_TIERS },
-  { id: "pol_4", policy_name: "Evergreen Health LTC", policy_number: "TM-UL205-2025-EVG", org_id: "org_5", org_name: "Evergreen Health", carrier_product_id: "cp_6", product: "LTC", status: "active", policy_owner_type: "employer_group", carrier_commission_pct: null, override_pct: null, channel_partner_id: "cpn_1", commission_schedule_id: "ccs_6", initial_effective_date: "2025-05-01", attio_last_synced_at: "2025-06-12T13:00:00Z", updated_at: "2025-06-10T10:00:00Z", attio_record_id: "att_pol_4", attio_policy_id: "att_pol_4", account_manager: "Casey Rep", google_drive_folder: null, original_enrollee_count: 6, original_monthly_premium_cents: 124000, ..._LTC_TIERS },
-  { id: "pol_5", policy_name: "Greylock Partners Affiliate DI", policy_number: null, org_id: "org_7", org_name: "Greylock Partners LLC", carrier_product_id: "cp_1", product: "DI", status: "pending", policy_owner_type: "affiliate", carrier_commission_pct: 12, override_pct: 3, channel_partner_id: "cpn_1", commission_schedule_id: null, initial_effective_date: "2025-07-01", attio_last_synced_at: null, updated_at: "2025-06-14T09:00:00Z", attio_record_id: "att_pol_5", attio_policy_id: null, account_manager: "Morgan Rep", google_drive_folder: null, original_enrollee_count: 5, original_monthly_premium_cents: 98000, ..._NO_TIERS },
-  { id: "pol_6", policy_name: null, policy_number: "DI-DEL-2024-006", org_id: "org_4", org_name: "Delta Manufacturing", carrier_product_id: "cp_1", product: "DI", status: "terminated", policy_owner_type: "employer_group", carrier_commission_pct: 10, override_pct: 2, channel_partner_id: "cpn_2", commission_schedule_id: null, initial_effective_date: "2024-06-01", attio_last_synced_at: "2025-04-01T10:00:00Z", updated_at: "2025-04-01T10:00:00Z", attio_record_id: "att_pol_6", attio_policy_id: "att_pol_6", account_manager: null, google_drive_folder: null, original_enrollee_count: 4, original_monthly_premium_cents: 75000, ..._NO_TIERS },
-  { id: "pol_7", policy_name: "Foxtail Education LTC Trust", policy_number: null, org_id: "org_6", org_name: "Foxtail Education Trust", carrier_product_id: "cp_8", product: "LTC", status: "pending", policy_owner_type: "employer_group", carrier_commission_pct: null, override_pct: null, channel_partner_id: null, commission_schedule_id: "ccs_10", initial_effective_date: "2025-08-15", attio_last_synced_at: null, updated_at: "2025-06-13T12:00:00Z", attio_record_id: "att_pol_7", attio_policy_id: null, account_manager: "Morgan Rep", google_drive_folder: null, original_enrollee_count: 2, original_monthly_premium_cents: 38000, ..._LTC_TIERS },
-  { id: "pol_8", policy_name: "Coastal CU LTC Amendment", policy_number: "TM-UL205-2025-CCU-A", org_id: "org_3", org_name: "Coastal Credit Union", carrier_product_id: "cp_6", product: "LTC", status: "lapsed", policy_owner_type: "employer_group", carrier_commission_pct: null, override_pct: null, channel_partner_id: "cpn_2", commission_schedule_id: null, initial_effective_date: "2025-01-15", attio_last_synced_at: "2025-06-10T08:00:00Z", updated_at: "2025-06-10T07:00:00Z", attio_record_id: "att_pol_8", attio_policy_id: "att_pol_8", account_manager: "Guy Livingstone", google_drive_folder: null, original_enrollee_count: 3, original_monthly_premium_cents: 62000, ..._LTC_TIERS },
-  { id: "pol_9", policy_name: "Foxtail Closed Pilot", policy_number: "TA-TE-2024-FX", org_id: "org_6", org_name: "Foxtail Education Trust", carrier_product_id: "cp_8", product: "LTC", status: "closed", policy_owner_type: "affiliate", carrier_commission_pct: null, override_pct: null, channel_partner_id: null, commission_schedule_id: "ccs_10", initial_effective_date: "2024-03-01", attio_last_synced_at: "2024-12-01T10:00:00Z", updated_at: "2024-12-01T10:00:00Z", attio_record_id: "att_pol_9", attio_policy_id: "att_pol_9", account_manager: null, google_drive_folder: null, original_enrollee_count: 1, original_monthly_premium_cents: 18000, ..._LTC_TIERS },
+  { id: "pol_1", policy_name: "Acme Widgets Group DI 2025", policy_number: "DI-AC-2025-001", organization_id: "org_1", org_name: "Acme Widgets Co", carrier_product_id: "cp_1", product: "DI", enrollment_status: "active", policy_owner_type: "affiliate", carrier_commission_pct: 12, override_pct: 3, channel_partner_id: "cpn_1", commission_schedule_id: null, initial_effective_date: "2025-02-01", attio_synced_at: "2025-06-10T14:14:00Z", updated_at: "2025-06-09T11:00:00Z", attio_record_id: "att_pol_1", attio_policy_id: "att_pol_1", account_manager: "Guy Livingstone", google_drive_folder: "https://drive.google.com/drive/folders/acme-2025", original_enrollee_count: 12, original_monthly_premium: 2450, ..._NO_TIERS },
+  { id: "pol_2", policy_name: "Bluefin Logistics DI Plan", policy_number: "DI-BF-2025-002", organization_id: "org_2", org_name: "Bluefin Logistics", carrier_product_id: "cp_1", product: "DI", enrollment_status: "active", policy_owner_type: "employer_group", carrier_commission_pct: 10, override_pct: null, channel_partner_id: "cpn_2", commission_schedule_id: null, initial_effective_date: "2025-03-15", attio_synced_at: "2025-05-20T09:00:00Z", updated_at: "2025-06-12T16:30:00Z", attio_record_id: "att_pol_2", attio_policy_id: "att_pol_2", account_manager: "Casey Rep", google_drive_folder: null, original_enrollee_count: 7, original_monthly_premium: 1420, ..._NO_TIERS },
+  { id: "pol_3", policy_name: "Coastal CU LTC Group", policy_number: "TM-UL205-2025-CCU", organization_id: "org_3", org_name: "Coastal Credit Union", carrier_product_id: "cp_6", product: "LTC", enrollment_status: "active", policy_owner_type: "employer_group", carrier_commission_pct: null, override_pct: null, channel_partner_id: "cpn_1", commission_schedule_id: "ccs_5", initial_effective_date: "2025-04-01", attio_synced_at: "2025-06-11T10:00:00Z", updated_at: "2025-06-08T08:00:00Z", attio_record_id: "att_pol_3", attio_policy_id: "att_pol_3", account_manager: "Guy Livingstone", google_drive_folder: "https://drive.google.com/drive/folders/coastal-ltc", original_enrollee_count: 9, original_monthly_premium: 1875, ..._LTC_TIERS },
+  { id: "pol_4", policy_name: "Evergreen Health LTC", policy_number: "TM-UL205-2025-EVG", organization_id: "org_5", org_name: "Evergreen Health", carrier_product_id: "cp_6", product: "LTC", enrollment_status: "active", policy_owner_type: "employer_group", carrier_commission_pct: null, override_pct: null, channel_partner_id: "cpn_1", commission_schedule_id: "ccs_6", initial_effective_date: "2025-05-01", attio_synced_at: "2025-06-12T13:00:00Z", updated_at: "2025-06-10T10:00:00Z", attio_record_id: "att_pol_4", attio_policy_id: "att_pol_4", account_manager: "Casey Rep", google_drive_folder: null, original_enrollee_count: 6, original_monthly_premium: 1240, ..._LTC_TIERS },
+  { id: "pol_5", policy_name: "Greylock Partners Affiliate DI", policy_number: null, organization_id: "org_7", org_name: "Greylock Partners LLC", carrier_product_id: "cp_1", product: "DI", enrollment_status: "pending", policy_owner_type: "affiliate", carrier_commission_pct: 12, override_pct: 3, channel_partner_id: "cpn_1", commission_schedule_id: null, initial_effective_date: "2025-07-01", attio_synced_at: null, updated_at: "2025-06-14T09:00:00Z", attio_record_id: "att_pol_5", attio_policy_id: null, account_manager: "Morgan Rep", google_drive_folder: null, original_enrollee_count: 5, original_monthly_premium: 980, ..._NO_TIERS },
+  { id: "pol_6", policy_name: null, policy_number: "DI-DEL-2024-006", organization_id: "org_4", org_name: "Delta Manufacturing", carrier_product_id: "cp_1", product: "DI", enrollment_status: "terminated", policy_owner_type: "employer_group", carrier_commission_pct: 10, override_pct: 2, channel_partner_id: "cpn_2", commission_schedule_id: null, initial_effective_date: "2024-06-01", attio_synced_at: "2025-04-01T10:00:00Z", updated_at: "2025-04-01T10:00:00Z", attio_record_id: "att_pol_6", attio_policy_id: "att_pol_6", account_manager: null, google_drive_folder: null, original_enrollee_count: 4, original_monthly_premium: 750, ..._NO_TIERS },
+  { id: "pol_7", policy_name: "Foxtail Education LTC Trust", policy_number: null, organization_id: "org_6", org_name: "Foxtail Education Trust", carrier_product_id: "cp_8", product: "LTC", enrollment_status: "pending", policy_owner_type: "employer_group", carrier_commission_pct: null, override_pct: null, channel_partner_id: null, commission_schedule_id: "ccs_10", initial_effective_date: "2025-08-15", attio_synced_at: null, updated_at: "2025-06-13T12:00:00Z", attio_record_id: "att_pol_7", attio_policy_id: null, account_manager: "Morgan Rep", google_drive_folder: null, original_enrollee_count: 2, original_monthly_premium: 380, ..._LTC_TIERS },
+  { id: "pol_8", policy_name: "Coastal CU LTC Amendment", policy_number: "TM-UL205-2025-CCU-A", organization_id: "org_3", org_name: "Coastal Credit Union", carrier_product_id: "cp_6", product: "LTC", enrollment_status: "lapsed", policy_owner_type: "employer_group", carrier_commission_pct: null, override_pct: null, channel_partner_id: "cpn_2", commission_schedule_id: null, initial_effective_date: "2025-01-15", attio_synced_at: "2025-06-10T08:00:00Z", updated_at: "2025-06-10T07:00:00Z", attio_record_id: "att_pol_8", attio_policy_id: "att_pol_8", account_manager: "Guy Livingstone", google_drive_folder: null, original_enrollee_count: 3, original_monthly_premium: 620, ..._LTC_TIERS },
+  { id: "pol_9", policy_name: "Foxtail Closed Pilot", policy_number: "TA-TE-2024-FX", organization_id: "org_6", org_name: "Foxtail Education Trust", carrier_product_id: "cp_8", product: "LTC", enrollment_status: "closed", policy_owner_type: "affiliate", carrier_commission_pct: null, override_pct: null, channel_partner_id: null, commission_schedule_id: "ccs_10", initial_effective_date: "2024-03-01", attio_synced_at: "2024-12-01T10:00:00Z", updated_at: "2024-12-01T10:00:00Z", attio_record_id: "att_pol_9", attio_policy_id: "att_pol_9", account_manager: null, google_drive_folder: null, original_enrollee_count: 1, original_monthly_premium: 180, ..._LTC_TIERS },
 ];
 
 export const CHANNEL_PARTNERS = [
-  { id: "cpn_1", name: "WTC Benefits", partner_type: "Broker", default_split_pct: 40, payment_method: "hollowtree_paid" },
-  { id: "cpn_2", name: "Westfield Brokers", partner_type: "Broker", default_split_pct: 60, payment_method: "hollowtree_paid" },
-  { id: "cpn_3", name: "Hollowtree House", partner_type: "House", default_split_pct: 45, payment_method: "hollowtree_paid" },
-  { id: "cpn_4", name: "Jamie Rep", partner_type: "Internal", default_split_pct: 10, payment_method: "hollowtree_paid" },
-  { id: "cpn_5", name: "Gallagher", partner_type: "Override", default_split_pct: 5, payment_method: "carrier_direct" },
-  { id: "cpn_6", name: "Override Group LLC", partner_type: "Override", default_split_pct: 5, payment_method: "carrier_direct" },
+  { id: "cpn_1", partner_name: "WTC Benefits", partner_type: "Broker", default_split_pct: 40, payment_method: "hollowtree_paid" },
+  { id: "cpn_2", partner_name: "Westfield Brokers", partner_type: "Broker", default_split_pct: 60, payment_method: "hollowtree_paid" },
+  { id: "cpn_3", partner_name: "Hollowtree House", partner_type: "House", default_split_pct: 45, payment_method: "hollowtree_paid" },
+  { id: "cpn_4", partner_name: "Jamie Rep", partner_type: "Internal", default_split_pct: 10, payment_method: "hollowtree_paid" },
+  { id: "cpn_5", partner_name: "Gallagher", partner_type: "Override", default_split_pct: 5, payment_method: "carrier_direct" },
+  { id: "cpn_6", partner_name: "Override Group LLC", partner_type: "Override", default_split_pct: 5, payment_method: "carrier_direct" },
 ];
 
 export const INTERNAL_REPS = [
@@ -484,7 +555,6 @@ export const INTERNAL_REPS = [
   { id: "rep_4", name: "Morgan Rep" },
 ];
 
-// Maps each org to its primary channel partner (broker firm) for splits defaults.
 export const ORG_PRIMARY_CHANNEL_PARTNER: Record<string, string> = {
   org_1: "cpn_1", org_2: "cpn_2", org_3: "cpn_1", org_4: "cpn_2",
   org_5: "cpn_1", org_6: "cpn_2", org_7: "cpn_1", org_8: "cpn_2",
@@ -493,7 +563,7 @@ export const ORG_PRIMARY_CHANNEL_PARTNER: Record<string, string> = {
 export const COMMISSION_SPLIT_DEFAULTS = CHANNEL_PARTNERS.map((p) => ({
   id: `csd_${p.id}`,
   channel_partner_id: p.id,
-  channel_partner_name: p.name,
+  channel_partner_name: p.partner_name,
   payee_type: p.partner_type === "House" ? "house" : p.partner_type === "Internal" ? "internal_rep" : p.partner_type === "Override" ? "override" : "channel_partner",
   default_split_pct: p.default_split_pct,
   payment_method: p.payment_method,
@@ -514,7 +584,6 @@ export type PolicySplit = {
   effective_to: string | null;
 };
 
-// Initial split rows by policy. pol_3 intentionally totals 85% to demo the warning state.
 export const POLICY_SPLITS_INITIAL: PolicySplit[] = [
   { id: "ps_1_1", policy_id: "pol_1", payee_type: "house", payee_name: "Hollowtree", split_pct: 45, payment_method: "hollowtree_paid", source: "default", effective_to: null },
   { id: "ps_1_2", policy_id: "pol_1", payee_type: "internal_rep", payee_name: "Guy Livingstone", split_pct: 10, payment_method: "hollowtree_paid", source: "default", effective_to: null },
@@ -547,16 +616,31 @@ export const POLICY_SPLITS_INITIAL: PolicySplit[] = [
   { id: "ps_8_2", policy_id: "pol_8", payee_type: "channel_partner", payee_name: "WTC Benefits", split_pct: 45, payment_method: "hollowtree_paid", source: "default", effective_to: null },
 ];
 
-// Back-compat alias for the commission view (uses pct + channel_partner_name shape).
 export const POLICY_SPLITS = POLICY_SPLITS_INITIAL.filter((s) => s.policy_id === "pol_1").map((s) => ({
   id: s.id, policy_id: s.policy_id, channel_partner_name: s.payee_name, pct: s.split_pct,
 }));
 
-export const COMMISSION_STATEMENTS = [
-  { id: "cs_1", payee: "WTC Benefits", period: "2025-05", amount_cents: 245000, payable: true },
-  { id: "cs_2", payee: "Hollowtree House", period: "2025-05", amount_cents: 81000, payable: true },
-  { id: "cs_3", payee: "Guy Livingstone", period: "2025-05", amount_cents: 60500, payable: true },
-  { id: "cs_4", payee: "Gallagher", period: "2025-05", amount_cents: 20000, payable: false },
+// Commission statements — wireframe demo includes draft / approved / paid lifecycle.
+export type CommissionStatementStatus = "draft" | "approved" | "paid";
+export type CommissionStatement = {
+  id: string;
+  payee: string;
+  period: string;
+  amount_cents: number;
+  payable: boolean;
+  status: CommissionStatementStatus;
+  approved_by: string | null;
+  approved_at: string | null;
+  paid_by: string | null;
+  paid_at: string | null;
+  payment_reference: string | null;
+};
+
+export const COMMISSION_STATEMENTS: CommissionStatement[] = [
+  { id: "cs_1", payee: "WTC Benefits", period: "2025-05", amount_cents: 245000, payable: true, status: "paid", approved_by: "Guy Livingstone", approved_at: "2025-06-03T14:22Z", paid_by: "Alex Admin", paid_at: "2025-06-08T11:00Z", payment_reference: "ACH-2025-0617-WTC" },
+  { id: "cs_2", payee: "Hollowtree House", period: "2025-05", amount_cents: 81000, payable: true, status: "approved", approved_by: "Guy Livingstone", approved_at: "2025-06-03T14:22Z", paid_by: null, paid_at: null, payment_reference: null },
+  { id: "cs_3", payee: "Guy Livingstone", period: "2025-05", amount_cents: 60500, payable: true, status: "draft", approved_by: null, approved_at: null, paid_by: null, paid_at: null, payment_reference: null },
+  { id: "cs_4", payee: "Gallagher", period: "2025-05", amount_cents: 20000, payable: false, status: "draft", approved_by: null, approved_at: null, paid_by: null, paid_at: null, payment_reference: null },
 ];
 
 export type ScheduleType = "heaped" | "flat" | "level";
@@ -573,50 +657,41 @@ export type CarrierCommissionSchedule = {
 };
 
 export const CARRIER_COMMISSION_SCHEDULES: CarrierCommissionSchedule[] = [
-  // Trustmark UL-205
   { id: "ccs_5", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: null, schedule_name: "Heaped Standard", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
   { id: "ccs_6", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: "NY", schedule_name: "Heaped NY", schedule_type: "heaped", is_default: false, effective_from: "2024-01-01", effective_to: null },
   { id: "ccs_7", carrier_product_id: "cp_6", carrier_product_name: "UL-205 Universal Life & LifeEvents", state_code: null, schedule_name: "Flat", schedule_type: "flat", is_default: false, effective_from: "2024-01-01", effective_to: null },
-  // Trustmark GTL-121
   { id: "ccs_8", carrier_product_id: "cp_7", carrier_product_name: "GTL-121 Life + Care", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
   { id: "ccs_9", carrier_product_id: "cp_7", carrier_product_name: "GTL-121 Life + Care", state_code: null, schedule_name: "Flat", schedule_type: "flat", is_default: false, effective_from: "2024-01-01", effective_to: null },
-  // Transamerica TransElite
   { id: "ccs_10", carrier_product_id: "cp_8", carrier_product_name: "TransElite", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
-  // Transamerica UL10
   { id: "ccs_11", carrier_product_id: "cp_9", carrier_product_name: "UL10", state_code: null, schedule_name: "Heaped", schedule_type: "heaped", is_default: true, effective_from: "2024-01-01", effective_to: null },
 ];
 
+// commission_rate_tiers — canonical: from_year, to_year, rate_pct.
 export const COMMISSION_RATE_TIERS = [
-  // Trustmark UL-205 Heaped (standard)
-  { id: "crt_10", schedule_id: "ccs_5", year_from: 1, year_to: 1, pct: 100 },
-  { id: "crt_11", schedule_id: "ccs_5", year_from: 2, year_to: 10, pct: 5 },
-  { id: "crt_12", schedule_id: "ccs_5", year_from: 11, year_to: 99, pct: 0 },
-  // Trustmark UL-205 Heaped (NY)
-  { id: "crt_13", schedule_id: "ccs_6", year_from: 1, year_to: 1, pct: 90 },
-  { id: "crt_14", schedule_id: "ccs_6", year_from: 2, year_to: 3, pct: 10 },
-  { id: "crt_15", schedule_id: "ccs_6", year_from: 4, year_to: 10, pct: 5 },
-  { id: "crt_16", schedule_id: "ccs_6", year_from: 11, year_to: 99, pct: 0 },
-  // Trustmark UL-205 Flat
-  { id: "crt_17", schedule_id: "ccs_7", year_from: 1, year_to: 99, pct: 22 },
-  // Trustmark GTL-121 Heaped
-  { id: "crt_18", schedule_id: "ccs_8", year_from: 1, year_to: 1, pct: 100 },
-  { id: "crt_19", schedule_id: "ccs_8", year_from: 2, year_to: 10, pct: 5 },
-  { id: "crt_20", schedule_id: "ccs_8", year_from: 11, year_to: 99, pct: 0 },
-  // Trustmark GTL-121 Flat
-  { id: "crt_21", schedule_id: "ccs_9", year_from: 1, year_to: 99, pct: 22 },
-  // Transamerica TransElite
-  { id: "crt_22", schedule_id: "ccs_10", year_from: 1, year_to: 1, pct: 100 },
-  { id: "crt_23", schedule_id: "ccs_10", year_from: 2, year_to: 4, pct: 4 },
-  { id: "crt_24", schedule_id: "ccs_10", year_from: 5, year_to: 6, pct: 4 },
-  { id: "crt_25", schedule_id: "ccs_10", year_from: 7, year_to: 99, pct: 2 },
-  // Transamerica UL10
-  { id: "crt_26", schedule_id: "ccs_11", year_from: 1, year_to: 1, pct: 100 },
-  { id: "crt_27", schedule_id: "ccs_11", year_from: 2, year_to: 4, pct: 4 },
-  { id: "crt_28", schedule_id: "ccs_11", year_from: 5, year_to: 6, pct: 4 },
-  { id: "crt_29", schedule_id: "ccs_11", year_from: 7, year_to: 99, pct: 2 },
+  { id: "crt_10", schedule_id: "ccs_5", from_year: 1, to_year: 1, rate_pct: 100 },
+  { id: "crt_11", schedule_id: "ccs_5", from_year: 2, to_year: 10, rate_pct: 5 },
+  { id: "crt_12", schedule_id: "ccs_5", from_year: 11, to_year: 99, rate_pct: 0 },
+  { id: "crt_13", schedule_id: "ccs_6", from_year: 1, to_year: 1, rate_pct: 90 },
+  { id: "crt_14", schedule_id: "ccs_6", from_year: 2, to_year: 3, rate_pct: 10 },
+  { id: "crt_15", schedule_id: "ccs_6", from_year: 4, to_year: 10, rate_pct: 5 },
+  { id: "crt_16", schedule_id: "ccs_6", from_year: 11, to_year: 99, rate_pct: 0 },
+  { id: "crt_17", schedule_id: "ccs_7", from_year: 1, to_year: 99, rate_pct: 22 },
+  { id: "crt_18", schedule_id: "ccs_8", from_year: 1, to_year: 1, rate_pct: 100 },
+  { id: "crt_19", schedule_id: "ccs_8", from_year: 2, to_year: 10, rate_pct: 5 },
+  { id: "crt_20", schedule_id: "ccs_8", from_year: 11, to_year: 99, rate_pct: 0 },
+  { id: "crt_21", schedule_id: "ccs_9", from_year: 1, to_year: 99, rate_pct: 22 },
+  { id: "crt_22", schedule_id: "ccs_10", from_year: 1, to_year: 1, rate_pct: 100 },
+  { id: "crt_23", schedule_id: "ccs_10", from_year: 2, to_year: 4, rate_pct: 4 },
+  { id: "crt_24", schedule_id: "ccs_10", from_year: 5, to_year: 6, rate_pct: 4 },
+  { id: "crt_25", schedule_id: "ccs_10", from_year: 7, to_year: 99, rate_pct: 2 },
+  { id: "crt_26", schedule_id: "ccs_11", from_year: 1, to_year: 1, rate_pct: 100 },
+  { id: "crt_27", schedule_id: "ccs_11", from_year: 2, to_year: 4, rate_pct: 4 },
+  { id: "crt_28", schedule_id: "ccs_11", from_year: 5, to_year: 6, rate_pct: 4 },
+  { id: "crt_29", schedule_id: "ccs_11", from_year: 7, to_year: 99, rate_pct: 2 },
 ];
 
-export type AffiliateType = "cca" | "union" | "industry_association" | "employer_trust" | "other";
+// AffiliateType canonical: "industry_association" renamed to "association".
+export type AffiliateType = "cca" | "union" | "association" | "employer_trust" | "other";
 export type AffiliationLevel = "individual" | "employer";
 export type AffiliateIndustry =
   | "education" | "healthcare" | "government" | "manufacturing"
@@ -630,35 +705,36 @@ export type AffiliateOrganization = {
   affiliation_level: AffiliationLevel;
   industry: AffiliateIndustry | null;
   is_external: boolean;
+  is_active: boolean;
   legal_entity_status: LegalEntityStatus | null;
   notes: string;
-  deleted_at: string | null;
-  logo_url: string | null;
 };
 
 export const AFFILIATE_ORGANIZATIONS: AffiliateOrganization[] = [
-  { id: "aff_1", name: "CCU Member Foundation", affiliate_type: "industry_association", affiliation_level: "individual", industry: null, is_external: true, legal_entity_status: "operational", notes: "From enrollment windows dummy data.", deleted_at: null, logo_url: null },
-  { id: "aff_2", name: "Foxtail Alumni Assoc", affiliate_type: "industry_association", affiliation_level: "individual", industry: null, is_external: true, legal_entity_status: "operational", notes: "From enrollment windows dummy data.", deleted_at: null, logo_url: null },
-  { id: "aff_3", name: "Clinicians Care Association", affiliate_type: "cca", affiliation_level: "individual", industry: "healthcare", is_external: true, legal_entity_status: "operational", notes: "DI primary. The CCA.", deleted_at: null, logo_url: "icon:shield" },
-  { id: "aff_4", name: "TeamHealth Affiliate Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "healthcare", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null, logo_url: "icon:building" },
-  { id: "aff_5", name: "Healthcare Workers United", affiliate_type: "union", affiliation_level: "individual", industry: "healthcare", is_external: true, legal_entity_status: "operational", notes: "Example union.", deleted_at: null, logo_url: "icon:handshake" },
-  { id: "aff_6", name: "Pacific Educators Alliance", affiliate_type: "industry_association", affiliation_level: "individual", industry: "education", is_external: true, legal_entity_status: "operational", notes: "Example association.", deleted_at: null, logo_url: null },
-  { id: "aff_7", name: "National Education Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "education", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null, logo_url: null },
-  { id: "aff_8", name: "Public Sector Benefits Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "government", is_external: false, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created.", deleted_at: null, logo_url: null },
+  { id: "aff_1", name: "CCU Member Foundation", affiliate_type: "association", affiliation_level: "individual", industry: null, is_external: true, is_active: true, legal_entity_status: "operational", notes: "From enrollment windows dummy data." },
+  { id: "aff_2", name: "Foxtail Alumni Assoc", affiliate_type: "association", affiliation_level: "individual", industry: null, is_external: true, is_active: true, legal_entity_status: "operational", notes: "From enrollment windows dummy data." },
+  { id: "aff_3", name: "Clinicians Care Association", affiliate_type: "cca", affiliation_level: "individual", industry: "healthcare", is_external: true, is_active: true, legal_entity_status: "operational", notes: "DI primary. The CCA." },
+  { id: "aff_4", name: "TeamHealth Affiliate Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "healthcare", is_external: false, is_active: true, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created." },
+  { id: "aff_5", name: "Healthcare Workers United", affiliate_type: "union", affiliation_level: "individual", industry: "healthcare", is_external: true, is_active: true, legal_entity_status: "operational", notes: "Example union." },
+  { id: "aff_6", name: "Pacific Educators Alliance", affiliate_type: "association", affiliation_level: "individual", industry: "education", is_external: true, is_active: true, legal_entity_status: "operational", notes: "Example association." },
+  { id: "aff_7", name: "National Education Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "education", is_external: false, is_active: true, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created." },
+  { id: "aff_8", name: "Public Sector Benefits Trust", affiliate_type: "employer_trust", affiliation_level: "employer", industry: "government", is_external: false, is_active: true, legal_entity_status: "operational", notes: "LTC trust, Hollowtree-created." },
 ];
 
+// sponsor_type CHECK is only "employer" | "affiliate". The "Employer + Affiliate"
+// display state is derived when sponsor_type='employer' AND affiliate_organization_id IS NOT NULL.
 export type EnrollmentWindow = {
   id: string;
-  org_id: string | null;
+  organization_id: string | null;
   org_name: string | null;
-  affiliate_org_id: string | null;
+  affiliate_organization_id: string | null;
   affiliate_org: string | null;
   window_type: "initial" | "annual" | "new_joiner" | "special";
-  start_date: string | null;
-  end_date: string | null;
+  enrollment_start_date: string | null;
+  enrollment_end_date: string | null;
   default_effective_date: string | null;
   status: "upcoming" | "open" | "closed";
-  sponsor_type: "employer" | "employer+affiliate" | "affiliate";
+  sponsor_type: "employer" | "affiliate";
   carrier: string;
   gi_eligible: boolean;
   notes: string;
@@ -666,11 +742,12 @@ export type EnrollmentWindow = {
 };
 
 export const ENROLLMENT_WINDOWS: EnrollmentWindow[] = [
-  { id: "ew_1", org_id: "org_1", org_name: "Acme Widgets Co", affiliate_org_id: null, affiliate_org: null, window_type: "initial", start_date: "2025-01-01", end_date: "2025-01-31", default_effective_date: "2025-02-01", status: "closed", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "", channel_partners: [] },
-  { id: "ew_2", org_id: "org_1", org_name: "Acme Widgets Co", affiliate_org_id: null, affiliate_org: null, window_type: "annual", start_date: "2025-09-01", end_date: "2025-09-30", default_effective_date: "2025-10-01", status: "upcoming", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "", channel_partners: [] },
-  { id: "ew_3", org_id: "org_3", org_name: "Coastal Credit Union", affiliate_org_id: "aff_1", affiliate_org: "CCU Member Foundation", window_type: "annual", start_date: "2025-08-01", end_date: "2025-08-31", default_effective_date: "2025-09-01", status: "open", sponsor_type: "employer+affiliate", carrier: "Heritage LTC Group", gi_eligible: true, notes: "", channel_partners: [{ id: "ewcp_1", channel_partner_id: "cpn_1", role: "primary" }] },
-  { id: "ew_4", org_id: null, org_name: null, affiliate_org_id: "aff_2", affiliate_org: "Foxtail Alumni Assoc", window_type: "special", start_date: "2025-07-15", end_date: "2025-08-15", default_effective_date: null, status: "open", sponsor_type: "affiliate", carrier: "Sequoia Care Partners", gi_eligible: false, notes: "", channel_partners: [] },
-  { id: "ew_5", org_id: "org_1", org_name: "Acme Widgets Co", affiliate_org_id: null, affiliate_org: null, window_type: "new_joiner", start_date: null, end_date: null, default_effective_date: null, status: "open", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "Always open. Per-individual deadlines computed from hire date.", channel_partners: [] },
+  { id: "ew_1", organization_id: "org_1", org_name: "Acme Widgets Co", affiliate_organization_id: null, affiliate_org: null, window_type: "initial", enrollment_start_date: "2025-01-01", enrollment_end_date: "2025-01-31", default_effective_date: "2025-02-01", status: "closed", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "", channel_partners: [] },
+  { id: "ew_2", organization_id: "org_1", org_name: "Acme Widgets Co", affiliate_organization_id: null, affiliate_org: null, window_type: "annual", enrollment_start_date: "2025-09-01", enrollment_end_date: "2025-09-30", default_effective_date: "2025-10-01", status: "upcoming", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "", channel_partners: [] },
+  // ew_3: employer sponsor with linked affiliate — display badge derives "Employer + Affiliate".
+  { id: "ew_3", organization_id: "org_3", org_name: "Coastal Credit Union", affiliate_organization_id: "aff_1", affiliate_org: "CCU Member Foundation", window_type: "annual", enrollment_start_date: "2025-08-01", enrollment_end_date: "2025-08-31", default_effective_date: "2025-09-01", status: "open", sponsor_type: "employer", carrier: "Heritage LTC Group", gi_eligible: true, notes: "", channel_partners: [{ id: "ewcp_1", channel_partner_id: "cpn_1", role: "primary" }] },
+  { id: "ew_4", organization_id: null, org_name: null, affiliate_organization_id: "aff_2", affiliate_org: "Foxtail Alumni Assoc", window_type: "special", enrollment_start_date: "2025-07-15", enrollment_end_date: "2025-08-15", default_effective_date: null, status: "open", sponsor_type: "affiliate", carrier: "Sequoia Care Partners", gi_eligible: false, notes: "", channel_partners: [] },
+  { id: "ew_5", organization_id: "org_1", org_name: "Acme Widgets Co", affiliate_organization_id: null, affiliate_org: null, window_type: "new_joiner", enrollment_start_date: null, enrollment_end_date: null, default_effective_date: null, status: "open", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "Always open. Per-individual deadlines computed from hire date.", channel_partners: [] },
 ];
 
 // v14 magic_tokens — 14 columns; raw token never exposed in UI.
@@ -682,7 +759,7 @@ export type MagicToken = {
   individual_name: string;
   token_class: MagicTokenClass;
   status: MagicTokenStatus;
-  expires_at: string; // ISO timestamp
+  expires_at: string;
   created_at: string;
   last_used_at: string | null;
   use_count: number;
@@ -693,7 +770,6 @@ export type MagicToken = {
 };
 
 function _hash64(seed: string): string {
-  // Deterministic pseudo-SHA256 (hex 64-char) for wireframe display only.
   let h = 2166136261 >>> 0;
   for (let i = 0; i < seed.length; i++) {
     h ^= seed.charCodeAt(i);
@@ -713,7 +789,6 @@ const _MT_SEED: Array<Partial<MagicToken> & { individual_id: string; token_class
   { individual_id: "ind_3",  token_class: "portal",     status: "active",  expires_at: "2027-03-04T12:00:00Z", created_at: "2026-03-04T12:00:00Z", use_count: 11, last_used_at: "2026-06-12T08:42:00Z", portal_destination: "hollowtree" },
   { individual_id: "ind_5",  token_class: "portal",     status: "active",  expires_at: "2027-01-15T09:00:00Z", created_at: "2026-01-15T09:00:00Z", use_count: 3, last_used_at: "2026-06-01T14:10:00Z", portal_destination: "hollowtree" },
   { individual_id: "ind_6",  token_class: "enrollment", status: "active",  expires_at: "2026-09-30T23:59:59Z", created_at: "2026-04-22T16:30:00Z", use_count: 2, last_used_at: "2026-06-08T19:01:00Z", portal_destination: null },
-  // Status drift: expires_at in the past but status still 'active' (sweep pending).
   { individual_id: "ind_8",  token_class: "enrollment", status: "active",  expires_at: "2026-05-30T23:59:59Z", created_at: "2026-03-15T11:45:00Z", use_count: 4, last_used_at: "2026-05-28T20:13:00Z", portal_destination: null },
   { individual_id: "ind_9",  token_class: "enrollment", status: "expired", expires_at: "2025-04-01T23:59:59Z", created_at: "2025-02-20T09:00:00Z", use_count: 1, last_used_at: "2025-03-22T08:14:00Z", portal_destination: null },
   { individual_id: "ind_11", token_class: "portal",     status: "active",  expires_at: "2026-10-15T23:59:59Z", created_at: "2025-10-15T14:30:00Z", use_count: 0, last_used_at: null, portal_destination: "hollowtree" },
@@ -743,7 +818,6 @@ export const MAGIC_TOKENS: MagicToken[] = _MT_SEED.map((s, i) => {
   };
 });
 
-// v14 token_audit_log — 9 columns. SHA-256 hex hash; outcome is 6-value enum.
 export type TokenAuditOutcome = "success" | "invalid_token" | "revoked" | "expired" | "class_mismatch" | "rate_limited";
 export type TokenAuditEntry = {
   id: string;
@@ -770,14 +844,12 @@ const _OUTCOMES: TokenAuditOutcome[] = ["success", "success", "success", "succes
 
 export const TOKEN_AUDIT_LOG: TokenAuditEntry[] = Array.from({ length: 38 }, (_, i) => {
   const outcome = _OUTCOMES[i % _OUTCOMES.length];
-  // Most rows resolve to a real token; invalid_token rows do not.
   const resolves = outcome !== "invalid_token";
   const token = resolves ? MAGIC_TOKENS[i % MAGIC_TOKENS.length] : null;
   const day = (i % 14) + 1;
   const hour = (i * 3) % 24;
   const minute = (i * 7) % 60;
   const ts = `2026-06-${String(day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00Z`;
-  // Repeated attempts on the same hash for one suspicious series.
   const hashSeed = i === 4 || i === 11 || i === 24 ? "shared-bad-token-seed" : `${token?.id ?? "unknown"}-${i}`;
   return {
     id: `tal_${i + 1}`,
@@ -796,15 +868,14 @@ export const TOKEN_AUDIT_LOG: TokenAuditEntry[] = Array.from({ length: 38 }, (_,
 export type AuditAction = "create" | "update" | "soft_delete" | "view_phi" | "export_phi";
 export type AuditEntry = {
   id: string;
-  ts: string;
-  table: string;
+  timestamp: string;
+  table_name: string;
   record_id: string;
   action: AuditAction;
-  actor: string;
   actor_id: string;
   actor_name: string;
-  before: Record<string, unknown> | null;
-  after: Record<string, unknown> | null;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
 };
 
 const _AL_TABLES = [
@@ -830,35 +901,35 @@ const _AL_ACTIONS: AuditAction[] = ["create", "update", "update", "update", "sof
 
 export const AUDIT_LOG: AuditEntry[] = Array.from({ length: 84 }, (_, i) => {
   const action = _AL_ACTIONS[i % _AL_ACTIONS.length];
-  const table = action === "view_phi" || action === "export_phi"
+  const table_name = action === "view_phi" || action === "export_phi"
     ? ["individuals", "enrollment_responses", "individuals"][i % 3]
     : _AL_TABLES[i % _AL_TABLES.length];
   const [actor_id, actor_name] = _AL_ACTORS[i % _AL_ACTORS.length];
   const daysAgo = i % 30;
   const d = new Date(Date.UTC(2026, 5, 16) - daysAgo * 86400000 - (i % 8) * 3600000);
-  const ts = d.toISOString();
-  const recId = action === "view_phi" || action === "export_phi"
+  const timestamp = d.toISOString();
+  const record_id = action === "view_phi" || action === "export_phi"
     ? `ind_${(i % 40) + 1}`
     : `rec_${String(100 + i).padStart(6, "0")}-${(i * 7 % 9999).toString(16)}`;
 
-  let before: Record<string, unknown> | null = null;
-  let after: Record<string, unknown> | null = null;
+  let old_values: Record<string, unknown> | null = null;
+  let new_values: Record<string, unknown> | null = null;
   if (action === "create") {
-    after = { id: recId, status: "pending", name: `Record ${i}`, created_at: ts };
+    new_values = { id: record_id, status: "pending", name: `Record ${i}`, created_at: timestamp };
   } else if (action === "update") {
-    before = { status: "pending", premium_cents: 12500, updated_at: ts };
-    after = { status: "active", premium_cents: 13200, updated_at: ts };
+    old_values = { status: "pending", premium_cents: 12500, updated_at: timestamp };
+    new_values = { status: "active", premium_cents: 13200, updated_at: timestamp };
   } else if (action === "soft_delete") {
-    before = { id: recId, status: "active", name: `Record ${i}`, deleted_at: null };
-    after = { deleted_at: ts };
+    old_values = { id: record_id, status: "active", name: `Record ${i}`, deleted_at: null };
+    new_values = { deleted_at: timestamp };
   } else if (action === "view_phi") {
-    after = {
+    new_values = {
       context: "Opened PHI drawer",
       fields_viewed: ["ssn_encrypted", "date_of_birth", "address_line_1"],
       reason: _AL_REASONS[i % _AL_REASONS.length],
     };
   } else if (action === "export_phi") {
-    after = {
+    new_values = {
       export_mode: i % 2 === 0 ? "full" : "metadata_only",
       row_count: 25 + (i % 200),
       reason: _AL_REASONS[i % _AL_REASONS.length],
@@ -866,12 +937,14 @@ export const AUDIT_LOG: AuditEntry[] = Array.from({ length: 84 }, (_, i) => {
   }
   return {
     id: `al_${String(i + 1).padStart(4, "0")}-${(i * 11).toString(16)}`,
-    ts, table, record_id: recId, action,
-    actor: actor_name, actor_id, actor_name,
-    before, after,
+    timestamp, table_name, record_id, action,
+    actor_id, actor_name,
+    old_values, new_values,
   };
 });
 
+// MissingSubmission canonical CHECK values.
+export type MissingSubmissionStatus = "unreviewed" | "employee_added" | "not_an_employee";
 export type MissingSubmission = {
   id: string;
   full_name: string;
@@ -879,26 +952,24 @@ export type MissingSubmission = {
   phone: string | null;
   org_name: string | null;
   origin_url: string;
-  status: "new" | "reviewing" | "resolved";
+  status: MissingSubmissionStatus;
   created_at: string;
   reviewed_by: string | null;
   reviewed_at: string | null;
 };
 export const MISSING_SUBMISSIONS: MissingSubmission[] = [
-  { id: "ms_1", full_name: "Test Person A", email: "a@example.com", phone: "555-0001", org_name: "Acme Widgets Co", origin_url: "/enroll/acme", status: "new", created_at: "2026-06-14", reviewed_by: null, reviewed_at: null },
-  { id: "ms_2", full_name: "Test Person B", email: "b@example.com", phone: "555-0002", org_name: "Bluefin Logistics", origin_url: "/enroll/bluefin", status: "reviewing", created_at: "2026-06-10", reviewed_by: "jordan.ops", reviewed_at: "2026-06-11" },
-  { id: "ms_3", full_name: "Test Person C", email: "c@example.com", phone: null, org_name: null, origin_url: "/enroll/unknown", status: "resolved", created_at: "2026-06-05", reviewed_by: "alex.admin", reviewed_at: "2026-06-07" },
-  { id: "ms_4", full_name: "Test Person D", email: "d@example.com", phone: "555-0004", org_name: "Greylock Partners LLC", origin_url: "/enroll/greylock", status: "new", created_at: "2026-06-15", reviewed_by: null, reviewed_at: null },
+  { id: "ms_1", full_name: "Test Person A", email: "a@example.com", phone: "555-0001", org_name: "Acme Widgets Co", origin_url: "/enroll/acme", status: "unreviewed", created_at: "2026-06-14", reviewed_by: null, reviewed_at: null },
+  { id: "ms_2", full_name: "Test Person B", email: "b@example.com", phone: "555-0002", org_name: "Bluefin Logistics", origin_url: "/enroll/bluefin", status: "employee_added", created_at: "2026-06-10", reviewed_by: "jordan.ops", reviewed_at: "2026-06-11" },
+  { id: "ms_3", full_name: "Test Person C", email: "c@example.com", phone: null, org_name: null, origin_url: "/enroll/unknown", status: "not_an_employee", created_at: "2026-06-05", reviewed_by: "alex.admin", reviewed_at: "2026-06-07" },
+  { id: "ms_4", full_name: "Test Person D", email: "d@example.com", phone: "555-0004", org_name: "Greylock Partners LLC", origin_url: "/enroll/greylock", status: "unreviewed", created_at: "2026-06-15", reviewed_by: null, reviewed_at: null },
 ];
 
-// DI rate_config: per-org, age-banded rate sheet (rate per $1,000 of monthly coverage).
-// FK: organization_id. Keyed by (employee_class, age_band, product, effective_from).
 export type DIRateRow = {
   id: string;
   organization_id: string;
   employee_class: string;
   age_band: string;
-  product: string; // text per schema (semantically carrier_product)
+  product: string;
   rate_per_unit: number;
   benefit_percentage: number;
   effective_from: string;
@@ -909,7 +980,6 @@ const DI_AGE_BANDS = ["18-29","30-39","40-49","50-59","60-64","65+"];
 const DI_RATES_STD: Record<string, number> = { "18-29": 0.32, "30-39": 0.48, "40-49": 0.74, "50-59": 1.05, "60-64": 1.18, "65+": 1.22 };
 const DI_RATES_EXEC: Record<string, number> = { "18-29": 0.36, "30-39": 0.54, "40-49": 0.82, "50-59": 1.14, "60-64": 1.28, "65+": 1.34 };
 export const DI_RATE_CONFIG: DIRateRow[] = [
-  // org_1: Acme Widgets — Standard + Executive classes
   ...DI_AGE_BANDS.map((band, i) => ({
     id: `dir_a_s_${i}`, organization_id: "org_1", employee_class: "Standard", age_band: band,
     product: "Group LTD", rate_per_unit: DI_RATES_STD[band], benefit_percentage: 60,
@@ -920,7 +990,6 @@ export const DI_RATE_CONFIG: DIRateRow[] = [
     product: "Group LTD", rate_per_unit: DI_RATES_EXEC[band], benefit_percentage: 66.7,
     effective_from: "2025-01-01", effective_to: null, source: "sun_life_rate_sheet",
   })),
-  // org_2: Bluefin — single class, fewer rows
   ...DI_AGE_BANDS.map((band, i) => ({
     id: `dir_b_s_${i}`, organization_id: "org_2", employee_class: "All Employees", age_band: band,
     product: "Group LTD", rate_per_unit: DI_RATES_STD[band] * 0.95, benefit_percentage: 60,
@@ -928,7 +997,6 @@ export const DI_RATE_CONFIG: DIRateRow[] = [
   })),
 ];
 
-// LTC rate_cells: per benefit_class, smoker_status, issue_age, tier.
 export type LTCRateCell = {
   id: string;
   benefit_class_id: string;
@@ -946,12 +1014,11 @@ const LTC_TIER_FACES: Record<string, number> = { bronze: 2500000, silver: 500000
 const LTC_TIER_BASE: Record<string, number> = { bronze: 1800, silver: 3400, gold: 5100, platinum: 6800, diamond: 10200 };
 function ltcPremiumCents(tier: "bronze" | "silver" | "gold" | "platinum" | "diamond", age: number, smoker: boolean): number {
   const base = LTC_TIER_BASE[tier];
-  const ageMult = 1 + (age - 25) * 0.045; // ~4.5% per year over 25
+  const ageMult = 1 + (age - 25) * 0.045;
   const smokerMult = smoker ? 1.45 : 1.0;
   return Math.round(base * ageMult * smokerMult);
 }
 const _ltcCells: LTCRateCell[] = [];
-// bc_1: Standard Trustmark UL — ages 25..65 step 5, both smoker statuses, all 5 tiers
 const BC1_AGES = [25,30,35,40,45,50,55,60,65];
 const BC1_TIERS: Array<"bronze" | "silver" | "gold" | "platinum" | "diamond"> = ["bronze","silver","gold","platinum","diamond"];
 for (const age of BC1_AGES) {
@@ -974,7 +1041,6 @@ for (const age of BC1_AGES) {
     }
   }
 }
-// bc_2: Reduced Eligibility — narrower age range, 3 tiers
 const BC2_AGES = [30,40,50,55];
 const BC2_TIERS: Array<"bronze" | "silver" | "gold" | "platinum" | "diamond"> = ["bronze","silver","gold"];
 for (const age of BC2_AGES) {
