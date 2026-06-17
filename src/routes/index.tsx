@@ -87,7 +87,7 @@ function Dashboard() {
   };
   const stageCounts: Array<{ stage: string; n: number }> = isDI
     ? DI_FUNNEL_STAGES.map((s) => ({ stage: s, n: diBuckets.filter((b) => b === s).length }))
-    : STAGES.map((s) => ({ stage: s, n: inds.filter((i) => i.current_stage === s).length }));
+    : LTC_STAGES.map((s) => ({ stage: s, n: inds.filter((i) => i.current_stage === s).length }));
   const maxStage = Math.max(...stageCounts.map((c) => c.n), 1);
 
   // ===== LTC three-funnel buckets =====

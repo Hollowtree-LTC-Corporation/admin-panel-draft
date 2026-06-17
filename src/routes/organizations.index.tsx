@@ -17,7 +17,7 @@ type SortKey = "name" | "carrier" | "situs_state" | "status" | "individuals_coun
 function carrierForOrg(orgId: string): string | null {
   const orgPolicies = POLICIES.filter((p) => p.organization_id === orgId);
   if (orgPolicies.length === 0) return null;
-  const pol = orgPolicies.find((p) => p.status === "active") ?? orgPolicies[0];
+  const pol = orgPolicies.find((p) => p.enrollment_status === "active") ?? orgPolicies[0];
   const cp = CARRIER_PRODUCTS.find((c) => c.id === pol.carrier_product_id);
   if (!cp) return null;
   const car = CARRIERS.find((c) => c.id === cp.carrier_id);

@@ -705,7 +705,7 @@ function View() {
           const currentRows = g.rows.filter((r) => r.effective_to === null);
           const total = currentRows.reduce((s, r) => s + r.split_pct, 0);
           const pol = POLICIES.find((p) => p.id === g.policy_id);
-          const isActive = pol?.status === "active";
+          const isActive = pol?.enrollment_status === "active";
           return (
             <div key={g.policy_id} className="bg-white border border-black/10 rounded-md overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2 bg-[#f7f3eb] border-b border-black/10">
