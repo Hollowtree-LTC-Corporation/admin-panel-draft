@@ -54,7 +54,7 @@ function View() {
   const onStatusChange = (id: string, next: MissingSubmission["status"]) => {
     setData((prev) => prev.map((m) => {
       if (m.id !== id) return m;
-      if (next === "new") return { ...m, status: next, reviewed_by: null, reviewed_at: null };
+      if (next === "unreviewed") return { ...m, status: next, reviewed_by: null, reviewed_at: null };
       return { ...m, status: next, reviewed_by: currentUser, reviewed_at: todayISO() };
     }));
   };
@@ -102,9 +102,9 @@ function View() {
                   disabled={!can("missing_submissions", "status_only")}
                   className="px-1 py-0.5 border border-black/15 rounded text-xs bg-white disabled:opacity-40"
                 >
-                  <option value="new">new</option>
-                  <option value="reviewing">reviewing</option>
-                  <option value="resolved">resolved</option>
+                  <option value="unreviewed">unreviewed</option>
+                  <option value="employee_added">employee added</option>
+                  <option value="not_an_employee">not an employee</option>
                 </select>
                 <div className="mt-1"><Pill tone={m.status === "not_an_employee" ? "ok" : m.status === "employee_added" ? "info" : "warn"}>{m.status}</Pill></div>
               </TCell>
