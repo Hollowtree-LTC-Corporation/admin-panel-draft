@@ -118,7 +118,7 @@ function View() {
         <Field label="Billing Group"><Input defaultValue={BILLING_GROUPS[0]?.id ?? ""} /></Field>
         <Field label="Adjustment Type">
           <select defaultValue="premium_correction" className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
-            {ADJ_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            {ADJ_TYPES.map((t) => <option key={t} value={t}>{ADJ_TYPE_LABELS[t]}</option>)}
           </select>
         </Field>
         <Field label="Amount (cents)"><Input placeholder="-1500" /></Field>
