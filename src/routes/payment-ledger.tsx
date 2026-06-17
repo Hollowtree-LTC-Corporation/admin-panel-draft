@@ -67,10 +67,10 @@ function View() {
   const clearAll = () => { setSearch(""); setOrg("all"); setInd("all"); setStatus("all"); setCtype("all"); setSource("all"); setCoverage("all"); setFrom(""); setTo(""); sort.reset(); };
 
   const cols: { key: SortKey; label: string }[] = [
-    { key: "date", label: "Date" },
+    { key: "event_date", label: "Date" },
     { key: "individual_name", label: "Individual" },
     { key: "billing_group_id", label: "Group" },
-    { key: "charge_type", label: "Charge Type" },
+    { key: "event_type", label: "Charge Type" },
     { key: "amount_cents", label: "Amount" },
     { key: "funding_source", label: "Funding" },
     { key: "contribution_source", label: "Source" },
