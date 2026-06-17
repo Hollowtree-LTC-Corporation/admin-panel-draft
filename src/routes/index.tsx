@@ -162,7 +162,7 @@ function Dashboard() {
 
   const ltcMainCounts = LTC_MAIN_STAGES.map((s) => ({
     stage: s,
-    n: ltcMainInds.filter((ind, idx) => mapMainStage(ind.current_stage, idx) === s).length,
+    n: ltcMainInds.filter((ind) => mapMainStage(ind.current_stage) === s).length,
   }));
   const ltcUpgradeCounts = LTC_UPGRADE_STAGES.map((s, sIdx) => ({
     stage: s,
