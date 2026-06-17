@@ -20,7 +20,10 @@ export const Route = createFileRoute("/enrollment-windows")({ component: View })
 
 type SortKey = "window_type" | "org_name" | "start_date" | "end_date" | "status" | "sponsor_type" | "carrier";
 
+// Stored sponsor_type CHECK is "employer" | "affiliate". The "employer+affiliate"
+// display shape is derived when sponsor_type='employer' AND affiliate_organization_id IS NOT NULL.
 type SponsorShape = "employer" | "employer+affiliate" | "affiliate";
+type SponsorStored = "employer" | "affiliate";
 
 type DraftPartner = { id: string; channel_partner_id: string; role: string };
 
