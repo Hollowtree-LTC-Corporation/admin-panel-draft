@@ -125,7 +125,7 @@ function View() {
               <TCell className="capitalize">{p.funding_source}</TCell>
               <TCell><ContributionSourceBadge value={p.contribution_source} /></TCell>
               {product === "DI" && <TCell><CoverageTypeBadge value={p.coverage_type} /></TCell>}
-              <TCell><Pill tone={p.status === "successful" ? "ok" : p.status === "failed" ? "bad" : "info"}>{p.status}</Pill></TCell>
+              <TCell><Pill tone={p.status === "successful" ? "ok" : p.status === "failed" ? "bad" : p.status === "reversed" ? "neutral" : "info"}>{p.status}</Pill></TCell>
             </TRow>
           ))}
           {rows.length === 0 && (
