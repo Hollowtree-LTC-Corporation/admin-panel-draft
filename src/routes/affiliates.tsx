@@ -75,7 +75,7 @@ export function AffiliateLogo({
 const TYPE_OPTIONS: Array<{ value: AffiliateType; label: string }> = [
   { value: "cca", label: "CCA (Clinicians Care Association)" },
   { value: "union", label: "Union" },
-  { value: "industry_association", label: "Association" },
+  { value: "association", label: "Association" },
   { value: "employer_trust", label: "Employer Trust" },
   { value: "other", label: "Other" },
 ];
@@ -83,7 +83,7 @@ const TYPE_OPTIONS: Array<{ value: AffiliateType; label: string }> = [
 const TYPE_SHORT: Record<AffiliateType, string> = {
   cca: "CCA",
   union: "Union",
-  industry_association: "Association",
+  association: "Association",
   employer_trust: "Trust",
   other: "Other",
 };
@@ -91,7 +91,7 @@ const TYPE_SHORT: Record<AffiliateType, string> = {
 const TYPE_BADGE: Record<AffiliateType, string> = {
   cca: "bg-teal-100 text-teal-800",
   union: "bg-blue-100 text-blue-800",
-  industry_association: "bg-purple-100 text-purple-800",
+  association: "bg-purple-100 text-purple-800",
   employer_trust: "bg-amber-100 text-amber-800",
   other: "bg-black/10 text-black/70",
 };
@@ -121,7 +121,7 @@ function emptyDraft(): AffiliateOrganization {
   return {
     id: "",
     name: "",
-    affiliate_type: "industry_association",
+    affiliate_type: "association",
     affiliation_level: "individual",
     industry: null,
     is_external: true,
@@ -153,7 +153,7 @@ function View() {
       return true;
     });
     return sort.applySort(filtered, (r, k) => {
-      if (k === "status") return r.deleted_at ? "z_deactivated" : "active";
+      if (k === "status") return !r.is_active ? "z_deactivated" : "active";
       if (k === "is_external") return r.is_external ? "external" : "internal";
       return (r as unknown as Record<string, string | null>)[k] ?? "";
     });
@@ -205,7 +205,7 @@ function View() {
           options={[
             { value: "cca", label: "CCA" },
             { value: "union", label: "Union" },
-            { value: "industry_association", label: "Association" },
+            { value: "association", label: "Association" },
             { value: "employer_trust", label: "Trust" },
             { value: "other", label: "Other" },
           ]}
@@ -239,7 +239,7 @@ function View() {
         />
         <tbody>
           {rows.map((a) => {
-            const deactivated = !!a.deleted_at;
+            const deactivated = !!!a.is_active;
             return (
               <TRow key={a.id} onClick={() => openEdit(a)}>
                 <TCell className="w-10"><div className={deactivated ? "opacity-50" : ""}><AffiliateLogo affiliate={a} size={32} /></div></TCell>
@@ -277,8 +277,8 @@ function View() {
           isCreate={isCreate}
           onCancel={() => setDrawerOpen(false)}
           onSave={saveDraft}
-          onDeactivate={!isCreate && !draft.deleted_at && can("affiliate_organizations", "delete") ? deactivate : undefined}
-          onReactivate={!isCreate && !!draft.deleted_at ? reactivate : undefined}
+          onDeactivate={!isCreate && !!draft.is_active && can("affiliate_organizations", "delete") ? deactivate : undefined}
+          onReactivate={!isCreate && !!!draft.is_active ? reactivate : undefined}
         />
       </Drawer>
     </div>
@@ -307,7 +307,7 @@ export function AffiliateForm({
   const onTypeChange = (t: AffiliateType) => {
     const next = { ...draft, affiliate_type: t };
     // Auto-derive level for known types
-    if (t === "cca" || t === "union" || t === "industry_association") next.affiliation_level = "individual";
+    if (t === "cca" || t === "union" || t === "association") next.affiliation_level = "individual";
     else if (t === "employer_trust") next.affiliation_level = "employer";
     // Auto-derive is_external default
     next.is_external = t !== "employer_trust";
@@ -319,7 +319,7 @@ export function AffiliateForm({
   return (
     <div className="-m-4 flex flex-col min-h-full">
       <div className="flex-1 p-4 space-y-4">
-        {draft.deleted_at && (
+        {!draft.is_active && (
           <div className="rounded-md bg-rose-50 border border-rose-200 px-3 py-2 text-[12px] text-rose-800">
             This affiliate is deactivated. It does not appear in selectors.
           </div>
