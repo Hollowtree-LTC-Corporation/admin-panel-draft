@@ -37,12 +37,35 @@ const COVERAGE_BADGE: Record<string, { label: string; cls: string }> = {
   lapsed: { label: "Lapsed", cls: "border border-red-300 text-red-600 bg-transparent" },
 };
 const STAGE_BADGE: Record<string, { label: string; cls: string }> = {
-  invited: { label: "Invited", cls: "bg-purple-50 text-purple-600" },
-  education: { label: "Education", cls: "bg-purple-100 text-purple-700" },
-  selecting_plan: { label: "Selecting Plan", cls: "bg-purple-200 text-purple-800" },
-  medical_questions: { label: "Medical Qs", cls: "bg-violet-200 text-violet-800" },
-  checkout: { label: "Checkout", cls: "bg-violet-100 text-violet-700" },
-  completed: { label: "Completed", cls: "bg-indigo-100 text-indigo-700" },
+  // DI (5)
+  choosing_plan: { label: "Choosing Plan", cls: "bg-purple-50 text-purple-700" },
+  confirming_info: { label: "Confirming Info", cls: "bg-purple-100 text-purple-700" },
+  at_checkout: { label: "At Checkout", cls: "bg-violet-100 text-violet-700" },
+  adding_payment: { label: "Adding Payment", cls: "bg-violet-200 text-violet-800" },
+  purchased: { label: "Purchased", cls: "bg-indigo-100 text-indigo-700" },
+  // LTC core
+  starting_application: { label: "Starting Application", cls: "bg-purple-50 text-purple-700" },
+  selecting_plan: { label: "Selecting Plan", cls: "bg-purple-100 text-purple-700" },
+  beneficiary_form: { label: "Beneficiary Form", cls: "bg-purple-200 text-purple-800" },
+  // LTC post-purchase
+  upsell_survey: { label: "Upsell Survey", cls: "bg-indigo-50 text-indigo-700" },
+  interested_spouse: { label: "Interested: Spouse", cls: "bg-indigo-100 text-indigo-700" },
+  interested_upgrade: { label: "Interested: Upgrade", cls: "bg-indigo-100 text-indigo-700" },
+  interested_both: { label: "Interested: Both", cls: "bg-indigo-100 text-indigo-700" },
+  at_more_coverage: { label: "At More Coverage", cls: "bg-indigo-200 text-indigo-800" },
+  // LTC spouse sub-funnel
+  choosing_spousal_pricing: { label: "Choosing Spousal Pricing", cls: "bg-pink-50 text-pink-700" },
+  spouse_eligibility: { label: "Spouse Eligibility", cls: "bg-pink-100 text-pink-700" },
+  spouse_confirming_details: { label: "Spouse Confirming Details", cls: "bg-pink-100 text-pink-700" },
+  spouse_designee: { label: "Spouse Designee", cls: "bg-pink-100 text-pink-700" },
+  spouse_checkout: { label: "Spouse Checkout", cls: "bg-pink-200 text-pink-800" },
+  // LTC upgrade sub-funnel
+  choosing_upgrade: { label: "Choosing Upgrade", cls: "bg-amber-50 text-amber-700" },
+  upgrade_medical: { label: "Upgrade Medical", cls: "bg-amber-100 text-amber-700" },
+  upgrade_checkout: { label: "Upgrade Checkout", cls: "bg-amber-100 text-amber-800" },
+  upgrade_applied: { label: "Upgrade Applied", cls: "bg-amber-200 text-amber-800" },
+  upgrade_approved: { label: "Upgrade Approved", cls: "bg-emerald-100 text-emerald-700" },
+  upgrade_denied: { label: "Upgrade Denied", cls: "bg-red-100 text-red-700" },
 };
 
 function Badge({ map, value }: { map: typeof COVERAGE_BADGE; value: string }) {
@@ -290,11 +313,11 @@ function IndividualDetail() {
             <LTCCoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
             <PaymentSection i={i} bg={bg} readOnly={readOnly} />
             <ContributionSection i={i} readOnly={readOnly} />
-            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} isLTC={isLTC} />
             <UnderwritingSection i={i} readOnly={readOnly} />
             <SpouseSection i={i} linked={linked ?? undefined} linkedDetail={linkedDetail} readOnly={readOnly} />
             <UpgradeSection i={i} readOnly={readOnly} />
-            <EnrollmentSection i={i} />
+            <EnrollmentSection i={i} isLTC={isLTC} />
             <SystemRefsSection i={i} />
           </>
         ) : (
@@ -302,9 +325,9 @@ function IndividualDetail() {
             <DICoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
             <PaymentSection i={i} bg={bg} readOnly={readOnly} />
             <ContributionSection i={i} readOnly={readOnly} />
-            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} isLTC={isLTC} />
             <ProfessionalClassificationSection i={i} readOnly={readOnly} />
-            <EnrollmentSection i={i} />
+            <EnrollmentSection i={i} isLTC={isLTC} />
             <SystemRefsSection i={i} />
           </>
         )}
@@ -716,7 +739,7 @@ function ContributionSection({ i, readOnly }: { i: Detail; readOnly: boolean }) 
   );
 }
 
-function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void }) {
+function IdentitySection({ i, readOnly, setConfirm, isLTC }: { i: Detail; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void; isLTC: boolean }) {
   const [editing, setEditing] = useState(false);
   const summary = `${i.full_name} · ${i.email} · ${i.org_name ?? "Affiliate-sponsored"} · Hired ${fmtDate(i.hire_date)}`;
   const onSave = () => {
@@ -759,16 +782,22 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
             <Link to="/organizations/$id" params={{ id: i.organization_id }} className="text-sm underline hover:text-[#0a3d3e]">{i.org_name}</Link>
           ) : <span className="text-sm italic text-black/50">Affiliate-sponsored</span>}
         </RField>
-        <RField label="Employment Relationship" value={i.employment_relationship} editing={editing}>
-          <select defaultValue={i.employment_relationship} className={inputCls}>{EMPLOYMENT_REL.map((o) => <option key={o}>{o}</option>)}</select>
-        </RField>
-        <RField label="Title" value={i.title ?? "—"} editing={editing}><input defaultValue={i.title ?? ""} className={inputCls} /></RField>
+        {!isLTC && (
+          <RField label="Employment Relationship" value={i.employment_relationship} editing={editing}>
+            <select defaultValue={i.employment_relationship} className={inputCls}>{EMPLOYMENT_REL.map((o) => <option key={o}>{o}</option>)}</select>
+          </RField>
+        )}
+        {!isLTC && (
+          <RField label="Title" value={i.title ?? "—"} editing={editing}><input defaultValue={i.title ?? ""} className={inputCls} /></RField>
+        )}
         <RField label="Hire Date" value={fmtDate(i.hire_date)} editing={editing}><input type="date" defaultValue={i.hire_date} className={inputCls} /></RField>
         <RField label="Gender" value={i.gender} editing={editing}>
           <select defaultValue={i.gender} className={inputCls}>{GENDERS.map((o) => <option key={o}>{o}</option>)}</select>
         </RField>
-        <RField label="Union Member"><Switch checked={i.is_union_member} disabled={!editing} /></RField>
-        <RField label="Union Local Name" value={i.union_local_name ?? "—"} editing={editing}><input defaultValue={i.union_local_name ?? ""} className={inputCls} /></RField>
+        {!isLTC && <RField label="Union Member"><Switch checked={i.is_union_member} disabled={!editing} /></RField>}
+        {!isLTC && (
+          <RField label="Union Local Name" value={i.union_local_name ?? "—"} editing={editing}><input defaultValue={i.union_local_name ?? ""} className={inputCls} /></RField>
+        )}
         {/* TODO: v14 schema add individuals.assigned_rep TEXT for LTC parity with DI. Currently shared free-text from dummy data. */}
         <RField label="Assigned Rep" value={i.assigned_rep ?? "—"} editing={editing}>
           <input defaultValue={i.assigned_rep ?? ""} className={inputCls} placeholder="e.g., Casey Rep" />
@@ -926,7 +955,7 @@ function UpgradeSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
 
 
 
-function EnrollmentSection({ i }: { i: Detail }) {
+function EnrollmentSection({ i, isLTC }: { i: Detail; isLTC: boolean }) {
   return (
     <SectionCard title="Enrollment Window & Affiliations">
       <Grid cols={2}>
@@ -935,7 +964,7 @@ function EnrollmentSection({ i }: { i: Detail }) {
             <Link to="/organizations/$id" params={{ id: i.organization_id }} className="text-sm underline hover:text-[#0a3d3e]">annual · 2025-09</Link>
           ) : <span className="text-sm text-black/50">—</span>}
         </RField>
-        <RField label="Enrollment Deadline" value={fmtDate(i.enrollment_deadline)} />
+        {!isLTC && <RField label="Enrollment Deadline" value={fmtDate(i.enrollment_deadline)} />}
         <RField label="Affiliations">
           {(() => {
             const fromWindow = i.enrollment_window_affiliate

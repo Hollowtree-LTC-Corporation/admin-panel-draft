@@ -148,7 +148,7 @@ function contributionTypeLabel(v: string | null | undefined): string {
   if (v === "employer_paid") return "Employer Paid";
   return v ?? "—";
 }
-const PREMIUM_STRUCTURES = ["lifetime","10_pay"] as const;
+const PREMIUM_STRUCTURES = ["lifetime","ten_pay"] as const;
 type PremiumStructure = typeof PREMIUM_STRUCTURES[number];
 function premiumStructureLabel(s: PremiumStructure): string {
   return s === "lifetime" ? "Lifetime" : "10-Pay";
@@ -351,7 +351,7 @@ function synthesize(org: typeof ORGS[number]) {
     supported_languages: idx % 4 === 0 ? ["en", "es"] : (idx === 3 ? ["en", "es", "zh"] : ["en"]),
     // Coverage / Billing
     contribution_type: cca ? "voluntary" : "employer_paid",
-    available_premium_structures: (product === "LTC" ? (idx % 3 === 0 ? ["lifetime","10_pay"] : ["lifetime"]) : ["lifetime"]) as PremiumStructure[],
+    available_premium_structures: (product === "LTC" ? (idx % 3 === 0 ? ["lifetime","ten_pay"] : ["lifetime"]) : ["lifetime"]) as PremiumStructure[],
     tpa_fee_cents: cca ? 2000 : 800,
     service_fee_retained_cents: cca ? 500 : null,
     tpa_fee_name: cca ? "CCA Membership Fee" : "Processing Fee",
@@ -370,7 +370,7 @@ function synthesize(org: typeof ORGS[number]) {
     ach_first_fee_cents: 100,
     ach_subsequent_fee_cents: 50,
     failed_ach_penalty_cents: 1500,
-    failed_card_penalty_mode: "flat" as "flat" | "percent",
+    failed_card_penalty_mode: "flat" as "flat" | "percentage",
     failed_card_penalty_value_cents: 1000 as number | null,
     failed_card_penalty_pct_bps: null as number | null,
     free_retry_count: idx === 2 ? 1 : 2,
@@ -2346,7 +2346,7 @@ function PaymentProcessingSection({ org, readOnly }: { org: OrgDetail; readOnly:
   const [achFirst, setAchFirst] = useState(String(org.ach_first_fee_cents));
   const [achSub, setAchSub] = useState(String(org.ach_subsequent_fee_cents));
   const [achPenalty, setAchPenalty] = useState(String(org.failed_ach_penalty_cents));
-  const [penaltyMode, setPenaltyMode] = useState<"flat" | "percent">(org.failed_card_penalty_mode);
+  const [penaltyMode, setPenaltyMode] = useState<"flat" | "percentage">(org.failed_card_penalty_mode);
   const [penaltyFlat, setPenaltyFlat] = useState(String(org.failed_card_penalty_value_cents ?? ""));
   const [penaltyBps, setPenaltyBps] = useState(String(org.failed_card_penalty_pct_bps ?? ""));
   const [retry, setRetry] = useState(String(org.free_retry_count));
@@ -2415,9 +2415,9 @@ function PaymentProcessingSection({ org, readOnly }: { org: OrgDetail; readOnly:
         <RField label="Failed Card Penalty Mode">
           {e.editing
             ? (
-              <select className={inputCls} value={penaltyMode} onChange={(ev) => setPenaltyMode(ev.target.value as "flat" | "percent")}>
+              <select className={inputCls} value={penaltyMode} onChange={(ev) => setPenaltyMode(ev.target.value as "flat" | "percentage")}>
                 <option value="flat">Flat</option>
-                <option value="percent">Percent</option>
+                <option value="percentage">Percentage</option>
               </select>
             )
             : (org.failed_card_penalty_mode === "flat" ? "Flat" : "Percent")}
