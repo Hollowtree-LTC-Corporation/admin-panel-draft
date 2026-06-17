@@ -65,8 +65,8 @@ function toDraft(w: EnrollmentWindow): Draft {
     organization_id: w.organization_id,
     affiliate_organization_id: w.affiliate_organization_id,
     window_type: w.window_type,
-    start_date: w.start_date ?? "",
-    end_date: w.end_date ?? "",
+    start_date: w.enrollment_start_date ?? "",
+    end_date: w.enrollment_end_date ?? "",
     default_effective_date: w.default_effective_date ?? "",
     carrier: w.carrier,
     gi_eligible: w.gi_eligible,
@@ -200,8 +200,8 @@ function View() {
                 {w.org_name && w.affiliate_org ? <div className="text-[10px] text-black/50">+ {w.affiliate_org}</div> : null}
               </TCell>
               <TCell className="capitalize">{w.window_type.replace(/_/g, " ")}</TCell>
-              <TCell className="text-black/70">{w.start_date ?? <span className="text-black/30">—</span>}</TCell>
-              <TCell className="text-black/70">{w.end_date ?? <span className="text-black/30">—</span>}</TCell>
+              <TCell className="text-black/70">{w.enrollment_start_date ?? <span className="text-black/30">—</span>}</TCell>
+              <TCell className="text-black/70">{w.enrollment_end_date ?? <span className="text-black/30">—</span>}</TCell>
               <TCell><Pill tone={w.status === "open" ? "ok" : w.status === "upcoming" ? "info" : "bad"}>{w.status}</Pill></TCell>
               <TCell>{w.sponsor_type}</TCell>
               <TCell>{w.carrier}</TCell>

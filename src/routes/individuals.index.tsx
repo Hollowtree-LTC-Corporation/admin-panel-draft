@@ -120,7 +120,7 @@ function IndividualsView() {
 
   const productRows = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
-  const stageOptions = Array.from(new Set(productRows.map((r) => r.stage)));
+  const stageOptions = Array.from(new Set(productRows.map((r) => r.current_stage)));
   const repOptions = Array.from(new Set(productRows.map((r) => r.assigned_rep).filter(Boolean))) as string[];
   const benefitClassOptions = ["All Employees", "Management"];
 
@@ -131,7 +131,7 @@ function IndividualsView() {
       if (s && !(i.full_name.toLowerCase().includes(s) || i.email.toLowerCase().includes(s))) return false;
       if (orgFilter !== "all" && i.organization_id !== orgFilter) return false;
       if (coverageFilter !== "all" && i.coverage_status !== coverageFilter) return false;
-      if (stageFilter !== "all" && i.stage !== stageFilter) return false;
+      if (stageFilter !== "all" && i.current_stage !== stageFilter) return false;
       if (isLTC && issueFilter !== "all" && issueTypeFor(i) !== issueFilter) return false;
       if (isLTC && bclassFilter !== "all" && benefitClassFor(n) !== bclassFilter) return false;
       if (!isLTC && typeFilter !== "all") {
@@ -248,7 +248,7 @@ function IndividualsView() {
                     </span>
                   </TCell>
                   <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
-                  <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
+                  <TCell><StatusBadge map={STAGE_BADGE} value={i.current_stage} /></TCell>
                   <TCell className="text-[12px]">{bclass}</TCell>
                   <TCell className="text-[12px]">{premiumStructureLabel(ps)}</TCell>
                   <TCell className="text-right">{unpurchased ? "—" : formatFaceAmount(i.face_amount_cents)}</TCell>
@@ -272,7 +272,7 @@ function IndividualsView() {
                   </span>
                 </TCell>
                 <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
-                <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
+                <TCell><StatusBadge map={STAGE_BADGE} value={i.current_stage} /></TCell>
                 <TCell>{unpurchased ? "—" : i.coverage_plan}</TCell>
                 <TCell className={i.coverage_status === "in_progress" ? "text-black/40" : ""}>{formatDate(i.effective_date)}</TCell>
                 <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>

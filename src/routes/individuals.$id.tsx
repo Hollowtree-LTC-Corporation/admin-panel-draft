@@ -266,7 +266,7 @@ function IndividualDetail() {
             value={i.org_name ?? <span className="italic text-black/50">Affiliate</span>}
             onClick={i.organization_id ? () => navigate({ to: "/organizations/$id", params: { id: i.organization_id! } }) : undefined} />
           <SummaryChip label="Coverage Status" value={<Badge map={COVERAGE_BADGE} value={i.coverage_status} />} />
-          <SummaryChip label="Current Stage" value={<Badge map={STAGE_BADGE} value={i.stage} />} />
+          <SummaryChip label="Current Stage" value={<Badge map={STAGE_BADGE} value={i.current_stage} />} />
           {isLTC && (
             <SummaryChip label="Issue Type" value={<IssueTypeBadge value={i.issue_type} />} />
           )}
@@ -441,8 +441,8 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
         <RField label="Monthly Benefit" value={i.monthly_benefit_cents != null ? formatCents(i.monthly_benefit_cents) : "—"} />
         <RField label="Current Stage" editing={editing}>
           {editing
-            ? <select defaultValue={i.stage} className={inputCls}>{DI_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-            : <Badge map={STAGE_BADGE} value={i.stage} />}
+            ? <select defaultValue={i.current_stage} className={inputCls}>{DI_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+            : <Badge map={STAGE_BADGE} value={i.current_stage} />}
         </RField>
         <RField label="Application Status">
           {i.application_status
@@ -470,7 +470,7 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
     <SectionCard title="Coverage & Plan · LTC" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
         <CoverageStatusField editing={editing} status={status} setStatus={setStatus} allowed={allowed} current={i.coverage_status} />
-        <RField label="Current Stage"><Badge map={STAGE_BADGE} value={i.stage} /></RField>
+        <RField label="Current Stage"><Badge map={STAGE_BADGE} value={i.current_stage} /></RField>
         <RField label="Benefit Class" value={i.benefit_class_name} editing={editing}>
           <select defaultValue={i.benefit_class_name} className={inputCls}>{["All Employees","Management"].map((o) => <option key={o}>{o}</option>)}</select>
         </RField>

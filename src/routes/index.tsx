@@ -62,7 +62,7 @@ function Dashboard() {
     if (ind.coverage_status === "canceled") return "canceled";
     if (idx % 17 === 3) return "test";
     if (idx % 19 === 5) return "transitioning";
-    switch (ind.stage) {
+    switch (ind.current_stage) {
       case "invited":
       case "education":
       case "selecting_plan":
@@ -88,7 +88,7 @@ function Dashboard() {
   };
   const stageCounts: Array<{ stage: string; n: number }> = isDI
     ? DI_FUNNEL_STAGES.map((s) => ({ stage: s, n: diBuckets.filter((b) => b === s).length }))
-    : STAGES.map((s) => ({ stage: s, n: inds.filter((i) => i.stage === s).length }));
+    : STAGES.map((s) => ({ stage: s, n: inds.filter((i) => i.current_stage === s).length }));
   const maxStage = Math.max(...stageCounts.map((c) => c.n), 1);
 
   // ===== LTC three-funnel buckets =====
@@ -140,7 +140,7 @@ function Dashboard() {
 
   const ltcMainCounts = LTC_MAIN_STAGES.map((s) => ({
     stage: s,
-    n: ltcMainInds.filter((ind, idx) => mapMainStage(ind.stage, idx) === s).length,
+    n: ltcMainInds.filter((ind, idx) => mapMainStage(ind.current_stage, idx) === s).length,
   }));
   const ltcUpgradeCounts = LTC_UPGRADE_STAGES.map((s, sIdx) => ({
     stage: s,

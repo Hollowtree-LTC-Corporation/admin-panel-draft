@@ -310,16 +310,16 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
         ],
         rows: all.map((w) => {
           let indicator = "";
-          if (w.end_date) {
-            const days = Math.round((new Date(w.end_date).getTime() - today.getTime()) / 86400000);
+          if (w.enrollment_end_date) {
+            const days = Math.round((new Date(w.enrollment_end_date).getTime() - today.getTime()) / 86400000);
             if (w.status === "open" && days <= 14 && days >= 0) indicator = `Closing in ${days}d`;
             else if (w.status === "closed" && days >= -30) indicator = "Recently closed";
           }
           return {
             org: w.org_name ?? w.affiliate_org ?? "—",
             window_type: w.window_type,
-            start_date: w.start_date ?? "—",
-            end_date: w.end_date ?? "—",
+            start_date: w.enrollment_start_date ?? "—",
+            end_date: w.enrollment_end_date ?? "—",
             status: w.status,
             indicator,
             carrier: w.carrier ?? "—",
@@ -359,7 +359,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
         rows: INDIVIDUALS.filter((i) => i.coverage_status === "in_progress").slice(0, 25).map((i, idx) => ({
           individual: i.full_name,
           org: i.org_name,
-          stage: (i as { stage?: string }).stage ?? "—",
+          stage: (i as { current_stage?: string }).stage ?? "—",
           days: 14 + (idx * 3) % 40,
           owner: i.assigned_rep ?? "—",
         })),
@@ -518,7 +518,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
           { key: "actor", label: "Actor" },
         ],
         rows: AUDIT_LOG.slice(0, 25).map((a) => ({
-          ts: a.ts, table: a.table, record_id: a.record_id, action: a.action, actor: a.actor,
+          ts: a.timestamp, table: a.table_name, record_id: a.record_id, action: a.action, actor: a.actor_name,
         })),
       };
     }
@@ -549,12 +549,12 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
           { key: "actor", label: "Actor" },
         ],
         rows: AUDIT_LOG.slice(0, 20).map((a) => ({
-          ts: a.ts,
-          table: a.table,
+          ts: a.timestamp,
+          table: a.table_name,
           record_id: a.record_id,
-          before: JSON.stringify(a.before),
-          after: JSON.stringify(a.after),
-          actor: a.actor,
+          before: JSON.stringify(a.old_values),
+          after: JSON.stringify(a.new_values),
+          actor: a.actor_name,
         })),
       };
     }
