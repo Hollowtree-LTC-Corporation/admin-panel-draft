@@ -59,14 +59,14 @@ const PARTNER_EXT: Record<string, PartnerExt> = {
   cpn_5: { partner_type_v2: "IMO-BGA", partner_entity_type: "company", license_number: "IM-IL-440091", license_status: "Licensed", activation_status: "Agreement Signed", agreement_status: "Signed", agreement_date: "2024-09-10", primary_contact_name: "Patricia Kim", primary_contact_email: "pkim@gallagher.example.com", google_drive_folder: "https://drive.google.com/drive/folders/gallagher", attio_channel_partner_id: "att_cp_gallagher" },
   cpn_6: { partner_type_v2: "IMO-BGA", partner_entity_type: "company", license_number: "IM-FL-119087", license_status: "Licensed", activation_status: "In Conversation", agreement_status: "Sent", agreement_date: null, primary_contact_name: "Derek Holloway", primary_contact_email: "derek@overridegroup.example.com", google_drive_folder: "", attio_channel_partner_id: "att_cp_override" },
 };
-const ADDITIONAL_INTERNAL: Array<{ id: string; name: string; default_split_pct: number; payment_method: PaymentMethodSetting } & PartnerExt> = [
-  { id: "cpn_7", name: "Guy Livingstone", default_split_pct: 10, payment_method: "hollowtree_paid", partner_type_v2: "Internal", partner_entity_type: "individual", license_number: "RP-NY-991133", license_status: "Licensed", activation_status: "Active", agreement_status: "Signed", agreement_date: "2022-05-01", primary_contact_name: "Guy Livingstone", primary_contact_email: "guy@hollowtree.example.com", google_drive_folder: "", attio_channel_partner_id: "att_cp_guy" },
-  { id: "cpn_8", name: "Casey Rep", default_split_pct: 10, payment_method: "hollowtree_paid", partner_type_v2: "Internal", partner_entity_type: "individual", license_number: "RP-MA-220714", license_status: "Licensed", activation_status: "Active", agreement_status: "Signed", agreement_date: "2023-06-19", primary_contact_name: "Casey Rep", primary_contact_email: "casey@hollowtree.example.com", google_drive_folder: "", attio_channel_partner_id: "att_cp_casey" },
+const ADDITIONAL_INTERNAL: Array<{ id: string; partner_name: string; default_split_pct: number; payment_method: PaymentMethodSetting } & PartnerExt> = [
+  { id: "cpn_7", partner_name: "Guy Livingstone", default_split_pct: 10, payment_method: "hollowtree_paid", partner_type_v2: "Internal", partner_entity_type: "individual", license_number: "RP-NY-991133", license_status: "Licensed", activation_status: "Active", agreement_status: "Signed", agreement_date: "2022-05-01", primary_contact_name: "Guy Livingstone", primary_contact_email: "guy@hollowtree.example.com", google_drive_folder: "", attio_channel_partner_id: "att_cp_guy" },
+  { id: "cpn_8", partner_name: "Casey Rep", default_split_pct: 10, payment_method: "hollowtree_paid", partner_type_v2: "Internal", partner_entity_type: "individual", license_number: "RP-MA-220714", license_status: "Licensed", activation_status: "Active", agreement_status: "Signed", agreement_date: "2023-06-19", primary_contact_name: "Casey Rep", primary_contact_email: "casey@hollowtree.example.com", google_drive_folder: "", attio_channel_partner_id: "att_cp_casey" },
 ];
 
 type Partner = {
   id: string;
-  name: string;
+  partner_name: string;
   default_split_pct: number;
   payment_method: PaymentMethodSetting;
 } & PartnerExt;
@@ -76,7 +76,7 @@ const ALL_PARTNERS: Partner[] = [
     .filter((p) => p.partner_type !== "House")
     .filter((p) => PARTNER_EXT[p.id])
     .map((p) => ({
-      id: p.id, name: p.partner_name,
+      id: p.id, partner_name: p.partner_name,
       default_split_pct: p.default_split_pct,
       payment_method: p.payment_method as PaymentMethodSetting,
       ...PARTNER_EXT[p.id],
