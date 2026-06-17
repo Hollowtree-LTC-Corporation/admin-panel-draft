@@ -1133,7 +1133,7 @@ function PartnerDrawerView({ open, partner, defaults, statements, onClose }: {
   }, [statements]);
 
   return (
-    <Drawer open={open} onClose={onClose} title={partner?.name ?? "Channel Partner"}>
+    <Drawer open={open} onClose={onClose} title={partner?.partner_name ?? "Channel Partner"}>
       {partner && (
         <>
           <SectionHeader>Header</SectionHeader>
@@ -1337,7 +1337,7 @@ function ActiveSplitsDrawer({ open, policyId, partners, rows, onClose, onSave }:
                     : <select value={r.payee_ref_id ?? ""} onChange={(e) => {
                         const id = e.target.value;
                         const p = partners.find((x) => x.id === id);
-                        setRow(i, { payee_ref_id: id, payee_name: p?.name ?? "" });
+                        setRow(i, { payee_ref_id: id, payee_name: p?.partner_name ?? "" });
                       }} className="px-1 py-0.5 text-xs border border-black/15 rounded">
                         {partners.map((p) => <option key={p.id} value={p.id}>{p.partner_name}</option>)}
                       </select>}
