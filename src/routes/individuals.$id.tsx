@@ -313,7 +313,7 @@ function IndividualDetail() {
             <LTCCoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
             <PaymentSection i={i} bg={bg} readOnly={readOnly} />
             <ContributionSection i={i} readOnly={readOnly} />
-            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} isLTC={isLTC} />
             <UnderwritingSection i={i} readOnly={readOnly} />
             <SpouseSection i={i} linked={linked ?? undefined} linkedDetail={linkedDetail} readOnly={readOnly} />
             <UpgradeSection i={i} readOnly={readOnly} />
@@ -325,7 +325,8 @@ function IndividualDetail() {
             <DICoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
             <PaymentSection i={i} bg={bg} readOnly={readOnly} />
             <ContributionSection i={i} readOnly={readOnly} />
-            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} isLTC={isLTC} />
+            <EnrollmentSection i={i} isLTC={isLTC} />
             <ProfessionalClassificationSection i={i} readOnly={readOnly} />
             <EnrollmentSection i={i} />
             <SystemRefsSection i={i} />
