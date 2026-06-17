@@ -2,7 +2,7 @@ import * as React from "react";
 import { useState, useEffect, useReducer } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-  PageHeader, Card, Field, Btn, Pill, TableShell, THead, TRow, TCell, ProductBadge,
+  PageHeader, Card, Field, Btn, Pill, TableShell, THead, TRow, TCell,
   Drawer, useDrawer, Input,
 } from "@/components/wireframe/Bits";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
