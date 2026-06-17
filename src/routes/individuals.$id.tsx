@@ -782,16 +782,22 @@ function IdentitySection({ i, readOnly, setConfirm, isLTC }: { i: Detail; readOn
             <Link to="/organizations/$id" params={{ id: i.organization_id }} className="text-sm underline hover:text-[#0a3d3e]">{i.org_name}</Link>
           ) : <span className="text-sm italic text-black/50">Affiliate-sponsored</span>}
         </RField>
-        <RField label="Employment Relationship" value={i.employment_relationship} editing={editing}>
-          <select defaultValue={i.employment_relationship} className={inputCls}>{EMPLOYMENT_REL.map((o) => <option key={o}>{o}</option>)}</select>
-        </RField>
-        <RField label="Title" value={i.title ?? "—"} editing={editing}><input defaultValue={i.title ?? ""} className={inputCls} /></RField>
+        {!isLTC && (
+          <RField label="Employment Relationship" value={i.employment_relationship} editing={editing}>
+            <select defaultValue={i.employment_relationship} className={inputCls}>{EMPLOYMENT_REL.map((o) => <option key={o}>{o}</option>)}</select>
+          </RField>
+        )}
+        {!isLTC && (
+          <RField label="Title" value={i.title ?? "—"} editing={editing}><input defaultValue={i.title ?? ""} className={inputCls} /></RField>
+        )}
         <RField label="Hire Date" value={fmtDate(i.hire_date)} editing={editing}><input type="date" defaultValue={i.hire_date} className={inputCls} /></RField>
         <RField label="Gender" value={i.gender} editing={editing}>
           <select defaultValue={i.gender} className={inputCls}>{GENDERS.map((o) => <option key={o}>{o}</option>)}</select>
         </RField>
-        <RField label="Union Member"><Switch checked={i.is_union_member} disabled={!editing} /></RField>
-        <RField label="Union Local Name" value={i.union_local_name ?? "—"} editing={editing}><input defaultValue={i.union_local_name ?? ""} className={inputCls} /></RField>
+        {!isLTC && <RField label="Union Member"><Switch checked={i.is_union_member} disabled={!editing} /></RField>}
+        {!isLTC && (
+          <RField label="Union Local Name" value={i.union_local_name ?? "—"} editing={editing}><input defaultValue={i.union_local_name ?? ""} className={inputCls} /></RField>
+        )}
         {/* TODO: v14 schema add individuals.assigned_rep TEXT for LTC parity with DI. Currently shared free-text from dummy data. */}
         <RField label="Assigned Rep" value={i.assigned_rep ?? "—"} editing={editing}>
           <input defaultValue={i.assigned_rep ?? ""} className={inputCls} placeholder="e.g., Casey Rep" />
@@ -958,7 +964,7 @@ function EnrollmentSection({ i, isLTC }: { i: Detail; isLTC: boolean }) {
             <Link to="/organizations/$id" params={{ id: i.organization_id }} className="text-sm underline hover:text-[#0a3d3e]">annual · 2025-09</Link>
           ) : <span className="text-sm text-black/50">—</span>}
         </RField>
-        <RField label="Enrollment Deadline" value={fmtDate(i.enrollment_deadline)} />
+        {!isLTC && <RField label="Enrollment Deadline" value={fmtDate(i.enrollment_deadline)} />}
         <RField label="Affiliations">
           {(() => {
             const fromWindow = i.enrollment_window_affiliate
