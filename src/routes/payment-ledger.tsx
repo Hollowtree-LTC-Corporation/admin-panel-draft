@@ -37,7 +37,7 @@ function View() {
   const [coverage, setCoverage] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const sort = useSort<SortKey>("date", "desc");
+  const sort = useSort<SortKey>("event_date", "desc");
 
   const productInds = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
