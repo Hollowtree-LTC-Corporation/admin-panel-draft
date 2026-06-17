@@ -94,6 +94,8 @@ function View() {
   const [org, setOrg] = useState("all");
   const [status, setStatus] = useState<PolicyStatus | "all">("all");
   const [ownerType, setOwnerType] = useState<PolicyOwnerType | "all">("all");
+  const [policyType, setPolicyType] = useState<"all" | "group" | "individual">("all");
+  const [lob, setLob] = useState<"all" | "DI" | "LTC" | "life">("all");
   const [cp, setCp] = useState("all");
   const sort = useSort<SortKey>("org_name", "asc");
 
@@ -118,24 +120,31 @@ function View() {
     const s = search.trim().toLowerCase();
     const filtered = productPolicies.map((p) => {
       const sched = p.commission_schedule_id ? CARRIER_COMMISSION_SCHEDULES.find((x) => x.id === p.commission_schedule_id) : null;
+      const cpObj = CARRIER_PRODUCTS.find((c) => c.id === p.carrier_product_id);
+      const ind = p.individual_id ? INDIVIDUALS.find((i) => i.id === p.individual_id) : null;
       return {
         ...p,
         carrier_product_name: carrierProductLabel(p.carrier_product_id),
         schedule_name: sched?.schedule_name ?? "Default",
+        line_of_business: cpObj?.line_of_business ?? "",
+        individual_name: ind?.full_name ?? null,
       };
     }).filter((p) => {
       if (s && !(p.org_name.toLowerCase().includes(s) || p.id.toLowerCase().includes(s) || (p.policy_number ?? "").toLowerCase().includes(s) || (p.policy_name ?? "").toLowerCase().includes(s))) return false;
       if (org !== "all" && p.organization_id !== org) return false;
       if (status !== "all" && p.enrollment_status !== status) return false;
       if (ownerType !== "all" && p.policy_owner_type !== ownerType) return false;
+      if (policyType === "individual" && p.policy_owner_type !== "individual") return false;
+      if (policyType === "group" && p.policy_owner_type === "individual") return false;
+      if (lob !== "all" && p.line_of_business !== lob) return false;
       if (cp !== "all" && p.carrier_product_id !== cp) return false;
       return true;
     });
     return sort.applySort(filtered, (r, k) => (r as unknown as Record<string, string | number | null>)[k]);
-  }, [productPolicies, search, org, status, ownerType, cp, sort]);
+  }, [productPolicies, search, org, status, ownerType, policyType, lob, cp, sort]);
 
-  const active = search !== "" || org !== "all" || status !== "all" || ownerType !== "all" || cp !== "all" || !sort.isDefault;
-  const clearAll = () => { setSearch(""); setOrg("all"); setStatus("all"); setOwnerType("all"); setCp("all"); sort.reset(); };
+  const active = search !== "" || org !== "all" || status !== "all" || ownerType !== "all" || policyType !== "all" || lob !== "all" || cp !== "all" || !sort.isDefault;
+  const clearAll = () => { setSearch(""); setOrg("all"); setStatus("all"); setOwnerType("all"); setPolicyType("all"); setLob("all"); setCp("all"); sort.reset(); };
 
   const openView = (p: Policy) => { setEditingId(p.id); setMode("view"); setDrawerOpen(true); };
   const openCreate = () => { setEditingId(null); setMode("create"); setDrawerOpen(true); };
@@ -173,6 +182,9 @@ function View() {
         { key: "policy_number", label: "Policy" },
         { key: "policy_name", label: "Policy Name" },
         { key: "org_name", label: "Org" },
+        { key: null, label: "Owner" },
+        { key: null, label: "LOB" },
+        { key: null, label: "Individual" },
         { key: "carrier_product_name", label: "Carrier Product" },
         { key: "status", label: "Status" },
         { key: "initial_effective_date", label: "Effective Date" },
@@ -184,6 +196,7 @@ function View() {
         { key: "policy_number", label: "Policy" },
         { key: "policy_name", label: "Policy Name" },
         { key: "org_name", label: "Org" },
+        { key: null, label: "Owner" },
         { key: "carrier_product_name", label: "Carrier Product" },
         { key: "status", label: "Status" },
         { key: "initial_effective_date", label: "Effective Date" },
