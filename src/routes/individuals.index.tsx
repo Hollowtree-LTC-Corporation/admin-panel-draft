@@ -50,9 +50,9 @@ function issueTypeFor(i: { issue_type?: string | null; relationship_type?: strin
 
 function paymentBadge(status: string | null, retry: number) {
   if (!status) return <span className="text-black/40">—</span>;
-  if (status === "Successful") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">Paid</span>;
-  if (status === "Pending") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Pending</span>;
-  if (status === "Failed") {
+  if (status === "successful") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">Paid</span>;
+  if (status === "pending") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Pending</span>;
+  if (status === "failed") {
     const escalated = retry >= 3;
     const cls = escalated ? "bg-red-200 text-red-800 font-medium" : "bg-red-100 text-red-700";
     const label = retry > 0 ? `Failed (${retry})` : "Failed";
@@ -192,7 +192,7 @@ function IndividualsView() {
             <FilterSelect value={repFilter} onChange={setRepFilter} allLabel="All reps" options={[...repOptions.map((v) => ({ value: v })), { value: "__unassigned__", label: "Unassigned" }]} />
           </>
         )}
-        <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "Successful", label: "Paid" }, { value: "Failed" }, { value: "Pending" }]} />
+        <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "successful", label: "Paid" }, { value: "failed", label: "Failed" }, { value: "pending", label: "Pending" }]} />
         <ClearFiltersLink show={filtersActive} onClick={clearAll} />
         <ExportCsvButton filteredCount={filtered.length} totalCount={productRows.length} resourceLabel="individuals" />
       </FilterRow>

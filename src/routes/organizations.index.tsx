@@ -60,7 +60,7 @@ function OrgsView() {
 
   const enriched = useMemo(() => productRows.map((o) => {
     const orgInds = INDIVIDUALS.filter((i) => i.organization_id === o.id);
-    const failed = ALL_CURRENT_OVERRIDE.has(o.id) ? 0 : orgInds.filter((i) => i.last_payment_status === "Failed").length;
+    const failed = ALL_CURRENT_OVERRIDE.has(o.id) ? 0 : orgInds.filter((i) => i.last_payment_status === "failed").length;
     return {
       ...o,
       carrier: carrierForOrg(o.id),

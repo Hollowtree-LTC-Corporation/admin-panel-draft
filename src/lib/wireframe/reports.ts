@@ -560,7 +560,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
     }
 
     case "payment-health": {
-      const failing = INDIVIDUALS.filter((i) => i.last_payment_status === "Failed");
+      const failing = INDIVIDUALS.filter((i) => i.last_payment_status === "failed");
       return {
         columns: [
           { key: "individual", label: "Individual" },

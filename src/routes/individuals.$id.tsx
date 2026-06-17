@@ -144,9 +144,9 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     employer_contribution_start_date: `2025-0${(n % 9) + 1}-01`,
     last_charge_date: base.last_payment_status ? `2025-06-0${(n % 9) + 1}` : null,
     next_charge_date: `2025-07-0${(n % 9) + 1}`,
-    next_retry_date: base.last_payment_status === "Failed" ? `2025-06-1${n % 9}` : null,
-    failed_attempt_date: base.last_payment_status === "Failed" ? `2025-06-0${(n % 9) + 1}` : null,
-    failed_payment_reason: base.last_payment_status === "Failed" ? "Insufficient funds" : null,
+    next_retry_date: base.last_payment_status === "failed" ? `2025-06-1${n % 9}` : null,
+    failed_attempt_date: base.last_payment_status === "failed" ? `2025-06-0${(n % 9) + 1}` : null,
+    failed_payment_reason: base.last_payment_status === "failed" ? "Insufficient funds" : null,
     enrollment_deadline: n % 4 === 0 ? `2025-08-${10 + (n % 18)}` : null,
     affiliations: !isLTC && org?.cca_group
       ? [{ id: "aff_cca", name: "CCA: Coastal Carriers Association" }]
@@ -224,7 +224,7 @@ function IndividualDetail() {
   const readOnly = !can("individuals", "update");
   const bg = BILLING_GROUPS.find((b) => b.id === i.billing_group_id);
 
-  const balanceCents = i.last_payment_status === "Failed" ? i.monthly_premium_cents : -250;
+  const balanceCents = i.last_payment_status === "failed" ? i.monthly_premium_cents : -250;
   const balanceNeg = balanceCents > 0;
 
   const [deactivateOpen, setDeactivateOpen] = useState(false);
@@ -570,8 +570,8 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
           <Link to="/billing-groups" className="text-sm underline hover:text-[#0a3d3e]">{bg?.name ?? i.billing_group_id}</Link>
         </RField>
         <RField label="Balance">
-          <span className={i.last_payment_status === "Failed" ? "text-red-700 font-medium" : "text-emerald-700"}>
-            {formatCents(i.last_payment_status === "Failed" ? i.monthly_premium_cents : -250)}
+          <span className={i.last_payment_status === "failed" ? "text-red-700 font-medium" : "text-emerald-700"}>
+            {formatCents(i.last_payment_status === "failed" ? i.monthly_premium_cents : -250)}
           </span>
         </RField>
         <div />

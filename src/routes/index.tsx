@@ -168,16 +168,16 @@ function Dashboard() {
   const expected = Math.round(collected * 1.08);
   const delta = collected - expected;
   const outstanding = Math.round(collected * 0.07);
-  const outstandingEnrollees = inds.filter((i) => i.last_payment_status === "Failed" || i.last_payment_status === "Pending").length;
+  const outstandingEnrollees = inds.filter((i) => i.last_payment_status === "failed" || i.last_payment_status === "pending").length;
 
-  const failedInds = inds.filter((i) => i.last_payment_status === "Failed");
+  const failedInds = inds.filter((i) => i.last_payment_status === "failed");
   const grace = failedInds.filter((i) => i.retry_count <= 2).length;
   const penalty = failedInds.filter((i) => i.retry_count >= 3 && i.retry_count <= 4).length;
   const suspensionRisk = failedInds.filter((i) => i.retry_count >= 5).length;
 
   const orgRows = useMemo(() => productOrgs.map((o) => {
     const orgInds = allInds.filter((i) => i.organization_id === o.id);
-    const failed = orgInds.filter((i) => i.last_payment_status === "Failed").length;
+    const failed = orgInds.filter((i) => i.last_payment_status === "failed").length;
     let healthTone: "ok" | "warn" | "bad" = "ok";
     if (failed >= 3) healthTone = "bad";
     else if (failed >= 1) healthTone = "warn";
