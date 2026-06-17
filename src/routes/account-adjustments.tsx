@@ -10,7 +10,14 @@ export const Route = createFileRoute("/account-adjustments")({ component: View }
 
 type SortKey = "individual_name" | "billing_group_id" | "adjustment_type" | "amount_cents" | "reason" | "effective_date" | "applied_to_next_charge" | "approved_by";
 
-const ADJ_TYPES = ["premium_correction", "write_off", "refund", "penalty_waiver", "billing_error", "other"] as const;
+const ADJ_TYPES = ["premium_correction", "penalty_waiver", "refund", "write_off", "other"] as const;
+const ADJ_TYPE_LABELS: Record<typeof ADJ_TYPES[number], string> = {
+  premium_correction: "Premium Correction",
+  penalty_waiver: "Penalty Waiver",
+  refund: "Refund",
+  write_off: "Write-off",
+  other: "Other",
+};
 
 function View() {
   const can = usePermission();
