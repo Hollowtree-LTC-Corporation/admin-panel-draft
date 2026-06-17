@@ -484,7 +484,7 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
       {error && <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
       {mismatch && !editing && (
         <div className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 inline-flex items-center gap-1">
-          <AlertTriangle className="h-3 w-3" /> STD + LTD does not equal Monthly Premium ({formatCents(premiumSum)} vs {formatCents(i.monthly_premium_cents)})
+          <AlertTriangle className="h-3 w-3" /> STD + LTD does not equal Monthly Premium ({formatCents(premiumSumCents)} vs {formatCents(i.monthly_premium_cents)})
         </div>
       )}
       {editing && <SectionActions onCancel={onCancel} onSave={onSave} />}
