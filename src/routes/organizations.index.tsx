@@ -147,7 +147,12 @@ function OrgsView() {
             const healthLabel = o.failed === 0 ? "All current" : `${o.failed} failed`;
             return (
               <TRow key={o.id} onClick={() => navigate({ to: "/organizations/$id", params: { id: o.id } })}>
-                <TCell className="font-medium">{o.name}</TCell>
+                <TCell className="font-medium">
+                  <div className="flex items-center gap-3">
+                    <OrgLogo name={o.name} logoUrl={o.logo_url} />
+                    <span>{o.name}</span>
+                  </div>
+                </TCell>
                 <TCell>
                   {o.carrier
                     ? <span>{o.carrier}</span>
