@@ -216,6 +216,15 @@ function Dashboard() {
   const stalled = allInds.filter((i) => i.coverage_status === "in_progress").length;
   const onboardingOrgs = productOrgs.filter((o) => o.status === "onboarding").length;
 
+  // v15: conversion / life / departure metrics
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const convEligibleCount = product === "DI"
+    ? inds.filter((i) => i.coverage_mode === "group" && i.conversion_eligible_date && i.conversion_eligible_date <= todayISO).length
+    : 0;
+  const lifeEnrollees = product === "DI" ? inds.filter((i) => i.life_enrolled) : [];
+  const lifePremiumTotal = lifeEnrollees.reduce((s, i) => s + (i.life_premium_cents ?? 0), 0);
+  const departedActiveCount = inds.filter((i) => i.departed_organization_at && i.coverage_status === "active").length;
+
   const notify = (where: string) => toast(`Navigate to ${where}`, { description: "Wireframe only" });
 
   return (
@@ -308,9 +317,41 @@ function Dashboard() {
         </Card>
       </div>
 
-      {/* Enrollment Progress / Funnel */}
-      <div className="text-[11px] uppercase tracking-wider text-black/55 font-semibold mb-2">
-        {isLTC ? "Enrollment Progress (stage)" : "Enrollment Funnel (stage)"}
+      {/* v15: Conversion / Life / Departure overview */}
+      <div className={`grid ${product === "DI" ? "grid-cols-3" : "grid-cols-1"} gap-3 mb-5`}>
+        {product === "DI" && (
+          <Card
+            className="p-3 cursor-pointer hover:bg-[#f7f3eb]/40"
+            // Click navigates to filtered list
+            // @ts-expect-error tag-on style; route accepts unknown search keys via validateSearch
+          >
+            <div
+              onClick={() => navigate({ to: "/individuals", search: { conv_eligible: "1" } as never })}
+            >
+              <div className="text-[10px] uppercase tracking-wider text-black/50">Conversion Eligible</div>
+              <div className="text-2xl font-semibold mt-1">{convEligibleCount}</div>
+              <div className="text-[11px] text-black/55 mt-0.5">Eligible for individual conversion</div>
+              <div className="text-[10px] text-black/40">Members with 12+ months of group coverage</div>
+            </div>
+          </Card>
+        )}
+        {product === "DI" && (
+          <Card className="p-3">
+            <div className="text-[10px] uppercase tracking-wider text-black/50">GI Life Enrollees</div>
+            <div className="text-2xl font-semibold mt-1">{lifeEnrollees.length}</div>
+            <div className="text-[11px] text-black/55 mt-0.5">Total monthly life premium: {formatCents(lifePremiumTotal)}</div>
+          </Card>
+        )}
+        <Card
+          className="p-3 cursor-pointer hover:bg-[#f7f3eb]/40"
+          // @ts-expect-error see above
+        >
+          <div onClick={() => navigate({ to: "/individuals", search: { employment: "departed" } as never })}>
+            <div className="text-[10px] uppercase tracking-wider text-black/50">Departed Employees (Active Coverage)</div>
+            <div className="text-2xl font-semibold mt-1">{departedActiveCount}</div>
+            <div className="text-[11px] text-black/55 mt-0.5">People who left but still pay</div>
+          </div>
+        </Card>
       </div>
       {isLTC ? (
         <Card className="p-3 mb-5">
