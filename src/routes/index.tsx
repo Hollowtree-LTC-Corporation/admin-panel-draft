@@ -63,16 +63,15 @@ function Dashboard() {
     if (idx % 17 === 3) return "test";
     if (idx % 19 === 5) return "transitioning";
     switch (ind.current_stage) {
-      case "invited":
-      case "education":
-      case "selecting_plan":
+      case "choosing_plan":
         return "Choosing a Plan";
-      case "medical_questions":
-        // DI is Guaranteed Issue — fold this legacy bucket into the prior step.
+      case "confirming_info":
         return "Plan Selected - Confirming Information";
-      case "checkout":
-        return idx % 2 === 0 ? "At Checkout" : "Adding Payment Method";
-      case "completed":
+      case "at_checkout":
+        return "At Checkout";
+      case "adding_payment":
+        return "Adding Payment Method";
+      case "purchased":
         return "Payment Method Added - Purchase Completed";
       default:
         return "Choosing a Plan";
