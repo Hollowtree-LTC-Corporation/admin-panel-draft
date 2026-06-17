@@ -151,7 +151,7 @@ function View() {
   };
 
   const onSync = (policyId: string, ts: string) => {
-    setPolicies((prev) => prev.map((p) => (p.id === policyId ? { ...p, attio_last_synced_at: ts, attio_policy_id: p.attio_policy_id ?? `att_${p.id}` } : p)));
+    setPolicies((prev) => prev.map((p) => (p.id === policyId ? { ...p, attio_synced_at: ts, attio_policy_id: p.attio_policy_id ?? `att_${p.id}` } : p)));
   };
 
   const handleRowSync = (e: React.MouseEvent, p: Policy) => {
@@ -244,15 +244,15 @@ function View() {
               )}
               <TCell>
                 <div className="flex items-center gap-1.5">
-                  {p.attio_last_synced_at ? (
-                    <Check className="h-3.5 w-3.5 text-emerald-600" aria-label={`Last synced: ${fmtDateTime(p.attio_last_synced_at)}`} />
+                  {p.attio_synced_at ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-600" aria-label={`Last synced: ${fmtDateTime(p.attio_synced_at)}`} />
                   ) : (
                     <Minus className="h-3.5 w-3.5 text-black/30" aria-label="Never synced" />
                   )}
                   <button
                     onClick={(e) => handleRowSync(e, p)}
                     className="text-black/30 hover:text-[#0a3d3e]"
-                    title={p.attio_last_synced_at ? `Last synced: ${fmtDateTime(p.attio_last_synced_at)} — click to re-sync` : "Never synced — click to sync"}
+                    title={p.attio_synced_at ? `Last synced: ${fmtDateTime(p.attio_synced_at)} — click to re-sync` : "Never synced — click to sync"}
                     aria-label="Re-sync to Attio"
                   >
                     <RefreshCw className="h-3 w-3" />
@@ -298,7 +298,7 @@ function emptyPolicy(product: "DI" | "LTC"): Policy {
     channel_partner_id: null,
     commission_schedule_id: null,
     initial_effective_date: "",
-    attio_last_synced_at: null,
+    attio_synced_at: null,
     updated_at: new Date().toISOString(),
     attio_record_id: `att_${id}`,
     attio_policy_id: null,
@@ -328,7 +328,7 @@ function PolicyDrawer({
   const [draftSplits, setDraftSplits] = useState<DraftSplit[]>(existingSplits);
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [lastSynced, setLastSynced] = useState<string | null>(policy?.attio_last_synced_at ?? null);
+  const [lastSynced, setLastSynced] = useState<string | null>(policy?.attio_synced_at ?? null);
   const [splitsLoadedFromDefaults, setSplitsLoadedFromDefaults] = useState(false);
   const [defaultsPartner, setDefaultsPartner] = useState<string | null>(null);
 
@@ -349,7 +349,7 @@ function PolicyDrawer({
       setDraft(policy);
       setDraftSplits(existingSplits);
       setSplitsLoadedFromDefaults(true);
-      setLastSynced(policy.attio_last_synced_at);
+      setLastSynced(policy.attio_synced_at);
     }
     setEditingRow(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -446,7 +446,7 @@ function PolicyDrawer({
       const ts = new Date().toISOString();
       setLastSynced(ts);
       onSync(draft.id, ts);
-      setDraft((d) => ({ ...d, attio_last_synced_at: ts, attio_policy_id: d.attio_policy_id ?? `att_${d.id}` }));
+      setDraft((d) => ({ ...d, attio_synced_at: ts, attio_policy_id: d.attio_policy_id ?? `att_${d.id}` }));
       setSyncing(false);
       toast.success(`Synced to Attio`);
     }, 800);
