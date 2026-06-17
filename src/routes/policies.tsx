@@ -223,8 +223,28 @@ function View() {
           value={ownerType}
           onChange={(v) => setOwnerType(v as PolicyOwnerType | "all")}
           allLabel="All owner types"
-          options={[{ value: "employer_group", label: "Employer Group" }, { value: "affiliate", label: "Affiliate" }]}
+          options={[
+            { value: "employer_group", label: "Employer Group" },
+            { value: "affiliate", label: "Affiliate" },
+            { value: "individual", label: "Individual" },
+          ]}
         />
+        {product === "DI" && (
+          <>
+            <FilterSelect
+              value={policyType}
+              onChange={(v) => setPolicyType(v as "all" | "group" | "individual")}
+              allLabel="All policy types"
+              options={[{ value: "group", label: "Group" }, { value: "individual", label: "Individual" }]}
+            />
+            <FilterSelect
+              value={lob}
+              onChange={(v) => setLob(v as "all" | "DI" | "LTC" | "life")}
+              allLabel="All lines of business"
+              options={[{ value: "DI", label: "Disability" }, { value: "life", label: "Life" }]}
+            />
+          </>
+        )}
         <FilterCombobox value={cp} onChange={setCp} placeholder="All carrier products" options={cpOptions} />
         <ClearFiltersLink show={active} onClick={clearAll} />
         <ExportCsvButton filteredCount={rows.length} totalCount={productPolicies.length} resourceLabel="policies" />
@@ -251,6 +271,17 @@ function View() {
               </TCell>
               <TCell>{p.policy_name ?? <span className="text-black/30">—</span>}</TCell>
               <TCell className="font-medium">{p.org_name}</TCell>
+              <TCell>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border ${OWNER_TONE[p.policy_owner_type]}`}>
+                  {OWNER_LABEL[p.policy_owner_type]}
+                </span>
+              </TCell>
+              {product === "DI" && (
+                <>
+                  <TCell>{LOB_LABEL[p.line_of_business] ?? <span className="text-black/30">—</span>}</TCell>
+                  <TCell>{p.individual_name ?? <span className="text-black/30">—</span>}</TCell>
+                </>
+              )}
               <TCell>{p.carrier_product_name}</TCell>
               <TCell><StatusChip s={p.enrollment_status} /></TCell>
               <TCell>{fmtDate(p.initial_effective_date)}</TCell>
