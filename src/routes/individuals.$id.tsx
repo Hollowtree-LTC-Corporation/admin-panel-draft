@@ -185,8 +185,9 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     physician_type: !isLTC && n % 2 === 0 ? ["MD","DO","Resident"][n % 3] : null,
     nurse_type: !isLTC && n % 2 === 1 ? ["RN","NP","CRNA"][n % 3] : null,
     were_they_client: !isLTC ? n % 3 === 0 : null,
-    std_premium: !isLTC && org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.4) : 0,
-    ltd_premium: !isLTC ? (org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.6) : base.monthly_premium_cents) : 0,
+    // std_premium / ltd_premium stored as whole dollars (DI only).
+    std_premium: !isLTC && org?.type_of_rate === "STD+LTD" ? Math.round((base.monthly_premium_cents * 0.4) / 100) : 0,
+    ltd_premium: !isLTC ? Math.round((org?.type_of_rate === "STD+LTD" ? base.monthly_premium_cents * 0.6 : base.monthly_premium_cents) / 100) : 0,
     // LTC-only extras
     employee_upgrade_option: isLTC && base.applied_for_upgrade ? ["Silver→Gold","Gold→Platinum","Platinum→Diamond"][n % 3] : null,
     applied_for_upgrade: isLTC ? base.applied_for_upgrade : null,
