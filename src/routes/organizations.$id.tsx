@@ -489,6 +489,14 @@ function OrgDetail() {
   useEffect(() => { setOnboardingChecks(seedChecks(id, product)); }, [id, product]);
   const onboardingAggregate = computeAggregate(onboardingChecks);
 
+  const [logoUrl, setLogoUrl] = useState<string | null>(orgBase.logo_url ?? null);
+  useEffect(() => { setLogoUrl(orgBase.logo_url ?? null); }, [orgBase.logo_url, orgBase.id]);
+  const handleLogoChange = (next: string | null) => {
+    setLogoUrl(next);
+    // Wireframe: mutate the shared mock so list view reflects after nav.
+    (orgBase as { logo_url: string | null }).logo_url = next;
+  };
+
   return (
     <div>
       <Link to="/organizations" className="inline-flex items-center text-xs text-black/60 hover:text-black mb-2">
