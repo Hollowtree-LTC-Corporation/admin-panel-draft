@@ -75,7 +75,7 @@ function computeBalances(inds: typeof INDIVIDUALS): Row[] {
       .reduce((s, a) => s + a.amount_cents, 0);
     // Employer-paid charges (excluded — surfaced for the drawer caption)
     const employerExcluded = ledger
-      .filter((p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employer")
+      .filter((p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employer_account")
       .reduce((s, p) => s + p.amount_cents, 0);
     const balance = charges - paid + adjusted;
     return {
