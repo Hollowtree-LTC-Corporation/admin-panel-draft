@@ -37,12 +37,35 @@ const COVERAGE_BADGE: Record<string, { label: string; cls: string }> = {
   lapsed: { label: "Lapsed", cls: "border border-red-300 text-red-600 bg-transparent" },
 };
 const STAGE_BADGE: Record<string, { label: string; cls: string }> = {
-  invited: { label: "Invited", cls: "bg-purple-50 text-purple-600" },
-  education: { label: "Education", cls: "bg-purple-100 text-purple-700" },
-  selecting_plan: { label: "Selecting Plan", cls: "bg-purple-200 text-purple-800" },
-  medical_questions: { label: "Medical Qs", cls: "bg-violet-200 text-violet-800" },
-  checkout: { label: "Checkout", cls: "bg-violet-100 text-violet-700" },
-  completed: { label: "Completed", cls: "bg-indigo-100 text-indigo-700" },
+  // DI (5)
+  choosing_plan: { label: "Choosing Plan", cls: "bg-purple-50 text-purple-700" },
+  confirming_info: { label: "Confirming Info", cls: "bg-purple-100 text-purple-700" },
+  at_checkout: { label: "At Checkout", cls: "bg-violet-100 text-violet-700" },
+  adding_payment: { label: "Adding Payment", cls: "bg-violet-200 text-violet-800" },
+  purchased: { label: "Purchased", cls: "bg-indigo-100 text-indigo-700" },
+  // LTC core
+  starting_application: { label: "Starting Application", cls: "bg-purple-50 text-purple-700" },
+  selecting_plan: { label: "Selecting Plan", cls: "bg-purple-100 text-purple-700" },
+  beneficiary_form: { label: "Beneficiary Form", cls: "bg-purple-200 text-purple-800" },
+  // LTC post-purchase
+  upsell_survey: { label: "Upsell Survey", cls: "bg-indigo-50 text-indigo-700" },
+  interested_spouse: { label: "Interested: Spouse", cls: "bg-indigo-100 text-indigo-700" },
+  interested_upgrade: { label: "Interested: Upgrade", cls: "bg-indigo-100 text-indigo-700" },
+  interested_both: { label: "Interested: Both", cls: "bg-indigo-100 text-indigo-700" },
+  at_more_coverage: { label: "At More Coverage", cls: "bg-indigo-200 text-indigo-800" },
+  // LTC spouse sub-funnel
+  choosing_spousal_pricing: { label: "Choosing Spousal Pricing", cls: "bg-pink-50 text-pink-700" },
+  spouse_eligibility: { label: "Spouse Eligibility", cls: "bg-pink-100 text-pink-700" },
+  spouse_confirming_details: { label: "Spouse Confirming Details", cls: "bg-pink-100 text-pink-700" },
+  spouse_designee: { label: "Spouse Designee", cls: "bg-pink-100 text-pink-700" },
+  spouse_checkout: { label: "Spouse Checkout", cls: "bg-pink-200 text-pink-800" },
+  // LTC upgrade sub-funnel
+  choosing_upgrade: { label: "Choosing Upgrade", cls: "bg-amber-50 text-amber-700" },
+  upgrade_medical: { label: "Upgrade Medical", cls: "bg-amber-100 text-amber-700" },
+  upgrade_checkout: { label: "Upgrade Checkout", cls: "bg-amber-100 text-amber-800" },
+  upgrade_applied: { label: "Upgrade Applied", cls: "bg-amber-200 text-amber-800" },
+  upgrade_approved: { label: "Upgrade Approved", cls: "bg-emerald-100 text-emerald-700" },
+  upgrade_denied: { label: "Upgrade Denied", cls: "bg-red-100 text-red-700" },
 };
 
 function Badge({ map, value }: { map: typeof COVERAGE_BADGE; value: string }) {
