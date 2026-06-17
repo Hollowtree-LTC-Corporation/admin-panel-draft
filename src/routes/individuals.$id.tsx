@@ -317,7 +317,7 @@ function IndividualDetail() {
             <UnderwritingSection i={i} readOnly={readOnly} />
             <SpouseSection i={i} linked={linked ?? undefined} linkedDetail={linkedDetail} readOnly={readOnly} />
             <UpgradeSection i={i} readOnly={readOnly} />
-            <EnrollmentSection i={i} />
+            <EnrollmentSection i={i} isLTC={isLTC} />
             <SystemRefsSection i={i} />
           </>
         ) : (
@@ -326,9 +326,8 @@ function IndividualDetail() {
             <PaymentSection i={i} bg={bg} readOnly={readOnly} />
             <ContributionSection i={i} readOnly={readOnly} />
             <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} isLTC={isLTC} />
-            <EnrollmentSection i={i} isLTC={isLTC} />
             <ProfessionalClassificationSection i={i} readOnly={readOnly} />
-            <EnrollmentSection i={i} />
+            <EnrollmentSection i={i} isLTC={isLTC} />
             <SystemRefsSection i={i} />
           </>
         )}
