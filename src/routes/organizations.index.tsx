@@ -7,6 +7,7 @@ import { INDIVIDUALS } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort, US_STATE_OPTIONS } from "@/components/wireframe/Filters";
 import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
+import { OrgLogo } from "@/components/wireframe/OrgLogo";
 
 export const Route = createFileRoute("/organizations/")({ component: OrgsView });
 
