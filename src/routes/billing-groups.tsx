@@ -148,8 +148,8 @@ function View() {
       base.push({
         id: sep.newGroupId,
         name: `Billing Group ${sep.newGroupId.split("_")[1]}`,
-        organization_id: departing.org_id,
-        org_name: ORGS.find((o) => o.id === departing.org_id)?.name ?? "—",
+        organization_id: departing.organization_id,
+        org_name: ORGS.find((o) => o.id === departing.organization_id)?.name ?? "—",
         primary_individual_id: departing.id,
         status: "pending",
         moov_account_id: null,
@@ -198,7 +198,7 @@ function View() {
       const members = memberMap[g.id] ?? [];
       if (s) {
         const inGroup =
-          g.name.toLowerCase().includes(s) ||
+          (g.name ?? "").toLowerCase().includes(s) ||
           g.id.toLowerCase().includes(s) ||
           g.org_name.toLowerCase().includes(s) ||
           members.some((m) => m.full_name.toLowerCase().includes(s));
@@ -340,7 +340,7 @@ function View() {
             <div className="flex items-start justify-between gap-3 mb-2">
               <div>
                 <input
-                  defaultValue={detailGroup.name}
+                  defaultValue={detailGroup.name ?? ""}
                   disabled={!can("billing_groups", "update")}
                   className="text-sm font-medium border border-transparent hover:border-black/15 rounded px-1 py-0.5 disabled:bg-transparent"
                 />
@@ -421,8 +421,8 @@ function View() {
                 <tbody>
                   {detailCharges.map((p) => (
                     <tr key={p.id} className="border-t border-black/5">
-                      <td className="px-2 py-1.5">{p.date}</td>
-                      <td className="px-2 py-1.5 text-black/70">{p.charge_type}</td>
+                      <td className="px-2 py-1.5">{p.event_date}</td>
+                      <td className="px-2 py-1.5 text-black/70">{p.event_type}</td>
                       <td className="px-2 py-1.5">{formatCents(p.amount_cents)}</td>
                       <td className="px-2 py-1.5"><Pill tone={statusTone(p.status)}>{p.status}</Pill></td>
                     </tr>

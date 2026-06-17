@@ -97,7 +97,7 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
   const isLtcSpouse = isLTC && (n === 7 || n === 14);
   const relationship = isLTC ? (isLtcSpouse ? "spouse" : "primary") : "primary";
   const linkedId = isLtcSpouse ? `ind_${n - 1}` : (isLTC && (n === 6 || n === 13) ? `ind_${n + 1}` : null);
-  const org = ORGS.find((o) => o.id === base.org_id);
+  const org = ORGS.find((o) => o.id === base.organization_id);
 
   return {
     ...base,
@@ -112,10 +112,10 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     state: US_STATES[n % US_STATES.length],
     zip_code: `7${1000 + n}`,
     hire_date: `202${(n % 4) + 1}-0${(n % 9) + 1}-15`,
-    org_id: noOrg ? null : base.org_id,
+    organization_id: noOrg ? null : base.organization_id,
     org_name: noOrg ? null : base.org_name,
     employment_relationship: EMPLOYMENT_REL[n % EMPLOYMENT_REL.length],
-    union_member: n % 6 === 0,
+    is_union_member: n % 6 === 0,
     union_local_name: n % 6 === 0 ? `Local ${100 + n}` : null,
     ssn_on_file: n % 3 !== 0,
     ssn_last4: String(1000 + n).slice(-4),
@@ -130,10 +130,10 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     persona: ["standard","high_value","new_hire"][n % 3],
     employee_plan_selected: isLTC ? base.purchased_plan : "",
     benefit_class_name: isLTC ? (n % 2 === 0 ? "All Employees" : "Management") : "",
-    upgrade_carrier_decision: isLTC && base.upgrade_applied_for ? UPGRADE_DECISIONS[n % 3] : null,
-    pre_upgrade_premium_cents: isLTC && base.upgrade_applied_for ? Math.round(base.monthly_premium_cents * 0.8) : null,
-    upgrade_submitted_at: isLTC && base.upgrade_applied_for ? `2025-05-1${n % 9}` : null,
-    upgrade_carrier_decision_at: isLTC && base.upgrade_applied_for ? `2025-06-0${(n % 9) + 1}` : null,
+    upgrade_carrier_decision: isLTC && base.applied_for_upgrade ? UPGRADE_DECISIONS[n % 3] : null,
+    pre_upgrade_premium_cents: isLTC && base.applied_for_upgrade ? Math.round(base.monthly_premium_cents * 0.8) : null,
+    upgrade_submitted_at: isLTC && base.applied_for_upgrade ? `2025-05-1${n % 9}` : null,
+    upgrade_carrier_decision_at: isLTC && base.applied_for_upgrade ? `2025-06-0${(n % 9) + 1}` : null,
     relationship_type: relationship,
     linked_individual_id: linkedId,
     interested_spousal_text: isLTC && relationship === "primary" ? (base.interested_spousal ? "yes" : "no") : "",
@@ -141,12 +141,12 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     clicked_spouse_link: isLTC && relationship === "primary" ? (n % 3 === 0 ? "yes" : "no") : "",
     sent_spouse_invite: isLTC && relationship === "primary" ? (n % 3 === 0 ? "2025-05-12" : "no") : "",
     why_no_spouse: isLTC && relationship === "primary" && !base.interested_spousal ? "unmarried" : null,
-    contribution_start_date: `2025-0${(n % 9) + 1}-01`,
+    employer_contribution_start_date: `2025-0${(n % 9) + 1}-01`,
     last_charge_date: base.last_payment_status ? `2025-06-0${(n % 9) + 1}` : null,
     next_charge_date: `2025-07-0${(n % 9) + 1}`,
-    next_retry_date: base.last_payment_status === "Failed" ? `2025-06-1${n % 9}` : null,
-    failed_attempt_date: base.last_payment_status === "Failed" ? `2025-06-0${(n % 9) + 1}` : null,
-    failed_payment_reason: base.last_payment_status === "Failed" ? "Insufficient funds" : null,
+    next_retry_date: base.last_payment_status === "failed" ? `2025-06-1${n % 9}` : null,
+    failed_attempt_date: base.last_payment_status === "failed" ? `2025-06-0${(n % 9) + 1}` : null,
+    failed_payment_reason: base.last_payment_status === "failed" ? "Insufficient funds" : null,
     enrollment_deadline: n % 4 === 0 ? `2025-08-${10 + (n % 18)}` : null,
     affiliations: !isLTC && org?.cca_group
       ? [{ id: "aff_cca", name: "CCA: Coastal Carriers Association" }]
@@ -162,11 +162,11 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     physician_type: !isLTC && n % 2 === 0 ? ["MD","DO","Resident"][n % 3] : null,
     nurse_type: !isLTC && n % 2 === 1 ? ["RN","NP","CRNA"][n % 3] : null,
     were_they_client: !isLTC ? n % 3 === 0 : null,
-    std_premium_cents: !isLTC && org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.4) : 0,
-    ltd_premium_cents: !isLTC ? (org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.6) : base.monthly_premium_cents) : 0,
+    std_premium: !isLTC && org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.4) : 0,
+    ltd_premium: !isLTC ? (org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.6) : base.monthly_premium_cents) : 0,
     // LTC-only extras
-    employee_upgrade_option: isLTC && base.upgrade_applied_for ? ["Silver→Gold","Gold→Platinum","Platinum→Diamond"][n % 3] : null,
-    applied_for_upgrade: isLTC ? base.upgrade_applied_for : null,
+    employee_upgrade_option: isLTC && base.applied_for_upgrade ? ["Silver→Gold","Gold→Platinum","Platinum→Diamond"][n % 3] : null,
+    applied_for_upgrade: isLTC ? base.applied_for_upgrade : null,
     // v14: individuals.premium_structure — TODO: confirm column migrated; default 'lifetime'
     premium_structure: isLTC ? (n % 4 === 0 ? "ten_pay" : "lifetime") : null,
     // Mocked from organizations.available_premium_structures
@@ -224,7 +224,7 @@ function IndividualDetail() {
   const readOnly = !can("individuals", "update");
   const bg = BILLING_GROUPS.find((b) => b.id === i.billing_group_id);
 
-  const balanceCents = i.last_payment_status === "Failed" ? i.monthly_premium_cents : -250;
+  const balanceCents = i.last_payment_status === "failed" ? i.monthly_premium_cents : -250;
   const balanceNeg = balanceCents > 0;
 
   const [deactivateOpen, setDeactivateOpen] = useState(false);
@@ -264,9 +264,9 @@ function IndividualDetail() {
         <div className="grid grid-cols-8 gap-2">
           <SummaryChip label="Organization"
             value={i.org_name ?? <span className="italic text-black/50">Affiliate</span>}
-            onClick={i.org_id ? () => navigate({ to: "/organizations/$id", params: { id: i.org_id! } }) : undefined} />
+            onClick={i.organization_id ? () => navigate({ to: "/organizations/$id", params: { id: i.organization_id! } }) : undefined} />
           <SummaryChip label="Coverage Status" value={<Badge map={COVERAGE_BADGE} value={i.coverage_status} />} />
-          <SummaryChip label="Current Stage" value={<Badge map={STAGE_BADGE} value={i.stage} />} />
+          <SummaryChip label="Current Stage" value={<Badge map={STAGE_BADGE} value={i.current_stage} />} />
           {isLTC && (
             <SummaryChip label="Issue Type" value={<IssueTypeBadge value={i.issue_type} />} />
           )}
@@ -418,7 +418,7 @@ function CoverageStatusField({ editing, status, setStatus, allowed, current }: {
 function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void }) {
   const { editing, setEditing, status, setStatus, error, allowed, onSave, onCancel } = useCoverageEditing(i, setConfirm);
   const unfunded = i.coverage_status === "not_started" || i.coverage_status === "in_progress";
-  const premiumSum = i.std_premium_cents + i.ltd_premium_cents;
+  const premiumSum = i.std_premium + i.ltd_premium;
   const mismatch = !unfunded && premiumSum !== i.monthly_premium_cents;
   const DI_PLANS = ["Bronze DI", "Silver DI", "Gold DI"];
   const DI_STAGES = ["not_started","quote_generated","link_sent","app_started","app_completed","payment_pending","enrolled","active"];
@@ -427,7 +427,7 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
       <Grid cols={4}>
         <CoverageStatusField editing={editing} status={status} setStatus={setStatus} allowed={allowed} current={i.coverage_status} />
         <RField label="Coverage Plan" value={unfunded ? "—" : i.coverage_plan} editing={editing}>
-          <select defaultValue={i.coverage_plan} className={inputCls}>{DI_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
+          <select defaultValue={i.coverage_plan ?? ""} className={inputCls}>{DI_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
         </RField>
         <RField label="Monthly Premium">
           {unfunded ? <span className="text-gray-400">—</span> : (
@@ -441,8 +441,8 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
         <RField label="Monthly Benefit" value={i.monthly_benefit_cents != null ? formatCents(i.monthly_benefit_cents) : "—"} />
         <RField label="Current Stage" editing={editing}>
           {editing
-            ? <select defaultValue={i.stage} className={inputCls}>{DI_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-            : <Badge map={STAGE_BADGE} value={i.stage} />}
+            ? <select defaultValue={i.current_stage} className={inputCls}>{DI_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+            : <Badge map={STAGE_BADGE} value={i.current_stage} />}
         </RField>
         <RField label="Application Status">
           {i.application_status
@@ -470,14 +470,14 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
     <SectionCard title="Coverage & Plan · LTC" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
         <CoverageStatusField editing={editing} status={status} setStatus={setStatus} allowed={allowed} current={i.coverage_status} />
-        <RField label="Current Stage"><Badge map={STAGE_BADGE} value={i.stage} /></RField>
+        <RField label="Current Stage"><Badge map={STAGE_BADGE} value={i.current_stage} /></RField>
         <RField label="Benefit Class" value={i.benefit_class_name} editing={editing}>
           <select defaultValue={i.benefit_class_name} className={inputCls}>{["All Employees","Management"].map((o) => <option key={o}>{o}</option>)}</select>
         </RField>
         <RField label="Riders" value={i._riders} />
 
         <RField label="Purchased Plan" value={unfunded ? "—" : i.purchased_plan} editing={editing}>
-          <select defaultValue={i.purchased_plan} className={inputCls}>{LTC_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
+          <select defaultValue={i.purchased_plan ?? ""} className={inputCls}>{LTC_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
         </RField>
         <RField label="Issue Type" editing={editing}>
           {editing
@@ -570,8 +570,8 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
           <Link to="/billing-groups" className="text-sm underline hover:text-[#0a3d3e]">{bg?.name ?? i.billing_group_id}</Link>
         </RField>
         <RField label="Balance">
-          <span className={i.last_payment_status === "Failed" ? "text-red-700 font-medium" : "text-emerald-700"}>
-            {formatCents(i.last_payment_status === "Failed" ? i.monthly_premium_cents : -250)}
+          <span className={i.last_payment_status === "failed" ? "text-red-700 font-medium" : "text-emerald-700"}>
+            {formatCents(i.last_payment_status === "failed" ? i.monthly_premium_cents : -250)}
           </span>
         </RField>
         <div />
@@ -663,16 +663,16 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
 
 function ContributionSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
   const [editing, setEditing] = useState(false);
-  const active = i.contribution_active;
-  const hasHistory = !active && !!i.contribution_start_date && !!i.contribution_duration_months;
-  const endDate = i.contribution_duration_months
-    ? addMonths(i.contribution_start_date, i.contribution_duration_months)
+  const active = i.employer_contribution_active;
+  const hasHistory = !active && !!i.employer_contribution_start_date && !!i.employer_contribution_duration_months;
+  const endDate = i.employer_contribution_duration_months
+    ? addMonths(i.employer_contribution_start_date, i.employer_contribution_duration_months)
     : "Indefinite";
   return (
     <SectionCard title="Employer Contribution" defaultOpen={active} editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
-        <RField label="Contribution Tier" value={titleCase(i.contribution_tier)} editing={editing && active}>
-          <select defaultValue={i.contribution_tier ?? ""} className={inputCls}>
+        <RField label="Contribution Tier" value={titleCase(i.employer_contribution_tier)} editing={editing && active}>
+          <select defaultValue={i.employer_contribution_tier ?? ""} className={inputCls}>
             {TIERS.map((t) => <option key={t} value={t}>{titleCase(t)}</option>)}
           </select>
         </RField>
@@ -680,32 +680,32 @@ function ContributionSection({ i, readOnly }: { i: Detail; readOnly: boolean }) 
           {active ? <Badge map={COVERAGE_BADGE} value="active" /> : <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">Inactive</span>}
         </RField>
         {active && (
-          <RField label="Duration (months)" value={i.contribution_duration_months ? String(i.contribution_duration_months) : "Indefinite"} editing={editing}>
-            <input defaultValue={i.contribution_duration_months?.toString() ?? ""} placeholder="Indefinite" className={inputCls} />
+          <RField label="Duration (months)" value={i.employer_contribution_duration_months ? String(i.employer_contribution_duration_months) : "Indefinite"} editing={editing}>
+            <input defaultValue={i.employer_contribution_duration_months?.toString() ?? ""} placeholder="Indefinite" className={inputCls} />
           </RField>
         )}
         {active && <div />}
         {(active || hasHistory) && (
           <>
-            <RField label="Start Date" value={fmtDate(i.contribution_start_date)} editing={editing && active}>
-              <input type="date" defaultValue={i.contribution_start_date ?? ""} className={inputCls} />
+            <RField label="Start Date" value={fmtDate(i.employer_contribution_start_date)} editing={editing && active}>
+              <input type="date" defaultValue={i.employer_contribution_start_date ?? ""} className={inputCls} />
             </RField>
             <RField label="End Date" value={endDate} />
           </>
         )}
       </Grid>
       {/* TODO: confirm tier→percentage mapping with product team before exposing % to ops */}
-      {active && i.contribution_tier && (
+      {active && i.employer_contribution_tier && (
         <div className="mt-4 bg-blue-50 border-l-4 border-blue-400 text-sm text-black/75 p-3 rounded-r leading-relaxed">
-          The employer covers this enrollee's premium at the <b>{titleCase(i.contribution_tier)}</b> tier
-          {i.contribution_duration_months ? <> for <b>{i.contribution_duration_months} months</b></> : <> <b>indefinitely</b></>}
-          {i.contribution_start_date ? <> starting <b>{fmtDate(i.contribution_start_date)}</b></> : null}.
+          The employer covers this enrollee's premium at the <b>{titleCase(i.employer_contribution_tier)}</b> tier
+          {i.employer_contribution_duration_months ? <> for <b>{i.employer_contribution_duration_months} months</b></> : <> <b>indefinitely</b></>}
+          {i.employer_contribution_start_date ? <> starting <b>{fmtDate(i.employer_contribution_start_date)}</b></> : null}.
           The dollar amount is derived at billing time from the benefit class configuration.
         </div>
       )}
       {!active && hasHistory && (
         <div className="mt-4 text-sm text-black/60 leading-relaxed">
-          Employer covered this enrollee's premium at the <b>{titleCase(i.contribution_tier)}</b> tier from <b>{fmtDate(i.contribution_start_date)}</b> to <b>{endDate}</b>. The enrollee now pays the full premium.
+          Employer covered this enrollee's premium at the <b>{titleCase(i.employer_contribution_tier)}</b> tier from <b>{fmtDate(i.employer_contribution_start_date)}</b> to <b>{endDate}</b>. The enrollee now pays the full premium.
         </div>
       )}
       {!active && !hasHistory && (
@@ -751,12 +751,12 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
         <RField label="Date of Birth" value={fmtDate(i.date_of_birth)} editing={editing}><input type="date" defaultValue={i.date_of_birth} className={inputCls} /></RField>
         <RField label="Organization">
           {editing ? (
-            <select defaultValue={i.org_id ?? ""} className={inputCls}>
+            <select defaultValue={i.organization_id ?? ""} className={inputCls}>
               <option value="">— Affiliate-sponsored —</option>
               {ORGS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
             </select>
-          ) : i.org_id ? (
-            <Link to="/organizations/$id" params={{ id: i.org_id }} className="text-sm underline hover:text-[#0a3d3e]">{i.org_name}</Link>
+          ) : i.organization_id ? (
+            <Link to="/organizations/$id" params={{ id: i.organization_id }} className="text-sm underline hover:text-[#0a3d3e]">{i.org_name}</Link>
           ) : <span className="text-sm italic text-black/50">Affiliate-sponsored</span>}
         </RField>
         <RField label="Employment Relationship" value={i.employment_relationship} editing={editing}>
@@ -767,7 +767,7 @@ function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boo
         <RField label="Gender" value={i.gender} editing={editing}>
           <select defaultValue={i.gender} className={inputCls}>{GENDERS.map((o) => <option key={o}>{o}</option>)}</select>
         </RField>
-        <RField label="Union Member"><Switch checked={i.union_member} disabled={!editing} /></RField>
+        <RField label="Union Member"><Switch checked={i.is_union_member} disabled={!editing} /></RField>
         <RField label="Union Local Name" value={i.union_local_name ?? "—"} editing={editing}><input defaultValue={i.union_local_name ?? ""} className={inputCls} /></RField>
         {/* TODO: v14 schema add individuals.assigned_rep TEXT for LTC parity with DI. Currently shared free-text from dummy data. */}
         <RField label="Assigned Rep" value={i.assigned_rep ?? "—"} editing={editing}>
@@ -931,8 +931,8 @@ function EnrollmentSection({ i }: { i: Detail }) {
     <SectionCard title="Enrollment Window & Affiliations">
       <Grid cols={2}>
         <RField label="Enrollment Window">
-          {i.org_id ? (
-            <Link to="/organizations/$id" params={{ id: i.org_id }} className="text-sm underline hover:text-[#0a3d3e]">annual · 2025-09</Link>
+          {i.organization_id ? (
+            <Link to="/organizations/$id" params={{ id: i.organization_id }} className="text-sm underline hover:text-[#0a3d3e]">annual · 2025-09</Link>
           ) : <span className="text-sm text-black/50">—</span>}
         </RField>
         <RField label="Enrollment Deadline" value={fmtDate(i.enrollment_deadline)} />

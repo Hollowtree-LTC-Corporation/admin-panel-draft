@@ -50,9 +50,9 @@ function issueTypeFor(i: { issue_type?: string | null; relationship_type?: strin
 
 function paymentBadge(status: string | null, retry: number) {
   if (!status) return <span className="text-black/40">—</span>;
-  if (status === "Successful") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">Paid</span>;
-  if (status === "Pending") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Pending</span>;
-  if (status === "Failed") {
+  if (status === "successful") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">Paid</span>;
+  if (status === "pending") return <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Pending</span>;
+  if (status === "failed") {
     const escalated = retry >= 3;
     const cls = escalated ? "bg-red-200 text-red-800 font-medium" : "bg-red-100 text-red-700";
     const label = retry > 0 ? `Failed (${retry})` : "Failed";
@@ -120,7 +120,7 @@ function IndividualsView() {
 
   const productRows = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
-  const stageOptions = Array.from(new Set(productRows.map((r) => r.stage)));
+  const stageOptions = Array.from(new Set(productRows.map((r) => r.current_stage)));
   const repOptions = Array.from(new Set(productRows.map((r) => r.assigned_rep).filter(Boolean))) as string[];
   const benefitClassOptions = ["All Employees", "Management"];
 
@@ -129,9 +129,9 @@ function IndividualsView() {
     const rows = productRows.filter((i) => {
       const n = parseInt(i.id.replace("ind_", ""), 10) || 1;
       if (s && !(i.full_name.toLowerCase().includes(s) || i.email.toLowerCase().includes(s))) return false;
-      if (orgFilter !== "all" && i.org_id !== orgFilter) return false;
+      if (orgFilter !== "all" && i.organization_id !== orgFilter) return false;
       if (coverageFilter !== "all" && i.coverage_status !== coverageFilter) return false;
-      if (stageFilter !== "all" && i.stage !== stageFilter) return false;
+      if (stageFilter !== "all" && i.current_stage !== stageFilter) return false;
       if (isLTC && issueFilter !== "all" && issueTypeFor(i) !== issueFilter) return false;
       if (isLTC && bclassFilter !== "all" && benefitClassFor(n) !== bclassFilter) return false;
       if (!isLTC && typeFilter !== "all") {
@@ -192,7 +192,7 @@ function IndividualsView() {
             <FilterSelect value={repFilter} onChange={setRepFilter} allLabel="All reps" options={[...repOptions.map((v) => ({ value: v })), { value: "__unassigned__", label: "Unassigned" }]} />
           </>
         )}
-        <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "Successful", label: "Paid" }, { value: "Failed" }, { value: "Pending" }]} />
+        <FilterSelect value={paymentFilter} onChange={setPaymentFilter} allLabel="All payments" options={[{ value: "successful", label: "Paid" }, { value: "failed", label: "Failed" }, { value: "pending", label: "Pending" }]} />
         <ClearFiltersLink show={filtersActive} onClick={clearAll} />
         <ExportCsvButton filteredCount={filtered.length} totalCount={productRows.length} resourceLabel="individuals" />
       </FilterRow>
@@ -248,7 +248,7 @@ function IndividualsView() {
                     </span>
                   </TCell>
                   <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
-                  <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
+                  <TCell><StatusBadge map={STAGE_BADGE} value={i.current_stage} /></TCell>
                   <TCell className="text-[12px]">{bclass}</TCell>
                   <TCell className="text-[12px]">{premiumStructureLabel(ps)}</TCell>
                   <TCell className="text-right">{unpurchased ? "—" : formatFaceAmount(i.face_amount_cents)}</TCell>
@@ -272,7 +272,7 @@ function IndividualsView() {
                   </span>
                 </TCell>
                 <TCell><StatusBadge map={COVERAGE_BADGE} value={i.coverage_status} /></TCell>
-                <TCell><StatusBadge map={STAGE_BADGE} value={i.stage} /></TCell>
+                <TCell><StatusBadge map={STAGE_BADGE} value={i.current_stage} /></TCell>
                 <TCell>{unpurchased ? "—" : i.coverage_plan}</TCell>
                 <TCell className={i.coverage_status === "in_progress" ? "text-black/40" : ""}>{formatDate(i.effective_date)}</TCell>
                 <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>

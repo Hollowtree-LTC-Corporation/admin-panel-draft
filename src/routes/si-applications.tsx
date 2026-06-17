@@ -96,7 +96,7 @@ function QueueTab() {
       if (s && !a.individual_name.toLowerCase().includes(s) && !a.org_name.toLowerCase().includes(s)) return false;
       if (status !== "all" && a.upgrade_carrier_decision !== status) return false;
       if (carrier !== "all" && a.carrier_id !== carrier) return false;
-      if (org !== "all" && a.org_id !== org) return false;
+      if (org !== "all" && a.organization_id !== org) return false;
       if (resp !== "all" && a.respondent_type !== resp) return false;
       if (tier !== "all" && a.plan_tier !== tier) return false;
       if (rep !== "all") {
@@ -457,8 +457,8 @@ function ApplicationDrawer({ app, openedAt, onClose, onExpire }: { app: SiApplic
               <Field label="Face amount">{formatCents(localApp.face_amount_cents)}</Field>
               <Field label="Carrier">{localApp.carrier_name}</Field>
               <Field label="Issue type">SI</Field>
-              {localApp.pre_buyup_premium_cents != null ? (
-                <Field label="Pre-buy-up premium">{formatCents(localApp.pre_buyup_premium_cents)}</Field>
+              {localApp.pre_upgrade_premium_cents != null ? (
+                <Field label="Pre-buy-up premium">{formatCents(localApp.pre_upgrade_premium_cents)}</Field>
               ) : null}
               {localApp.respondent_type === "spouse" && localApp.linked_individual_name ? (
                 <Field label="Linked employee">

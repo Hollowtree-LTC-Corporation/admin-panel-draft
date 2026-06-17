@@ -5,20 +5,12 @@ import { FilterRow, FilterSearch, FilterSelect, ClearFiltersLink, SortableTHead,
 import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import type { AffiliateOrganization, AffiliateType, AffiliationLevel, AffiliateIndustry, LegalEntityStatus } from "@/lib/wireframe/data";
-import { Shield, Building2, Handshake, Camera, ImageIcon } from "lucide-react";
+
 
 export const Route = createFileRoute("/affiliates")({ component: View });
 
 type SortKey = "name" | "affiliate_type" | "affiliation_level" | "industry" | "is_external" | "status";
 
-// Cycle of sample "uploaded" logos for the wireframe upload interaction.
-const SAMPLE_LOGOS = ["icon:shield", "icon:building", "icon:handshake", "icon:image"];
-let sampleLogoIdx = 0;
-function nextSampleLogo() {
-  const v = SAMPLE_LOGOS[sampleLogoIdx % SAMPLE_LOGOS.length];
-  sampleLogoIdx++;
-  return v;
-}
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -31,36 +23,12 @@ export function AffiliateLogo({
   affiliate,
   size = 32,
 }: {
-  affiliate: Pick<AffiliateOrganization, "name" | "logo_url">;
+  affiliate: Pick<AffiliateOrganization, "name">;
   size?: number;
 }) {
   const px = `${size}px`;
   const radius = size >= 48 ? "rounded-md" : "rounded";
-  const iconSize = Math.max(12, Math.round(size * 0.5));
   const baseStyle = { width: px, height: px, minWidth: px } as const;
-
-  if (affiliate.logo_url) {
-    if (affiliate.logo_url.startsWith("icon:")) {
-      const which = affiliate.logo_url.slice(5);
-      const Icon = which === "shield" ? Shield : which === "handshake" ? Handshake : which === "building" ? Building2 : ImageIcon;
-      return (
-        <div
-          style={baseStyle}
-          className={`${radius} bg-white border border-black/10 flex items-center justify-center text-[#0a3d3e]`}
-        >
-          <Icon style={{ width: iconSize, height: iconSize }} strokeWidth={1.75} />
-        </div>
-      );
-    }
-    return (
-      <img
-        src={affiliate.logo_url}
-        alt={`${affiliate.name} logo`}
-        style={baseStyle}
-        className={`${radius} object-cover border border-black/10`}
-      />
-    );
-  }
   const fontSize = Math.max(9, Math.round(size * 0.36));
   return (
     <div
@@ -75,7 +43,7 @@ export function AffiliateLogo({
 const TYPE_OPTIONS: Array<{ value: AffiliateType; label: string }> = [
   { value: "cca", label: "CCA (Clinicians Care Association)" },
   { value: "union", label: "Union" },
-  { value: "industry_association", label: "Association" },
+  { value: "association", label: "Association" },
   { value: "employer_trust", label: "Employer Trust" },
   { value: "other", label: "Other" },
 ];
@@ -83,7 +51,7 @@ const TYPE_OPTIONS: Array<{ value: AffiliateType; label: string }> = [
 const TYPE_SHORT: Record<AffiliateType, string> = {
   cca: "CCA",
   union: "Union",
-  industry_association: "Association",
+  association: "Association",
   employer_trust: "Trust",
   other: "Other",
 };
@@ -91,7 +59,7 @@ const TYPE_SHORT: Record<AffiliateType, string> = {
 const TYPE_BADGE: Record<AffiliateType, string> = {
   cca: "bg-teal-100 text-teal-800",
   union: "bg-blue-100 text-blue-800",
-  industry_association: "bg-purple-100 text-purple-800",
+  association: "bg-purple-100 text-purple-800",
   employer_trust: "bg-amber-100 text-amber-800",
   other: "bg-black/10 text-black/70",
 };
@@ -121,14 +89,13 @@ function emptyDraft(): AffiliateOrganization {
   return {
     id: "",
     name: "",
-    affiliate_type: "industry_association",
+    affiliate_type: "association",
     affiliation_level: "individual",
     industry: null,
     is_external: true,
+    is_active: true,
     legal_entity_status: null,
     notes: "",
-    deleted_at: null,
-    logo_url: null,
   };
 }
 
@@ -153,7 +120,7 @@ function View() {
       return true;
     });
     return sort.applySort(filtered, (r, k) => {
-      if (k === "status") return r.deleted_at ? "z_deactivated" : "active";
+      if (k === "status") return !r.is_active ? "z_deactivated" : "active";
       if (k === "is_external") return r.is_external ? "external" : "internal";
       return (r as unknown as Record<string, string | null>)[k] ?? "";
     });
@@ -180,13 +147,13 @@ function View() {
 
   const deactivate = () => {
     if (!confirm(`Deactivate "${draft.name}"? It will no longer appear in selectors.`)) return;
-    setAffiliates((prev) => prev.map((a) => a.id === draft.id ? { ...a, deleted_at: new Date().toISOString() } : a));
+    setAffiliates((prev) => prev.map((a) => a.id === draft.id ? { ...a, is_active: false } : a));
     setDrawerOpen(false);
   };
 
   const reactivate = () => {
-    setAffiliates((prev) => prev.map((a) => a.id === draft.id ? { ...a, deleted_at: null } : a));
-    setDraft({ ...draft, deleted_at: null });
+    setAffiliates((prev) => prev.map((a) => a.id === draft.id ? { ...a, is_active: true } : a));
+    setDraft({ ...draft, is_active: true });
   };
 
   return (
@@ -205,7 +172,7 @@ function View() {
           options={[
             { value: "cca", label: "CCA" },
             { value: "union", label: "Union" },
-            { value: "industry_association", label: "Association" },
+            { value: "association", label: "Association" },
             { value: "employer_trust", label: "Trust" },
             { value: "other", label: "Other" },
           ]}
@@ -239,7 +206,7 @@ function View() {
         />
         <tbody>
           {rows.map((a) => {
-            const deactivated = !!a.deleted_at;
+            const deactivated = !!!a.is_active;
             return (
               <TRow key={a.id} onClick={() => openEdit(a)}>
                 <TCell className="w-10"><div className={deactivated ? "opacity-50" : ""}><AffiliateLogo affiliate={a} size={32} /></div></TCell>
@@ -277,8 +244,8 @@ function View() {
           isCreate={isCreate}
           onCancel={() => setDrawerOpen(false)}
           onSave={saveDraft}
-          onDeactivate={!isCreate && !draft.deleted_at && can("affiliate_organizations", "delete") ? deactivate : undefined}
-          onReactivate={!isCreate && !!draft.deleted_at ? reactivate : undefined}
+          onDeactivate={!isCreate && !!draft.is_active && can("affiliate_organizations", "delete") ? deactivate : undefined}
+          onReactivate={!isCreate && !!!draft.is_active ? reactivate : undefined}
         />
       </Drawer>
     </div>
@@ -307,7 +274,7 @@ export function AffiliateForm({
   const onTypeChange = (t: AffiliateType) => {
     const next = { ...draft, affiliate_type: t };
     // Auto-derive level for known types
-    if (t === "cca" || t === "union" || t === "industry_association") next.affiliation_level = "individual";
+    if (t === "cca" || t === "union" || t === "association") next.affiliation_level = "individual";
     else if (t === "employer_trust") next.affiliation_level = "employer";
     // Auto-derive is_external default
     next.is_external = t !== "employer_trust";
@@ -319,17 +286,12 @@ export function AffiliateForm({
   return (
     <div className="-m-4 flex flex-col min-h-full">
       <div className="flex-1 p-4 space-y-4">
-        {draft.deleted_at && (
+        {!draft.is_active && (
           <div className="rounded-md bg-rose-50 border border-rose-200 px-3 py-2 text-[12px] text-rose-800">
             This affiliate is deactivated. It does not appear in selectors.
           </div>
         )}
 
-        <LogoUpload
-          affiliate={draft}
-          onPick={() => update("logo_url", nextSampleLogo())}
-          onClear={draft.logo_url ? () => update("logo_url", null) : undefined}
-        />
 
 
 
@@ -432,64 +394,4 @@ export function AffiliateForm({
   );
 }
 
-function LogoUpload({
-  affiliate,
-  onPick,
-  onClear,
-}: {
-  affiliate: Pick<AffiliateOrganization, "name" | "logo_url">;
-  onPick: () => void;
-  onClear?: () => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1.5">Logo</div>
-      <div className="flex items-center gap-3">
-        <div className="relative group">
-          <AffiliateLogo affiliate={affiliate} size={64} />
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-[#0a3d3e] text-white flex items-center justify-center shadow border border-white hover:bg-[#0a3d3e]/90"
-            aria-label="Upload logo"
-            title="Upload logo"
-          >
-            <Camera className="h-3 w-3" />
-          </button>
-        </div>
-        <div className="flex flex-col gap-1">
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="text-xs text-[#0a3d3e] hover:underline text-left"
-          >
-            {affiliate.logo_url ? "Replace logo" : "Upload logo"}
-          </button>
-          {onClear && (
-            <button
-              type="button"
-              onClick={onClear}
-              className="text-xs text-black/50 hover:text-rose-600 text-left"
-            >
-              Remove
-            </button>
-          )}
-          <div className="text-[11px] text-black/40">PNG or SVG, square preferred.</div>
-        </div>
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          // Wireframe: ignore the actual file, swap to a sample logo.
-          if (e.target.files && e.target.files.length > 0) onPick();
-          e.target.value = "";
-        }}
-      />
-    </div>
-  );
-}
 

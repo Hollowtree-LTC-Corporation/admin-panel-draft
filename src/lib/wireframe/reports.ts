@@ -82,9 +82,9 @@ export const PENDING_SUBMISSIONS = [
 
 // Onboarding checklist completion (item count out of 12).
 export const ONBOARDING_PROGRESS = [
-  { org_id: "org_6", org: "Foxtail Education Trust", status: "onboarding", completed: 7, total: 12, owner: "Casey Rep", days_in_stage: 11 },
-  { org_id: "org_9", org: "Ironwood Tech Co-op", status: "not_started", completed: 0, total: 12, owner: "Jamie Rep", days_in_stage: 3 },
-  { org_id: "org_10", org: "Juniper Health Network", status: "not_started", completed: 2, total: 12, owner: "Jamie Rep", days_in_stage: 6 },
+  { organization_id: "org_6", org: "Foxtail Education Trust", status: "onboarding", completed: 7, total: 12, owner: "Casey Rep", days_in_stage: 11 },
+  { organization_id: "org_9", org: "Ironwood Tech Co-op", status: "not_started", completed: 0, total: 12, owner: "Jamie Rep", days_in_stage: 3 },
+  { organization_id: "org_10", org: "Juniper Health Network", status: "not_started", completed: 2, total: 12, owner: "Jamie Rep", days_in_stage: 6 },
 ];
 
 const MONTHS_2025 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -169,7 +169,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
         ],
         monthlyPivot: true,
         rows: activeIndiv.slice(0, 25).map((ind) => {
-          const org = ORGS.find((o) => o.id === ind.org_id);
+          const org = ORGS.find((o) => o.id === ind.organization_id);
           const isCca = !!org?.cca_group;
           const row: Record<string, any> = { individual: ind.full_name, org: ind.org_name, cca: isCca ? "Yes" : "No" };
           MONTHS_2025.slice(0, 6).forEach((m) => { row[m] = fmtCents(isCca ? 2099 : 99); });
@@ -253,7 +253,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
 
     case "enrollment-summary": {
       const grouped = ORGS.filter((o) => o.product === product).map((o) => {
-        const orgInd = INDIVIDUALS.filter((i) => i.org_id === o.id);
+        const orgInd = INDIVIDUALS.filter((i) => i.organization_id === o.id);
         const enrolled = orgInd.filter((i) => i.coverage_status === "active").length;
         const eligible = orgInd.length;
         return {
@@ -282,13 +282,13 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
       const today = new Date("2025-06-15");
       const extra = [{
         id: "ew_6",
-        org_id: "org_1",
+        organization_id: "org_1",
         org_name: "Acme Widgets Co",
-        affiliate_org_id: null,
+        affiliate_organization_id: null,
         affiliate_org: null,
         window_type: "special" as const,
-        start_date: "2025-06-01",
-        end_date: "2025-06-20",
+        enrollment_start_date: "2025-06-01",
+        enrollment_end_date: "2025-06-20",
         default_effective_date: "2025-07-01",
         status: "open" as const,
         sponsor_type: "employer" as const,
@@ -310,16 +310,16 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
         ],
         rows: all.map((w) => {
           let indicator = "";
-          if (w.end_date) {
-            const days = Math.round((new Date(w.end_date).getTime() - today.getTime()) / 86400000);
+          if (w.enrollment_end_date) {
+            const days = Math.round((new Date(w.enrollment_end_date).getTime() - today.getTime()) / 86400000);
             if (w.status === "open" && days <= 14 && days >= 0) indicator = `Closing in ${days}d`;
             else if (w.status === "closed" && days >= -30) indicator = "Recently closed";
           }
           return {
             org: w.org_name ?? w.affiliate_org ?? "—",
             window_type: w.window_type,
-            start_date: w.start_date ?? "—",
-            end_date: w.end_date ?? "—",
+            start_date: w.enrollment_start_date ?? "—",
+            end_date: w.enrollment_end_date ?? "—",
             status: w.status,
             indicator,
             carrier: w.carrier ?? "—",
@@ -359,7 +359,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
         rows: INDIVIDUALS.filter((i) => i.coverage_status === "in_progress").slice(0, 25).map((i, idx) => ({
           individual: i.full_name,
           org: i.org_name,
-          stage: (i as { stage?: string }).stage ?? "—",
+          stage: (i as { current_stage?: string }).current_stage ?? "—",
           days: 14 + (idx * 3) % 40,
           owner: i.assigned_rep ?? "—",
         })),
@@ -398,7 +398,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
           { key: "total", label: "YTD Commission" },
         ],
         rows: CHANNEL_PARTNERS.map((cp, i) => ({
-          partner: cp.name,
+          partner: cp.partner_name,
           type: cp.partner_type,
           policies: 1 + (i % 4),
           total: fmtCents(100000 + i * 23500),
@@ -494,7 +494,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
           { key: "gap", label: "Gap" },
         ],
         rows: ORGS.filter((o) => o.product === product).map((o, idx) => {
-          const orgInd = INDIVIDUALS.filter((i) => i.org_id === o.id);
+          const orgInd = INDIVIDUALS.filter((i) => i.organization_id === o.id);
           const enrolled = orgInd.filter((i) => i.coverage_status === "active").length;
           const inCensus = Math.max(0, enrolled - (idx % 3));
           return {
@@ -518,7 +518,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
           { key: "actor", label: "Actor" },
         ],
         rows: AUDIT_LOG.slice(0, 25).map((a) => ({
-          ts: a.ts, table: a.table, record_id: a.record_id, action: a.action, actor: a.actor,
+          ts: a.timestamp, table: a.table_name, record_id: a.record_id, action: a.action, actor: a.actor_name,
         })),
       };
     }
@@ -549,18 +549,18 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
           { key: "actor", label: "Actor" },
         ],
         rows: AUDIT_LOG.slice(0, 20).map((a) => ({
-          ts: a.ts,
-          table: a.table,
+          ts: a.timestamp,
+          table: a.table_name,
           record_id: a.record_id,
-          before: JSON.stringify(a.before),
-          after: JSON.stringify(a.after),
-          actor: a.actor,
+          before: JSON.stringify(a.old_values),
+          after: JSON.stringify(a.new_values),
+          actor: a.actor_name,
         })),
       };
     }
 
     case "payment-health": {
-      const failing = INDIVIDUALS.filter((i) => i.last_payment_status === "Failed");
+      const failing = INDIVIDUALS.filter((i) => i.last_payment_status === "failed");
       return {
         columns: [
           { key: "individual", label: "Individual" },

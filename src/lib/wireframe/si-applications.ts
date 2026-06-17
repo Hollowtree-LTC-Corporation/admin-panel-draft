@@ -1,6 +1,6 @@
 // SI Applications — derived view over INDIVIDUALS (LTC only).
 // An SI application is any LTC individual where issue_type='SI' OR
-// upgrade_applied_for=true (GI -> SI buy-up). Spouses are always SI.
+// applied_for_upgrade=true (GI -> SI buy-up). Spouses are always SI.
 
 import { INDIVIDUALS, ORGS, CARRIERS, ENROLLMENT_WINDOWS } from "./data";
 
@@ -12,7 +12,7 @@ export type SiApplication = {
   first_name: string;
   last_name: string;
   respondent_type: "employee" | "spouse";
-  org_id: string;
+  organization_id: string;
   org_name: string;
   linked_individual_id: string | null;
   linked_individual_name: string | null;
@@ -24,7 +24,7 @@ export type SiApplication = {
   upgrade_carrier_decision: CarrierDecision;
   upgrade_carrier_decision_at: string | null;
   decision_reason: string | null;
-  pre_buyup_premium_cents: number | null;
+  pre_upgrade_premium_cents: number | null;
   issue_type: "SI";
   plan_tier: "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond";
   assigned_rep: string | null;
@@ -160,10 +160,10 @@ function splitName(full: string): { first: string; last: string } {
 }
 
 export const SI_APPLICATIONS: SiApplication[] = INDIVIDUALS
-  .filter((i) => i.product === "LTC" && (i.issue_type === "SI" || i.upgrade_applied_for))
+  .filter((i) => i.product === "LTC" && (i.issue_type === "SI" || i.applied_for_upgrade))
   .map((i, idx) => {
-    const org = ORGS.find((o) => o.id === i.org_id);
-    const ew = ENROLLMENT_WINDOWS.find((w) => w.org_id === i.org_id) ?? ENROLLMENT_WINDOWS[2];
+    const org = ORGS.find((o) => o.id === i.organization_id);
+    const ew = ENROLLMENT_WINDOWS.find((w) => w.organization_id === i.organization_id) ?? ENROLLMENT_WINDOWS[2];
     // Map ew.carrier (free-text name) to CARRIERS row; fall back to first LTC carrier.
     const ltcCarriers = CARRIERS.filter((c) => c.product === "LTC");
     const carrier =
@@ -185,7 +185,7 @@ export const SI_APPLICATIONS: SiApplication[] = INDIVIDUALS
       first_name: first,
       last_name: last,
       respondent_type: isSpouse ? "spouse" : "employee",
-      org_id: i.org_id,
+      organization_id: i.organization_id,
       org_name: org?.name ?? i.org_name,
       linked_individual_id: linked?.id ?? null,
       linked_individual_name: linked?.full_name ?? null,
@@ -202,7 +202,7 @@ export const SI_APPLICATIONS: SiApplication[] = INDIVIDUALS
           : decision === "approved"
           ? "Standard approval. Effective per window."
           : null,
-      pre_buyup_premium_cents: i.upgrade_applied_for ? i.monthly_premium_cents - 800 : null,
+      pre_upgrade_premium_cents: i.applied_for_upgrade ? i.monthly_premium_cents - 800 : null,
       issue_type: "SI",
       plan_tier: planTierFromName(planName),
       assigned_rep: i.assigned_rep ?? null,

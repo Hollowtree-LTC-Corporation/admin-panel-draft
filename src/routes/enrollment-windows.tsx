@@ -20,15 +20,18 @@ export const Route = createFileRoute("/enrollment-windows")({ component: View })
 
 type SortKey = "window_type" | "org_name" | "start_date" | "end_date" | "status" | "sponsor_type" | "carrier";
 
+// Stored sponsor_type CHECK is "employer" | "affiliate". The "employer+affiliate"
+// display shape is derived when sponsor_type='employer' AND affiliate_organization_id IS NOT NULL.
 type SponsorShape = "employer" | "employer+affiliate" | "affiliate";
+type SponsorStored = "employer" | "affiliate";
 
 type DraftPartner = { id: string; channel_partner_id: string; role: string };
 
 type Draft = {
   id: string | null;
   sponsor_type: SponsorShape;
-  org_id: string | null;
-  affiliate_org_id: string | null;
+  organization_id: string | null;
+  affiliate_organization_id: string | null;
   window_type: "initial" | "annual" | "new_joiner" | "special";
   start_date: string;
   end_date: string;
@@ -44,8 +47,8 @@ function emptyDraft(): Draft {
   return {
     id: null,
     sponsor_type: "employer",
-    org_id: null,
-    affiliate_org_id: null,
+    organization_id: null,
+    affiliate_organization_id: null,
     window_type: "annual",
     start_date: "",
     end_date: "",
@@ -62,11 +65,11 @@ function toDraft(w: EnrollmentWindow): Draft {
   return {
     id: w.id,
     sponsor_type: w.sponsor_type,
-    org_id: w.org_id,
-    affiliate_org_id: w.affiliate_org_id,
+    organization_id: w.organization_id,
+    affiliate_organization_id: w.affiliate_organization_id,
     window_type: w.window_type,
-    start_date: w.start_date ?? "",
-    end_date: w.end_date ?? "",
+    start_date: w.enrollment_start_date ?? "",
+    end_date: w.enrollment_end_date ?? "",
     default_effective_date: w.default_effective_date ?? "",
     carrier: w.carrier,
     gi_eligible: w.gi_eligible,
@@ -79,7 +82,7 @@ function toDraft(w: EnrollmentWindow): Draft {
 function View() {
   const can = usePermission();
   const { product, affiliates, setAffiliates } = useStore();
-  const activeAffiliates = useMemo(() => affiliates.filter((a) => !a.deleted_at), [affiliates]);
+  const activeAffiliates = useMemo(() => affiliates.filter((a) => !a.is_active === false), [affiliates]);
   const addAffiliate = (a: AffiliateOrganization): string => {
     const id = `aff_${Date.now()}`;
     const rec: AffiliateOrganization = { ...a, id };
@@ -125,21 +128,22 @@ function View() {
   const openEdit = (w: EnrollmentWindow) => { setDraft(toDraft(w)); setDrawerOpen(true); };
 
   const saveDraft = () => {
-    const orgRec = draft.org_id ? ORGS.find((o) => o.id === draft.org_id) ?? null : null;
-    const affRec = draft.affiliate_org_id ? affiliates.find((a) => a.id === draft.affiliate_org_id) ?? null : null;
+    const orgRec = draft.organization_id ? ORGS.find((o) => o.id === draft.organization_id) ?? null : null;
+    const affRec = draft.affiliate_organization_id ? affiliates.find((a) => a.id === draft.affiliate_organization_id) ?? null : null;
     const isNewJoiner = draft.window_type === "new_joiner";
     const next: EnrollmentWindow = {
       id: draft.id ?? `ew_${Date.now()}`,
-      org_id: draft.sponsor_type === "affiliate" ? null : draft.org_id,
+      organization_id: draft.sponsor_type === "affiliate" ? null : draft.organization_id,
       org_name: draft.sponsor_type === "affiliate" ? null : (orgRec?.name ?? null),
-      affiliate_org_id: draft.sponsor_type === "employer" ? null : draft.affiliate_org_id,
+      affiliate_organization_id: draft.sponsor_type === "employer" ? null : draft.affiliate_organization_id,
       affiliate_org: draft.sponsor_type === "employer" ? null : (affRec?.name ?? null),
       window_type: draft.window_type,
-      start_date: isNewJoiner ? null : (draft.start_date || null),
-      end_date: isNewJoiner ? null : (draft.end_date || null),
+      enrollment_start_date: isNewJoiner ? null : (draft.start_date || null),
+      enrollment_end_date: isNewJoiner ? null : (draft.end_date || null),
       default_effective_date: isNewJoiner ? null : (draft.default_effective_date || null),
       status: isNewJoiner ? "open" : draft.status,
-      sponsor_type: draft.sponsor_type,
+      // CHECK constraint: only "employer" | "affiliate" — composite shape derived in display.
+      sponsor_type: (draft.sponsor_type === "affiliate" ? "affiliate" : "employer") as SponsorStored,
       carrier: draft.carrier,
       gi_eligible: draft.gi_eligible,
       notes: draft.notes,
@@ -200,8 +204,8 @@ function View() {
                 {w.org_name && w.affiliate_org ? <div className="text-[10px] text-black/50">+ {w.affiliate_org}</div> : null}
               </TCell>
               <TCell className="capitalize">{w.window_type.replace(/_/g, " ")}</TCell>
-              <TCell className="text-black/70">{w.start_date ?? <span className="text-black/30">—</span>}</TCell>
-              <TCell className="text-black/70">{w.end_date ?? <span className="text-black/30">—</span>}</TCell>
+              <TCell className="text-black/70">{w.enrollment_start_date ?? <span className="text-black/30">—</span>}</TCell>
+              <TCell className="text-black/70">{w.enrollment_end_date ?? <span className="text-black/30">—</span>}</TCell>
               <TCell><Pill tone={w.status === "open" ? "ok" : w.status === "upcoming" ? "info" : "bad"}>{w.status}</Pill></TCell>
               <TCell>{w.sponsor_type}</TCell>
               <TCell>{w.carrier}</TCell>
@@ -250,7 +254,7 @@ function WindowForm({
   const [partnersOpen, setPartnersOpen] = useState(draft.channel_partners.length > 0);
   const [inlineOpen, setInlineOpen] = useState(false);
   const [inlineName, setInlineName] = useState("");
-  const [inlineType, setInlineType] = useState<AffiliateType>("industry_association");
+  const [inlineType, setInlineType] = useState<AffiliateType>("association");
   const update = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft({ ...draft, [k]: v });
 
   const SPONSOR_OPTIONS: Array<{ value: SponsorShape; label: string }> = [
@@ -296,8 +300,8 @@ function WindowForm({
             {showOrg && (
               <Field label="Organization">
                 <select
-                  value={draft.org_id ?? ""}
-                  onChange={(e) => update("org_id", e.target.value || null)}
+                  value={draft.organization_id ?? ""}
+                  onChange={(e) => update("organization_id", e.target.value || null)}
                   className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
                 >
                   <option value="">Select organization…</option>
@@ -308,9 +312,9 @@ function WindowForm({
             {showAffiliate && (
               <Field label="Affiliate">
                 <AffiliateDropdown
-                  value={draft.affiliate_org_id}
+                  value={draft.affiliate_organization_id}
                   affiliates={affiliates}
-                  onChange={(id) => update("affiliate_org_id", id)}
+                  onChange={(id) => update("affiliate_organization_id", id)}
                   onNew={() => setInlineOpen(true)}
                 />
                 {inlineOpen && (
@@ -330,7 +334,7 @@ function WindowForm({
                     >
                       <option value="cca">CCA (Clinicians Care Association)</option>
                       <option value="union">Union</option>
-                      <option value="industry_association">Association</option>
+                      <option value="association">Association</option>
                       <option value="employer_trust">Employer Trust</option>
                       <option value="other">Other</option>
                     </select>
@@ -360,13 +364,12 @@ function WindowForm({
                               is_external: !isTrust,
                               legal_entity_status: null,
                               notes: "",
-                              deleted_at: null,
-                              logo_url: null,
+                              is_active: true,
                             });
-                            update("affiliate_org_id", id);
+                            update("affiliate_organization_id", id);
                             setInlineOpen(false);
                             setInlineName("");
-                            setInlineType("industry_association");
+                            setInlineType("association");
                           }}
                         >
                           Save
@@ -494,7 +497,7 @@ function WindowForm({
                     className="flex-1 px-2 py-1 text-sm border border-black/15 rounded bg-white"
                   >
                     <option value="">Select partner…</option>
-                    {CHANNEL_PARTNERS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {CHANNEL_PARTNERS.map((c) => <option key={c.id} value={c.id}>{c.partner_name}</option>)}
                   </select>
                   <Input
                     defaultValue={p.role}

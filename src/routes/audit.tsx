@@ -119,7 +119,7 @@ function View() {
   }
 
   const tableOptions = useMemo(
-    () => Array.from(new Set(AUDIT_LOG.map((l) => l.table))).sort().map((v) => ({ value: v, label: v })),
+    () => Array.from(new Set(AUDIT_LOG.map((l) => l.table_name))).sort().map((v) => ({ value: v, label: v })),
     [],
   );
   const actorOptions = useMemo(
@@ -131,14 +131,14 @@ function View() {
     const s = debounced.trim().toLowerCase();
     return AUDIT_LOG.filter((l) => {
       if (s && !l.record_id.toLowerCase().includes(s)) return false;
-      if (table !== "all" && l.table !== table) return false;
+      if (table !== "all" && l.table_name !== table) return false;
       if (action !== "all" && l.action !== action) return false;
       if (actor !== "all" && l.actor_name !== actor) return false;
-      const day = l.ts.slice(0, 10);
+      const day = l.timestamp.slice(0, 10);
       if (from && day < from) return false;
       if (to && day > to) return false;
       return true;
-    }).sort((a, b) => b.ts.localeCompare(a.ts));
+    }).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   }, [debounced, table, action, actor, from, to]);
 
   // reset page on filter changes
@@ -401,7 +401,7 @@ function RowAndDiff({
   onReveal: (field: string) => void;
 }) {
   const truncatedId = row.record_id.length > 11 ? `${row.record_id.slice(0, 8)}…` : row.record_id;
-  const navHref = NAVIGABLE[row.table]?.(row.record_id);
+  const navHref = NAVIGABLE[row.table_name]?.(row.record_id);
 
   return (
     <>
@@ -409,15 +409,15 @@ function RowAndDiff({
         onClick={onToggle}
         className={`border-t border-black/5 cursor-pointer hover:bg-[#f7f3eb]/60 ${meta.border}`}
       >
-        <td className="px-3 py-2 whitespace-nowrap" title={`${row.ts} (UTC)`}>
+        <td className="px-3 py-2 whitespace-nowrap" title={`${row.timestamp} (UTC)`}>
           <button
-            onClick={(e) => { e.stopPropagation(); copy(row.ts, "ISO timestamp copied"); }}
+            onClick={(e) => { e.stopPropagation(); copy(row.timestamp, "ISO timestamp copied"); }}
             className="hover:underline"
           >
-            {fmtDate(row.ts)}
+            {fmtDate(row.timestamp)}
           </button>
         </td>
-        <td className="px-3 py-2 font-mono text-[11px]">{row.table}</td>
+        <td className="px-3 py-2 font-mono text-[11px]">{row.table_name}</td>
         <td className="px-3 py-2 font-mono text-[11px]">
           <span className="inline-flex items-center gap-1">
             {navHref ? (
@@ -475,10 +475,10 @@ function RowAndDiff({
 
 // ---------- Diff panel ----------
 function DiffPanel({ row, revealed, onReveal }: { row: AuditEntry; revealed: Set<string>; onReveal: (field: string) => void }) {
-  const isPhiTable = PHI_TABLES.has(row.table);
+  const isPhiTable = PHI_TABLES.has(row.table_name);
 
   if (row.action === "view_phi" || row.action === "export_phi") {
-    const after = row.after ?? {};
+    const after = row.new_values ?? {};
     const reason = (after as Record<string, unknown>)["reason"] as string | undefined;
     const tone = row.action === "view_phi" ? "text-orange-800" : "text-red-900";
     return (
@@ -507,7 +507,7 @@ function DiffPanel({ row, revealed, onReveal }: { row: AuditEntry; revealed: Set
     return (
       <div>
         <div className="text-[10px] uppercase text-emerald-700 font-medium mb-1">Created values</div>
-        <JsonBlock obj={row.after} table={row.table} isPhiTable={isPhiTable} revealed={revealed} onReveal={onReveal} tint="emerald" />
+        <JsonBlock obj={row.new_values} table={row.table_name} isPhiTable={isPhiTable} revealed={revealed} onReveal={onReveal} tint="emerald" />
         <DiffFooter row={row} />
       </div>
     );
@@ -516,11 +516,11 @@ function DiffPanel({ row, revealed, onReveal }: { row: AuditEntry; revealed: Set
     return (
       <div>
         <div className="text-[10px] uppercase text-rose-700 font-medium mb-1">Deleted record state</div>
-        <JsonBlock obj={row.before} table={row.table} isPhiTable={isPhiTable} revealed={revealed} onReveal={onReveal} tint="rose" />
-        {row.after && Object.keys(row.after).length > 0 ? (
+        <JsonBlock obj={row.old_values} table={row.table_name} isPhiTable={isPhiTable} revealed={revealed} onReveal={onReveal} tint="rose" />
+        {row.new_values && Object.keys(row.new_values).length > 0 ? (
           <div className="mt-2">
             <div className="text-[10px] uppercase text-black/40 mb-1">Soft-delete metadata</div>
-            <JsonBlock obj={row.after} table={row.table} isPhiTable={false} revealed={revealed} onReveal={onReveal} tint="neutral" />
+            <JsonBlock obj={row.new_values} table={row.table_name} isPhiTable={false} revealed={revealed} onReveal={onReveal} tint="neutral" />
           </div>
         ) : null}
         <DiffFooter row={row} />
@@ -528,19 +528,19 @@ function DiffPanel({ row, revealed, onReveal }: { row: AuditEntry; revealed: Set
     );
   }
   // update
-  const before = (row.before ?? {}) as Record<string, unknown>;
-  const after = (row.after ?? {}) as Record<string, unknown>;
+  const before = (row.old_values ?? {}) as Record<string, unknown>;
+  const after = (row.new_values ?? {}) as Record<string, unknown>;
   const keys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
   return (
     <div>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <div className="text-[10px] uppercase text-rose-700 font-medium mb-1">Before</div>
-          <DiffSide side="before" keys={keys} before={before} after={after} table={row.table} isPhiTable={isPhiTable} revealed={revealed} onReveal={onReveal} />
+          <DiffSide side="before" keys={keys} before={before} after={after} table={row.table_name} isPhiTable={isPhiTable} revealed={revealed} onReveal={onReveal} />
         </div>
         <div>
           <div className="text-[10px] uppercase text-emerald-700 font-medium mb-1">After</div>
-          <DiffSide side="after" keys={keys} before={before} after={after} table={row.table} isPhiTable={isPhiTable} revealed={revealed} onReveal={onReveal} />
+          <DiffSide side="after" keys={keys} before={before} after={after} table={row.table_name} isPhiTable={isPhiTable} revealed={revealed} onReveal={onReveal} />
         </div>
       </div>
       <DiffFooter row={row} />
@@ -634,7 +634,7 @@ function DiffFooter({ row }: { row: AuditEntry }) {
         <Copy className="h-2.5 w-2.5" />
       </button>
       <span>·</span>
-      <span>Logged: {fmtDate(row.ts)}</span>
+      <span>Logged: {fmtDate(row.timestamp)}</span>
     </div>
   );
 }
@@ -672,10 +672,10 @@ function ExportModal({ onClose, filtered, product, rangeDesc, filterSummary }: {
       : ["timestamp", "table_name", "record_id", "action", "actor_id", "actor_name", "old_values", "new_values"];
     const lines = [header.join(",")];
     for (const r of filtered) {
-      const base = [r.ts, r.table, r.record_id, r.action, r.actor_id, r.actor_name].map(csvEscape);
+      const base = [r.timestamp, r.table_name, r.record_id, r.action, r.actor_id, r.actor_name].map(csvEscape);
       if (mode === "full") {
-        base.push(csvEscape(r.before ? JSON.stringify(r.before) : ""));
-        base.push(csvEscape(r.after ? JSON.stringify(r.after) : ""));
+        base.push(csvEscape(r.old_values ? JSON.stringify(r.old_values) : ""));
+        base.push(csvEscape(r.new_values ? JSON.stringify(r.new_values) : ""));
       }
       lines.push(base.join(","));
     }

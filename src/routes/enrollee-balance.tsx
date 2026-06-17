@@ -59,14 +59,14 @@ type Row = {
 function computeBalances(inds: typeof INDIVIDUALS): Row[] {
   return inds.map((i) => {
     const bg = BILLING_GROUPS.find((b) => b.id === i.billing_group_id);
-    const ledger = PAYMENT_LEDGER.filter((p) => p.individual_id === i.id);
+    const ledger = PAYMENT_LEDGER.filter((p) => p.enrollment_id === i.id);
     // Total Charges: event_type IN ('premium','fee'), funding_source='employee_account', all statuses
     const chargeRows = ledger.filter(
-      (p) => (p.charge_type === "monthly_premium" || p.charge_type === "fee") && p.funding_source === "employee",
+      (p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employee",
     );
     const charges = chargeRows.reduce((s, p) => s + p.amount_cents, 0);
-    const premiumCharges = chargeRows.filter((p) => p.charge_type === "monthly_premium").reduce((s, p) => s + p.amount_cents, 0);
-    const feeCharges = chargeRows.filter((p) => p.charge_type === "fee").reduce((s, p) => s + p.amount_cents, 0);
+    const premiumCharges = chargeRows.filter((p) => p.event_type === "premium").reduce((s, p) => s + p.amount_cents, 0);
+    const feeCharges = chargeRows.filter((p) => p.event_type === "fee").reduce((s, p) => s + p.amount_cents, 0);
     // Successful Payments: subset of charges with status='successful'
     const paid = chargeRows.filter((p) => p.status === "successful").reduce((s, p) => s + p.amount_cents, 0);
     // Adjustments: signed sum
@@ -75,7 +75,7 @@ function computeBalances(inds: typeof INDIVIDUALS): Row[] {
       .reduce((s, a) => s + a.amount_cents, 0);
     // Employer-paid charges (excluded — surfaced for the drawer caption)
     const employerExcluded = ledger
-      .filter((p) => (p.charge_type === "monthly_premium" || p.charge_type === "fee") && p.funding_source === "employer")
+      .filter((p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employer")
       .reduce((s, p) => s + p.amount_cents, 0);
     const balance = charges - paid + adjusted;
     return {
@@ -111,7 +111,7 @@ function View() {
         || r.email.toLowerCase().includes(s)
         || r.billing.toLowerCase().includes(s)
       )) return false;
-      if (org !== "all" && r.i.org_id !== org) return false;
+      if (org !== "all" && r.i.organization_id !== org) return false;
       if (covStatus !== "all" && r.status !== covStatus) return false;
       if (balStatus !== "all") {
         if (balStatus === "owes" && !(r.balance > 0)) return false;
@@ -331,9 +331,9 @@ function BalanceDrawer({ row, onClose }: { row: Row | null; onClose: () => void 
   const open = !!row;
   if (!row) return <Drawer open={open} onClose={onClose} title="Enrollee Balance">{null}</Drawer>;
 
-  const org = ORGS.find((o) => o.id === row.i.org_id);
+  const org = ORGS.find((o) => o.id === row.i.organization_id);
   const ledgerRows = PAYMENT_LEDGER
-    .filter((p) => p.individual_id === row.i.id && p.funding_source === "employee" && (p.charge_type === "monthly_premium" || p.charge_type === "fee"))
+    .filter((p) => p.enrollment_id === row.i.id && p.funding_source === "employee" && (p.event_type === "premium" || p.event_type === "fee"))
     .slice(0, 10);
   const adjustments = ACCOUNT_ADJUSTMENTS.filter((a) => a.individual_id === row.i.id);
 
@@ -418,8 +418,8 @@ function BalanceDrawer({ row, onClose }: { row: Row | null; onClose: () => void 
             )}
             {ledgerRows.map((p) => (
               <tr key={p.id} className="border-t border-black/5">
-                <td className="px-3 py-1.5">{p.date}</td>
-                <td className="px-3 py-1.5 text-black/70">{p.charge_type === "monthly_premium" ? "Premium" : "Fee"}</td>
+                <td className="px-3 py-1.5">{p.event_date}</td>
+                <td className="px-3 py-1.5 text-black/70">{p.event_type === "premium" ? "Premium" : "Fee"}</td>
                 <td className="px-3 py-1.5 font-mono">{fmt(p.amount_cents)}</td>
                 <td className="px-3 py-1.5">
                   <Pill tone={p.status === "successful" ? "ok" : p.status === "failed" ? "bad" : "warn"}>

@@ -118,8 +118,8 @@ function View() {
       };
     }).filter((p) => {
       if (s && !(p.org_name.toLowerCase().includes(s) || p.id.toLowerCase().includes(s) || (p.policy_number ?? "").toLowerCase().includes(s) || (p.policy_name ?? "").toLowerCase().includes(s))) return false;
-      if (org !== "all" && p.org_id !== org) return false;
-      if (status !== "all" && p.status !== status) return false;
+      if (org !== "all" && p.organization_id !== org) return false;
+      if (status !== "all" && p.enrollment_status !== status) return false;
       if (ownerType !== "all" && p.policy_owner_type !== ownerType) return false;
       if (cp !== "all" && p.carrier_product_id !== cp) return false;
       return true;
@@ -151,7 +151,7 @@ function View() {
   };
 
   const onSync = (policyId: string, ts: string) => {
-    setPolicies((prev) => prev.map((p) => (p.id === policyId ? { ...p, attio_last_synced_at: ts, attio_policy_id: p.attio_policy_id ?? `att_${p.id}` } : p)));
+    setPolicies((prev) => prev.map((p) => (p.id === policyId ? { ...p, attio_synced_at: ts, attio_policy_id: p.attio_policy_id ?? `att_${p.id}` } : p)));
   };
 
   const handleRowSync = (e: React.MouseEvent, p: Policy) => {
@@ -232,7 +232,7 @@ function View() {
               <TCell>{p.policy_name ?? <span className="text-black/30">—</span>}</TCell>
               <TCell className="font-medium">{p.org_name}</TCell>
               <TCell>{p.carrier_product_name}</TCell>
-              <TCell><StatusChip s={p.status} /></TCell>
+              <TCell><StatusChip s={p.enrollment_status} /></TCell>
               <TCell>{fmtDate(p.initial_effective_date)}</TCell>
               {product === "DI" ? (
                 <>
@@ -244,15 +244,15 @@ function View() {
               )}
               <TCell>
                 <div className="flex items-center gap-1.5">
-                  {p.attio_last_synced_at ? (
-                    <Check className="h-3.5 w-3.5 text-emerald-600" aria-label={`Last synced: ${fmtDateTime(p.attio_last_synced_at)}`} />
+                  {p.attio_synced_at ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-600" aria-label={`Last synced: ${fmtDateTime(p.attio_synced_at)}`} />
                   ) : (
                     <Minus className="h-3.5 w-3.5 text-black/30" aria-label="Never synced" />
                   )}
                   <button
                     onClick={(e) => handleRowSync(e, p)}
                     className="text-black/30 hover:text-[#0a3d3e]"
-                    title={p.attio_last_synced_at ? `Last synced: ${fmtDateTime(p.attio_last_synced_at)} — click to re-sync` : "Never synced — click to sync"}
+                    title={p.attio_synced_at ? `Last synced: ${fmtDateTime(p.attio_synced_at)} — click to re-sync` : "Never synced — click to sync"}
                     aria-label="Re-sync to Attio"
                   >
                     <RefreshCw className="h-3 w-3" />
@@ -290,23 +290,23 @@ type DraftSplit = PolicySplit & { _isNew?: boolean };
 function emptyPolicy(product: "DI" | "LTC"): Policy {
   const id = `pol_${Math.floor(Math.random() * 9000) + 1000}`;
   return {
-    id, policy_name: "", policy_number: null, org_id: "", org_name: "", carrier_product_id: "",
-    product, status: "pending",
+    id, policy_name: "", policy_number: null, organization_id: "", org_name: "", carrier_product_id: "",
+    product, enrollment_status: "pending",
     policy_owner_type: "employer_group",
     carrier_commission_pct: product === "DI" ? 12 : null,
     override_pct: null,
     channel_partner_id: null,
     commission_schedule_id: null,
     initial_effective_date: "",
-    attio_last_synced_at: null,
+    attio_synced_at: null,
     updated_at: new Date().toISOString(),
     attio_record_id: `att_${id}`,
     attio_policy_id: null,
     account_manager: null,
     google_drive_folder: null,
     original_enrollee_count: null,
-    original_monthly_premium_cents: null,
-    ltc_bronze_cents: null, ltc_silver_cents: null, ltc_gold_cents: null, ltc_platinum_cents: null, ltc_diamond_cents: null,
+    original_monthly_premium: null,
+    ltc_bronze: null, ltc_silver: null, ltc_gold: null, ltc_platinum: null, ltc_diamond: null,
   };
 }
 
@@ -328,7 +328,7 @@ function PolicyDrawer({
   const [draftSplits, setDraftSplits] = useState<DraftSplit[]>(existingSplits);
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [lastSynced, setLastSynced] = useState<string | null>(policy?.attio_last_synced_at ?? null);
+  const [lastSynced, setLastSynced] = useState<string | null>(policy?.attio_synced_at ?? null);
   const [splitsLoadedFromDefaults, setSplitsLoadedFromDefaults] = useState(false);
   const [defaultsPartner, setDefaultsPartner] = useState<string | null>(null);
 
@@ -349,7 +349,7 @@ function PolicyDrawer({
       setDraft(policy);
       setDraftSplits(existingSplits);
       setSplitsLoadedFromDefaults(true);
-      setLastSynced(policy.attio_last_synced_at);
+      setLastSynced(policy.attio_synced_at);
     }
     setEditingRow(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -358,25 +358,25 @@ function PolicyDrawer({
   // Auto-load splits in CREATE mode when org chosen.
   useEffect(() => {
     if (!isCreate) return;
-    if (!draft.org_id) return;
+    if (!draft.organization_id) return;
     if (splitsLoadedFromDefaults) return;
-    const cpnId = ORG_PRIMARY_CHANNEL_PARTNER[draft.org_id];
+    const cpnId = ORG_PRIMARY_CHANNEL_PARTNER[draft.organization_id];
     const partner = CHANNEL_PARTNERS.find((c) => c.id === cpnId);
     setSplitsLoadedFromDefaults(true);
     if (!partner) {
       setDefaultsPartner(null);
       return;
     }
-    setDefaultsPartner(partner.name);
+    setDefaultsPartner(partner.partner_name);
     setDraftSplits([
       { id: `nsp_h`, policy_id: draft.id, payee_type: "house", payee_name: "Hollowtree", split_pct: 45, payment_method: "hollowtree_paid", source: "default", effective_to: null },
       { id: `nsp_r`, policy_id: draft.id, payee_type: "internal_rep", payee_name: "Guy Livingstone", split_pct: 10, payment_method: "hollowtree_paid", source: "default", effective_to: null },
-      { id: `nsp_c`, policy_id: draft.id, payee_type: "channel_partner", payee_name: partner.name, split_pct: 40, payment_method: "hollowtree_paid", source: "default", effective_to: null },
+      { id: `nsp_c`, policy_id: draft.id, payee_type: "channel_partner", payee_name: partner.partner_name, split_pct: 40, payment_method: "hollowtree_paid", source: "default", effective_to: null },
       { id: `nsp_o`, policy_id: draft.id, payee_type: "override", payee_name: "Gallagher", split_pct: 5, payment_method: "carrier_direct", source: "default", effective_to: null },
     ]);
-    toast.success(`Defaults loaded from ${partner.name}`);
+    toast.success(`Defaults loaded from ${partner.partner_name}`);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.org_id, isCreate]);
+  }, [draft.organization_id, isCreate]);
 
   const setCarrierProduct = (cpId: string) => {
     setDraft((d) => ({ ...d, carrier_product_id: cpId, commission_schedule_id: null }));
@@ -384,7 +384,7 @@ function PolicyDrawer({
 
   const setOrgId = (id: string) => {
     const o = ORGS.find((x) => x.id === id);
-    setDraft((d) => ({ ...d, org_id: id, org_name: o?.name ?? "" }));
+    setDraft((d) => ({ ...d, organization_id: id, org_name: o?.name ?? "" }));
     if (isCreate) { setSplitsLoadedFromDefaults(false); setDefaultsPartner(null); }
   };
 
@@ -397,10 +397,10 @@ function PolicyDrawer({
   const totalOk = Math.abs(total - 100) < 0.005;
 
   // Determine first missing requirement for tooltip
-  const missing = !draft.org_id ? "Select an organization"
+  const missing = !draft.organization_id ? "Select an organization"
     : !draft.policy_name?.trim() ? "Enter a policy name"
     : !draft.carrier_product_id ? "Select a carrier product"
-    : !draft.status ? "Select a status"
+    : !draft.enrollment_status ? "Select a status"
     : !draft.policy_owner_type ? "Select a policy owner type"
     : !draft.initial_effective_date ? "Set the effective date"
     : draftSplits.length === 0 ? "Add at least one commission split"
@@ -446,7 +446,7 @@ function PolicyDrawer({
       const ts = new Date().toISOString();
       setLastSynced(ts);
       onSync(draft.id, ts);
-      setDraft((d) => ({ ...d, attio_last_synced_at: ts, attio_policy_id: d.attio_policy_id ?? `att_${d.id}` }));
+      setDraft((d) => ({ ...d, attio_synced_at: ts, attio_policy_id: d.attio_policy_id ?? `att_${d.id}` }));
       setSyncing(false);
       toast.success(`Synced to Attio`);
     }, 800);
@@ -465,7 +465,7 @@ function PolicyDrawer({
     .map((c) => ({ value: c.id, label: carrierProductLabel(c.id) }));
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
 
-  const orgHasPartner = draft.org_id ? !!ORG_PRIMARY_CHANNEL_PARTNER[draft.org_id] : true;
+  const orgHasPartner = draft.organization_id ? !!ORG_PRIMARY_CHANNEL_PARTNER[draft.organization_id] : true;
 
   const inputCls = "w-full px-2 py-1 text-sm border border-black/15 rounded bg-white disabled:bg-black/5 disabled:text-black/60";
 
@@ -488,7 +488,7 @@ function PolicyDrawer({
         {readOnly || isEdit ? (
           <div className="text-sm text-black/80 py-1">{draft.org_name || "—"}</div>
         ) : (
-          <FilterCombobox value={draft.org_id || "all"} onChange={(v) => v !== "all" && setOrgId(v)} placeholder="Select organization…" options={orgOptions} width="w-full" />
+          <FilterCombobox value={draft.organization_id || "all"} onChange={(v) => v !== "all" && setOrgId(v)} placeholder="Select organization…" options={orgOptions} width="w-full" />
         )}
       </Field>
 
@@ -537,10 +537,10 @@ function PolicyDrawer({
 
       <Field label="Status *">
         {readOnly || isEdit ? (
-          <div className="py-1"><StatusChip s={draft.status} /></div>
+          <div className="py-1"><StatusChip s={draft.enrollment_status} /></div>
         ) : (
           <select
-            value={draft.status}
+            value={draft.enrollment_status}
             onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value as PolicyStatus }))}
             className={inputCls}
           >
@@ -670,16 +670,16 @@ function PolicyDrawer({
               <Field label="Enrollment Snapshot">
                 <div className="text-xs text-black/70 grid grid-cols-2 gap-2 py-1">
                   <div><span className="text-black/50">Original enrollees:</span> {draft.original_enrollee_count ?? "—"}</div>
-                  <div><span className="text-black/50">Original monthly premium:</span> {fmtDollars(draft.original_monthly_premium_cents)}</div>
+                  <div><span className="text-black/50">Original monthly premium:</span> {fmtDollars(draft.original_monthly_premium)}</div>
                 </div>
               </Field>
               <Field label="Face Amount Tiers (snapshot)">
                 <div className="text-xs text-black/70 grid grid-cols-5 gap-2 py-1">
-                  <div><div className="text-black/50">Bronze</div>{fmtDollars(draft.ltc_bronze_cents)}</div>
-                  <div><div className="text-black/50">Silver</div>{fmtDollars(draft.ltc_silver_cents)}</div>
-                  <div><div className="text-black/50">Gold</div>{fmtDollars(draft.ltc_gold_cents)}</div>
-                  <div><div className="text-black/50">Platinum</div>{fmtDollars(draft.ltc_platinum_cents)}</div>
-                  <div><div className="text-black/50">Diamond</div>{fmtDollars(draft.ltc_diamond_cents)}</div>
+                  <div><div className="text-black/50">Bronze</div>{fmtDollars(draft.ltc_bronze)}</div>
+                  <div><div className="text-black/50">Silver</div>{fmtDollars(draft.ltc_silver)}</div>
+                  <div><div className="text-black/50">Gold</div>{fmtDollars(draft.ltc_gold)}</div>
+                  <div><div className="text-black/50">Platinum</div>{fmtDollars(draft.ltc_platinum)}</div>
+                  <div><div className="text-black/50">Diamond</div>{fmtDollars(draft.ltc_diamond)}</div>
                 </div>
               </Field>
             </>
@@ -690,7 +690,7 @@ function PolicyDrawer({
       {/* Commission Splits */}
       <SectionHeader title="Commission Splits" subtitle="Per-policy payment waterfall. Must total 100%." />
 
-      {isCreate && draft.org_id && !orgHasPartner && (
+      {isCreate && draft.organization_id && !orgHasPartner && (
         <div className="mb-2 border border-amber-300 bg-amber-50 rounded px-3 py-2 text-xs text-amber-800 flex items-start gap-2">
           <CircleAlert className="h-3.5 w-3.5 mt-0.5 shrink-0" />
           <div>This organization has no primary channel partner set. Splits must be entered manually.</div>
@@ -906,7 +906,7 @@ function PayeeNameSelect({ type, value, onChange }: { type: PayeeType; value: st
     return (
       <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-1 py-0.5 text-xs border border-black/15 rounded bg-white">
         <option value="">Select partner…</option>
-        {opts.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+        {opts.map((p) => <option key={p.id} value={p.partner_name}>{p.partner_name}</option>)}
       </select>
     );
   }

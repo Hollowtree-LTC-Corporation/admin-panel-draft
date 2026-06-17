@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Users, DollarSign, Percent, ChevronDown, ChevronRight } from "lucide-react";
 import { Card, Stat, PageHeader, Pill, TableShell, THead, TRow, TCell } from "@/components/wireframe/Bits";
 import { useStore } from "@/lib/wireframe/store";
-import { INDIVIDUALS, ORGS, STAGES, COVERAGE_STATUSES, formatCents } from "@/lib/wireframe/data";
+import { INDIVIDUALS, ORGS, LTC_STAGES, COVERAGE_STATUSES, formatCents } from "@/lib/wireframe/data";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
 
@@ -38,7 +38,7 @@ function Dashboard() {
 
   const productOrgs = ORGS.filter((o) => o.product === product);
   const allInds = INDIVIDUALS.filter((i) => i.product === product);
-  const inds = orgFilter === "all" ? allInds : allInds.filter((i) => i.org_id === orgFilter);
+  const inds = orgFilter === "all" ? allInds : allInds.filter((i) => i.organization_id === orgFilter);
 
   const coverageCounts = COVERAGE_STATUSES.map((s) => ({
     status: s,
@@ -47,7 +47,7 @@ function Dashboard() {
 
   const enrolledLives = inds.filter((i) => ["active", "purchased", "in_progress"].includes(i.coverage_status)).length;
   const activePremium = inds.filter((i) => i.coverage_status === "active").reduce((sum, i) => sum + i.monthly_premium_cents, 0);
-  const numOrgs = new Set(inds.map((i) => i.org_id)).size;
+  const numOrgs = new Set(inds.map((i) => i.organization_id)).size;
 
   // DI funnel stages (Airtable-aligned). LTC keeps the legacy microsite stages.
   const DI_FUNNEL_STAGES = [
@@ -62,17 +62,16 @@ function Dashboard() {
     if (ind.coverage_status === "canceled") return "canceled";
     if (idx % 17 === 3) return "test";
     if (idx % 19 === 5) return "transitioning";
-    switch (ind.stage) {
-      case "invited":
-      case "education":
-      case "selecting_plan":
+    switch (ind.current_stage) {
+      case "choosing_plan":
         return "Choosing a Plan";
-      case "medical_questions":
-        // DI is Guaranteed Issue — fold this legacy bucket into the prior step.
+      case "confirming_info":
         return "Plan Selected - Confirming Information";
-      case "checkout":
-        return idx % 2 === 0 ? "At Checkout" : "Adding Payment Method";
-      case "completed":
+      case "at_checkout":
+        return "At Checkout";
+      case "adding_payment":
+        return "Adding Payment Method";
+      case "purchased":
         return "Payment Method Added - Purchase Completed";
       default:
         return "Choosing a Plan";
@@ -88,7 +87,7 @@ function Dashboard() {
   };
   const stageCounts: Array<{ stage: string; n: number }> = isDI
     ? DI_FUNNEL_STAGES.map((s) => ({ stage: s, n: diBuckets.filter((b) => b === s).length }))
-    : STAGES.map((s) => ({ stage: s, n: inds.filter((i) => i.stage === s).length }));
+    : LTC_STAGES.map((s) => ({ stage: s, n: inds.filter((i) => i.current_stage === s).length }));
   const maxStage = Math.max(...stageCounts.map((c) => c.n), 1);
 
   // ===== LTC three-funnel buckets =====
@@ -140,7 +139,7 @@ function Dashboard() {
 
   const ltcMainCounts = LTC_MAIN_STAGES.map((s) => ({
     stage: s,
-    n: ltcMainInds.filter((ind, idx) => mapMainStage(ind.stage, idx) === s).length,
+    n: ltcMainInds.filter((ind, idx) => mapMainStage(ind.current_stage, idx) === s).length,
   }));
   const ltcUpgradeCounts = LTC_UPGRADE_STAGES.map((s, sIdx) => ({
     stage: s,
@@ -168,16 +167,16 @@ function Dashboard() {
   const expected = Math.round(collected * 1.08);
   const delta = collected - expected;
   const outstanding = Math.round(collected * 0.07);
-  const outstandingEnrollees = inds.filter((i) => i.last_payment_status === "Failed" || i.last_payment_status === "Pending").length;
+  const outstandingEnrollees = inds.filter((i) => i.last_payment_status === "failed" || i.last_payment_status === "pending").length;
 
-  const failedInds = inds.filter((i) => i.last_payment_status === "Failed");
+  const failedInds = inds.filter((i) => i.last_payment_status === "failed");
   const grace = failedInds.filter((i) => i.retry_count <= 2).length;
   const penalty = failedInds.filter((i) => i.retry_count >= 3 && i.retry_count <= 4).length;
   const suspensionRisk = failedInds.filter((i) => i.retry_count >= 5).length;
 
   const orgRows = useMemo(() => productOrgs.map((o) => {
-    const orgInds = allInds.filter((i) => i.org_id === o.id);
-    const failed = orgInds.filter((i) => i.last_payment_status === "Failed").length;
+    const orgInds = allInds.filter((i) => i.organization_id === o.id);
+    const failed = orgInds.filter((i) => i.last_payment_status === "failed").length;
     let healthTone: "ok" | "warn" | "bad" = "ok";
     if (failed >= 3) healthTone = "bad";
     else if (failed >= 1) healthTone = "warn";
