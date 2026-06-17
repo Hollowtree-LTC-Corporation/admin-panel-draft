@@ -8,7 +8,7 @@ import {
 import {
   POLICIES, CARRIER_PRODUCTS, ORGS, CARRIERS, CHANNEL_PARTNERS,
   INTERNAL_REPS, ORG_PRIMARY_CHANNEL_PARTNER, CARRIER_COMMISSION_SCHEDULES,
-  POLICY_SPLITS_INITIAL,
+  POLICY_SPLITS_INITIAL, INDIVIDUALS,
   type Policy, type PolicySplit, type PolicyStatus, type PayeeType,
   type PaymentMethodSetting, type PolicyOwnerType,
 } from "@/lib/wireframe/data";
@@ -27,8 +27,14 @@ const STATUS_LABEL: Record<PolicyStatus, string> = {
   pending: "Pending", active: "Active", lapsed: "Lapsed", closed: "Closed", terminated: "Terminated",
 };
 const OWNER_LABEL: Record<PolicyOwnerType, string> = {
-  employer_group: "Employer Group", affiliate: "Affiliate",
+  employer_group: "Employer Group", affiliate: "Affiliate", individual: "Individual",
 };
+const OWNER_TONE: Record<PolicyOwnerType, string> = {
+  employer_group: "bg-blue-100 text-blue-800 border-blue-200",
+  affiliate: "bg-purple-100 text-purple-800 border-purple-200",
+  individual: "bg-amber-100 text-amber-900 border-amber-200",
+};
+const LOB_LABEL: Record<string, string> = { DI: "Disability", LTC: "LTC", life: "Life" };
 const PAYEE_LABEL: Record<PayeeType, string> = {
   house: "House", internal_rep: "Internal Rep", channel_partner: "Channel Partner", override: "Override",
 };
