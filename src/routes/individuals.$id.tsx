@@ -1322,3 +1322,246 @@ function ConfirmModal({ title, message, confirmLabel = "Confirm", danger, onCanc
     </div>
   );
 }
+
+/* ============================================================
+   v15: Employment Status / DI Conversion / GI Life sections
+============================================================ */
+
+function departureLabel(r: DepartureReason | null | undefined): string {
+  if (!r) return "Not specified";
+  return DEPARTURE_REASON_LABELS[r];
+}
+
+function EmploymentStatusSection({ i, onOpenDeparture }: { i: Detail; onOpenDeparture: () => void }) {
+  const departed = !!i.departed_organization_at;
+  return (
+    <SectionCard title="Employment Status" defaultOpen>
+      {!departed ? (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+            Currently employed at <b>{i.org_name ?? "—"}</b>
+          </div>
+          {i.org_name && <Btn onClick={onOpenDeparture}>Record Departure</Btn>}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm p-3 rounded">
+            This employee departed <b>{i.org_name}</b> on <b>{fmtDate(i.departed_organization_at)}</b>.
+          </div>
+          <div className="text-sm">Departure Reason: <b>{departureLabel(i.departure_reason as DepartureReason | null)}</b></div>
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
+function DIConversionSection({ i, onOpenConvert }: { i: Detail; onOpenConvert: () => void }) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (i.coverage_mode === "individual") {
+    const preBenefit = i.pre_conversion_monthly_benefit_cents ?? 0;
+    const benefitLower = i.monthly_benefit_cents != null && i.monthly_benefit_cents < preBenefit;
+    return (
+      <SectionCard title="Coverage Conversion" defaultOpen>
+        <div className="bg-purple-50 border border-purple-200 text-purple-900 text-sm p-3 rounded">
+          Converted to individual coverage on <b>{fmtDate(i.converted_to_individual_at)}</b>.
+        </div>
+        <div className="mt-4">
+          <Grid cols={2}>
+            <RField label="Policy">
+              <Link to="/policies" className="text-[#0a3d3e] underline">{i.policy_id ?? "—"}</Link>
+            </RField>
+            <div />
+            <RField label="Pre-conversion benefit">${(preBenefit / 100).toLocaleString()}/mo</RField>
+            <RField label="Current benefit">
+              {i.monthly_benefit_cents != null ? `$${(i.monthly_benefit_cents / 100).toLocaleString()}/mo` : "—"}
+              {benefitLower && <span className="ml-2 text-red-600 text-xs">↓ lower</span>}
+            </RField>
+            <RField label="Pre-conversion premium">${((i.pre_conversion_employee_monthly_premium_cents ?? 0) / 100).toLocaleString()}/mo</RField>
+            <RField label="Current premium">${(i.monthly_premium_cents / 100).toLocaleString()}/mo</RField>
+          </Grid>
+        </div>
+      </SectionCard>
+    );
+  }
+  const eligible = !!i.conversion_eligible_date && i.conversion_eligible_date <= today;
+  return (
+    <SectionCard title="Coverage Conversion" defaultOpen>
+      {eligible ? (
+        <div className="space-y-3">
+          <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm p-3 rounded">
+            This member has been on group coverage for 12+ months and is eligible for individual conversion.
+          </div>
+          <Btn variant="primary" onClick={onOpenConvert}>Convert to Individual Coverage</Btn>
+        </div>
+      ) : (
+        <div className="bg-gray-50 border border-gray-200 text-gray-700 text-sm p-3 rounded">
+          Eligible for individual conversion on <b>{fmtDate(i.conversion_eligible_date)}</b>.
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
+function GILifeSection({ i }: { i: Detail }) {
+  if (!i.life_enrolled) {
+    return (
+      <SectionCard title="GI Life Insurance" defaultOpen>
+        <div className="border border-dashed border-black/15 rounded p-4 text-sm text-black/40">
+          No GI life insurance coverage.
+        </div>
+      </SectionCard>
+    );
+  }
+  return (
+    <SectionCard title="GI Life Insurance" defaultOpen>
+      <div className="border-l-4 border-green-500 pl-4">
+        <Grid cols={2}>
+          <RField label="Face Amount">${((i.life_face_amount_cents ?? 0) / 100).toLocaleString()}</RField>
+          <RField label="Monthly Premium">${((i.life_premium_cents ?? 0) / 100).toLocaleString()}/mo</RField>
+          <RField label="Effective Date">{fmtDate(i.life_effective_date)}</RField>
+          <RField label="Policy">
+            <span className="inline-flex items-center gap-2">
+              <Link to="/policies" className="text-[#0a3d3e] underline">{i.life_policy_id ?? "—"}</Link>
+              <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800">Employer Group</span>
+            </span>
+          </RField>
+        </Grid>
+        {i.coverage_mode === "individual" && (
+          <div className="mt-3 text-xs text-black/60">
+            Converted to individual life policy on {fmtDate(i.converted_to_individual_at)}.
+          </div>
+        )}
+      </div>
+    </SectionCard>
+  );
+}
+
+function RecordDepartureModal({ i, onClose }: { i: Detail; onClose: () => void }) {
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [reason, setReason] = useState<DepartureReason | "">("");
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-5">
+        <h3 className="text-base font-semibold text-gray-900">Record Employee Departure</h3>
+        <div className="text-sm text-black/60 mt-1">{i.first_name} {i.last_name} at {i.org_name ?? "—"}</div>
+        <div className="mt-4 space-y-3">
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-black/50">Departure Date <span className="text-red-600">*</span></label>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputCls} mt-1`} />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-black/50">Departure Reason</label>
+            <select value={reason} onChange={(e) => setReason(e.target.value as DepartureReason | "")} className={`${inputCls} mt-1`}>
+              <option value="">— Select —</option>
+              {(Object.keys(DEPARTURE_REASON_LABELS) as DepartureReason[]).map((r) => (
+                <option key={r} value={r}>{DEPARTURE_REASON_LABELS[r]}</option>
+              ))}
+            </select>
+          </div>
+          <div className="text-xs text-black/55 leading-relaxed">
+            Recording a departure will end any active employer contribution. The employee's coverage and billing will continue unchanged. The organization link is preserved for reporting.
+          </div>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <Btn onClick={onClose}>Cancel</Btn>
+          <Btn variant="primary" disabled={!date} onClick={onClose}>Record Departure</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConvertCoverageModal({ i, onClose }: { i: Detail; onClose: () => void }) {
+  const currentBenefit = i.monthly_benefit_cents ?? 0;
+  const currentPremium = i.monthly_premium_cents;
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [newBenefit, setNewBenefit] = useState<number>(currentBenefit);
+  const [newPremium, setNewPremium] = useState<number>(currentPremium);
+  const [confirmed, setConfirmed] = useState(false);
+  const benefitError = newBenefit > currentBenefit ? "Individual coverage benefit cannot exceed the group benefit amount." : null;
+  const hasLife = !!i.life_enrolled;
+  const maxStep: 1 | 2 | 3 = 3;
+
+  const next = () => {
+    if (step === 1) {
+      if (benefitError || !newBenefit || !newPremium) return;
+      setStep(hasLife ? 2 : 3);
+    } else if (step === 2) {
+      setStep(3);
+    }
+  };
+  const back = () => {
+    if (step === 3) setStep(hasLife ? 2 : 1);
+    else if (step === 2) setStep(1);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-5">
+        <h3 className="text-base font-semibold text-gray-900">Convert to Individual Coverage</h3>
+        <div className="text-[11px] text-black/50 mt-0.5">Step {step} of {maxStep}</div>
+
+        {step === 1 && (
+          <div className="mt-4 space-y-4">
+            <div className="text-sm text-black/60">
+              {i.first_name} {i.last_name} — currently on group coverage since {fmtDate(i.effective_date)}
+            </div>
+            <Grid cols={2}>
+              <RField label="Current monthly benefit">${(currentBenefit / 100).toLocaleString()}</RField>
+              <RField label="Current monthly premium">${(currentPremium / 100).toLocaleString()}</RField>
+            </Grid>
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-black/50">Individual coverage benefit amount (cents)</label>
+              <input type="number" value={newBenefit} onChange={(e) => setNewBenefit(Number(e.target.value))} className={`${inputCls} mt-1`} />
+              <div className="text-[11px] text-black/55 mt-0.5">= ${(newBenefit / 100).toLocaleString()}/mo</div>
+              {benefitError && <div className="text-[11px] text-red-700 mt-1">{benefitError}</div>}
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-black/50">Individual coverage premium amount (cents)</label>
+              <input type="number" value={newPremium} onChange={(e) => setNewPremium(Number(e.target.value))} className={`${inputCls} mt-1`} />
+              <div className="text-[11px] text-black/55 mt-0.5">= ${(newPremium / 100).toLocaleString()}/mo</div>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && hasLife && (
+          <div className="mt-4">
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm p-3 rounded">
+              This member has active GI Life Insurance coverage. Both the DI disability and GI Life policies will be converted to individual coverage.
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="mt-4 space-y-3">
+            <div className="border border-black/10 rounded p-3 text-sm space-y-1.5">
+              <div>Coverage mode: <b>Group</b> → <b>Individual</b></div>
+              <div>
+                Monthly benefit: ${(currentBenefit / 100).toLocaleString()} → ${(newBenefit / 100).toLocaleString()}
+                {newBenefit < currentBenefit && <span className="ml-2 text-red-600 text-xs">↓ lower</span>}
+              </div>
+              <div>Monthly premium: ${(currentPremium / 100).toLocaleString()} → ${(newPremium / 100).toLocaleString()}</div>
+              {hasLife && <div>GI Life Insurance: <b>will also convert to individual policy</b></div>}
+            </div>
+            <label className="flex items-start gap-2 text-xs text-black/70">
+              <input type="checkbox" className="mt-0.5" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
+              I confirm that this conversion has been coordinated with the carrier and the new amounts are correct.
+            </label>
+          </div>
+        )}
+
+        <div className="mt-5 flex justify-between gap-2">
+          <Btn onClick={step === 1 ? onClose : back}>{step === 1 ? "Cancel" : "Back"}</Btn>
+          {step < 3 ? (
+            <Btn variant="primary" disabled={step === 1 && !!benefitError} onClick={next}>Continue</Btn>
+          ) : (
+            <Btn variant="primary" disabled={!confirmed} onClick={onClose}>Convert Coverage</Btn>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
