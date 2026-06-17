@@ -62,7 +62,7 @@ function computeBalances(inds: typeof INDIVIDUALS): Row[] {
     const ledger = PAYMENT_LEDGER.filter((p) => p.enrollment_id === i.id);
     // Total Charges: event_type IN ('premium','fee'), funding_source='employee_account', all statuses
     const chargeRows = ledger.filter(
-      (p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employee",
+      (p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employee_account",
     );
     const charges = chargeRows.reduce((s, p) => s + p.amount_cents, 0);
     const premiumCharges = chargeRows.filter((p) => p.event_type === "premium").reduce((s, p) => s + p.amount_cents, 0);
