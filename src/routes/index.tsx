@@ -320,14 +320,8 @@ function Dashboard() {
       {/* v15: Conversion / Life / Departure overview */}
       <div className={`grid ${product === "DI" ? "grid-cols-3" : "grid-cols-1"} gap-3 mb-5`}>
         {product === "DI" && (
-          <Card
-            className="p-3 cursor-pointer hover:bg-[#f7f3eb]/40"
-            // Click navigates to filtered list
-            // @ts-expect-error tag-on style; route accepts unknown search keys via validateSearch
-          >
-            <div
-              onClick={() => navigate({ to: "/individuals", search: { conv_eligible: "1" } as never })}
-            >
+          <Card className="p-3 cursor-pointer hover:bg-[#f7f3eb]/40">
+            <div onClick={() => navigate({ to: "/individuals", search: { conv_eligible: "1" } as never })}>
               <div className="text-[10px] uppercase tracking-wider text-black/50">Conversion Eligible</div>
               <div className="text-2xl font-semibold mt-1">{convEligibleCount}</div>
               <div className="text-[11px] text-black/55 mt-0.5">Eligible for individual conversion</div>
@@ -342,10 +336,7 @@ function Dashboard() {
             <div className="text-[11px] text-black/55 mt-0.5">Total monthly life premium: {formatCents(lifePremiumTotal)}</div>
           </Card>
         )}
-        <Card
-          className="p-3 cursor-pointer hover:bg-[#f7f3eb]/40"
-          // @ts-expect-error see above
-        >
+        <Card className="p-3 cursor-pointer hover:bg-[#f7f3eb]/40">
           <div onClick={() => navigate({ to: "/individuals", search: { employment: "departed" } as never })}>
             <div className="text-[10px] uppercase tracking-wider text-black/50">Departed Employees (Active Coverage)</div>
             <div className="text-2xl font-semibold mt-1">{departedActiveCount}</div>
