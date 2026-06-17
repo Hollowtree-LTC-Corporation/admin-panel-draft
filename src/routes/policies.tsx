@@ -291,7 +291,7 @@ function emptyPolicy(product: "DI" | "LTC"): Policy {
   const id = `pol_${Math.floor(Math.random() * 9000) + 1000}`;
   return {
     id, policy_name: "", policy_number: null, organization_id: "", org_name: "", carrier_product_id: "",
-    product, status: "pending",
+    product, enrollment_status: "pending",
     policy_owner_type: "employer_group",
     carrier_commission_pct: product === "DI" ? 12 : null,
     override_pct: null,
