@@ -10,7 +10,14 @@ export const Route = createFileRoute("/account-adjustments")({ component: View }
 
 type SortKey = "individual_name" | "billing_group_id" | "adjustment_type" | "amount_cents" | "reason" | "effective_date" | "applied_to_next_charge" | "approved_by";
 
-const ADJ_TYPES = ["premium_correction", "write_off", "refund", "penalty_waiver", "billing_error", "other"] as const;
+const ADJ_TYPES = ["premium_correction", "penalty_waiver", "refund", "write_off", "other"] as const;
+const ADJ_TYPE_LABELS: Record<typeof ADJ_TYPES[number], string> = {
+  premium_correction: "Premium Correction",
+  penalty_waiver: "Penalty Waiver",
+  refund: "Refund",
+  write_off: "Write-off",
+  other: "Other",
+};
 
 function View() {
   const can = usePermission();
@@ -61,7 +68,7 @@ function View() {
         <FilterSearch value={search} onChange={setSearch} placeholder="Search individual or email…" />
         <FilterCombobox value={ind} onChange={setInd} placeholder="All individuals" options={indOptions} />
         <FilterSelect value={type} onChange={setType} allLabel="All types" options={[
-          { value: "premium_correction" }, { value: "penalty_waiver" }, { value: "refund" }, { value: "write_off" },
+          { value: "premium_correction", label: "Premium Correction" }, { value: "penalty_waiver", label: "Penalty Waiver" }, { value: "refund", label: "Refund" }, { value: "write_off", label: "Write-off" }, { value: "other", label: "Other" },
         ]} />
         <FilterCombobox value={approver} onChange={setApprover} placeholder="All approvers" options={approvers} />
         <ClearFiltersLink show={active} onClick={clearAll} />
@@ -111,7 +118,7 @@ function View() {
         <Field label="Billing Group"><Input defaultValue={BILLING_GROUPS[0]?.id ?? ""} /></Field>
         <Field label="Adjustment Type">
           <select defaultValue="premium_correction" className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
-            {ADJ_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            {ADJ_TYPES.map((t) => <option key={t} value={t}>{ADJ_TYPE_LABELS[t]}</option>)}
           </select>
         </Field>
         <Field label="Amount (cents)"><Input placeholder="-1500" /></Field>

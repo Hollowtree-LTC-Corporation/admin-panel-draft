@@ -62,7 +62,7 @@ function computeBalances(inds: typeof INDIVIDUALS): Row[] {
     const ledger = PAYMENT_LEDGER.filter((p) => p.enrollment_id === i.id);
     // Total Charges: event_type IN ('premium','fee'), funding_source='employee_account', all statuses
     const chargeRows = ledger.filter(
-      (p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employee",
+      (p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employee_account",
     );
     const charges = chargeRows.reduce((s, p) => s + p.amount_cents, 0);
     const premiumCharges = chargeRows.filter((p) => p.event_type === "premium").reduce((s, p) => s + p.amount_cents, 0);
@@ -75,7 +75,7 @@ function computeBalances(inds: typeof INDIVIDUALS): Row[] {
       .reduce((s, a) => s + a.amount_cents, 0);
     // Employer-paid charges (excluded — surfaced for the drawer caption)
     const employerExcluded = ledger
-      .filter((p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employer")
+      .filter((p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employer_account")
       .reduce((s, p) => s + p.amount_cents, 0);
     const balance = charges - paid + adjusted;
     return {
@@ -333,7 +333,7 @@ function BalanceDrawer({ row, onClose }: { row: Row | null; onClose: () => void 
 
   const org = ORGS.find((o) => o.id === row.i.organization_id);
   const ledgerRows = PAYMENT_LEDGER
-    .filter((p) => p.enrollment_id === row.i.id && p.funding_source === "employee" && (p.event_type === "premium" || p.event_type === "fee"))
+    .filter((p) => p.enrollment_id === row.i.id && p.funding_source === "employee_account" && (p.event_type === "premium" || p.event_type === "fee"))
     .slice(0, 10);
   const adjustments = ACCOUNT_ADJUSTMENTS.filter((a) => a.individual_id === row.i.id);
 

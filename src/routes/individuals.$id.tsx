@@ -185,8 +185,9 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     physician_type: !isLTC && n % 2 === 0 ? ["MD","DO","Resident"][n % 3] : null,
     nurse_type: !isLTC && n % 2 === 1 ? ["RN","NP","CRNA"][n % 3] : null,
     were_they_client: !isLTC ? n % 3 === 0 : null,
-    std_premium: !isLTC && org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.4) : 0,
-    ltd_premium: !isLTC ? (org?.type_of_rate === "STD+LTD" ? Math.round(base.monthly_premium_cents * 0.6) : base.monthly_premium_cents) : 0,
+    // std_premium / ltd_premium stored as whole dollars (DI only).
+    std_premium: !isLTC && org?.type_of_rate === "STD+LTD" ? Math.round((base.monthly_premium_cents * 0.4) / 100) : 0,
+    ltd_premium: !isLTC ? Math.round((org?.type_of_rate === "STD+LTD" ? base.monthly_premium_cents * 0.6 : base.monthly_premium_cents) / 100) : 0,
     // LTC-only extras
     employee_upgrade_option: isLTC && base.applied_for_upgrade ? ["Silver→Gold","Gold→Platinum","Platinum→Diamond"][n % 3] : null,
     applied_for_upgrade: isLTC ? base.applied_for_upgrade : null,
@@ -441,10 +442,16 @@ function CoverageStatusField({ editing, status, setStatus, allowed, current }: {
 function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void }) {
   const { editing, setEditing, status, setStatus, error, allowed, onSave, onCancel } = useCoverageEditing(i, setConfirm);
   const unfunded = i.coverage_status === "not_started" || i.coverage_status === "in_progress";
-  const premiumSum = i.std_premium + i.ltd_premium;
-  const mismatch = !unfunded && premiumSum !== i.monthly_premium_cents;
+  const premiumSumCents = (i.std_premium + i.ltd_premium) * 100;
+  const mismatch = !unfunded && premiumSumCents !== i.monthly_premium_cents;
   const DI_PLANS = ["Bronze DI", "Silver DI", "Gold DI"];
-  const DI_STAGES = ["not_started","quote_generated","link_sent","app_started","app_completed","payment_pending","enrolled","active"];
+  const DI_STAGES: Array<{ value: string; label: string }> = [
+    { value: "choosing_plan", label: "Choosing Plan" },
+    { value: "confirming_info", label: "Confirming Info" },
+    { value: "at_checkout", label: "At Checkout" },
+    { value: "adding_payment", label: "Adding Payment" },
+    { value: "purchased", label: "Purchased" },
+  ];
   return (
     <SectionCard title="Coverage & Plan · DI" defaultOpen editing={editing} canEdit={!readOnly} onEdit={() => setEditing(true)}>
       <Grid cols={4}>
@@ -464,7 +471,7 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
         <RField label="Monthly Benefit" value={i.monthly_benefit_cents != null ? formatCents(i.monthly_benefit_cents) : "—"} />
         <RField label="Current Stage" editing={editing}>
           {editing
-            ? <select defaultValue={i.current_stage} className={inputCls}>{DI_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+            ? <select defaultValue={i.current_stage} className={inputCls}>{DI_STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select>
             : <Badge map={STAGE_BADGE} value={i.current_stage} />}
         </RField>
         <RField label="Application Status">
@@ -477,7 +484,7 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
       {error && <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">{error}</div>}
       {mismatch && !editing && (
         <div className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 inline-flex items-center gap-1">
-          <AlertTriangle className="h-3 w-3" /> STD + LTD does not equal Monthly Premium ({formatCents(premiumSum)} vs {formatCents(i.monthly_premium_cents)})
+          <AlertTriangle className="h-3 w-3" /> STD + LTD does not equal Monthly Premium ({formatCents(premiumSumCents)} vs {formatCents(i.monthly_premium_cents)})
         </div>
       )}
       {editing && <SectionActions onCancel={onCancel} onSave={onSave} />}

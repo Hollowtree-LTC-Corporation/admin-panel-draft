@@ -93,13 +93,13 @@ function Dashboard() {
   // ===== LTC three-funnel buckets =====
   const isLTC = product === "LTC";
   const LTC_MAIN_STAGES = [
-    "Logged in",
-    "Starting Application",
+    "Starting",
     "Selecting Plan",
-    "Beneficiary Form",
-    "At CheckOut",
-    "Adding Payment Method",
-    "Coverage Approved",
+    "Beneficiary",
+    "Checkout",
+    "Post-Purchase",
+    "Spousal Flow",
+    "SI Buy-up",
   ] as const;
   const LTC_UPGRADE_STAGES = [
     "Upsell Survey",
@@ -119,15 +119,38 @@ function Dashboard() {
     "Spousal Coverage - Checkout",
   ] as const;
 
-  const mapMainStage = (s: string, idx: number): (typeof LTC_MAIN_STAGES)[number] => {
+  const mapMainStage = (s: string): (typeof LTC_MAIN_STAGES)[number] => {
     switch (s) {
-      case "invited": return "Logged in";
-      case "education": return "Starting Application";
-      case "selecting_plan": return "Selecting Plan";
-      case "medical_questions": return "Beneficiary Form";
-      case "checkout": return idx % 2 === 0 ? "At CheckOut" : "Adding Payment Method";
-      case "completed": return "Coverage Approved";
-      default: return "Logged in";
+      case "starting_application":
+        return "Starting";
+      case "selecting_plan":
+        return "Selecting Plan";
+      case "beneficiary_form":
+        return "Beneficiary";
+      case "at_checkout":
+      case "adding_payment":
+        return "Checkout";
+      case "upsell_survey":
+      case "interested_spouse":
+      case "interested_upgrade":
+      case "interested_both":
+      case "at_more_coverage":
+        return "Post-Purchase";
+      case "choosing_spousal_pricing":
+      case "spouse_eligibility":
+      case "spouse_confirming_details":
+      case "spouse_designee":
+      case "spouse_checkout":
+        return "Spousal Flow";
+      case "choosing_upgrade":
+      case "upgrade_medical":
+      case "upgrade_checkout":
+      case "upgrade_applied":
+      case "upgrade_approved":
+      case "upgrade_denied":
+        return "SI Buy-up";
+      default:
+        return "Starting";
     }
   };
 
@@ -139,7 +162,7 @@ function Dashboard() {
 
   const ltcMainCounts = LTC_MAIN_STAGES.map((s) => ({
     stage: s,
-    n: ltcMainInds.filter((ind, idx) => mapMainStage(ind.current_stage, idx) === s).length,
+    n: ltcMainInds.filter((ind) => mapMainStage(ind.current_stage) === s).length,
   }));
   const ltcUpgradeCounts = LTC_UPGRADE_STAGES.map((s, sIdx) => ({
     stage: s,

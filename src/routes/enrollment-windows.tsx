@@ -18,7 +18,7 @@ import { AffiliateLogo } from "@/routes/affiliates";
 
 export const Route = createFileRoute("/enrollment-windows")({ component: View });
 
-type SortKey = "window_type" | "org_name" | "start_date" | "end_date" | "status" | "sponsor_type" | "carrier";
+type SortKey = "window_type" | "org_name" | "enrollment_start_date" | "enrollment_end_date" | "status" | "sponsor_type" | "carrier";
 
 // Stored sponsor_type CHECK is "employer" | "affiliate". The "employer+affiliate"
 // display shape is derived when sponsor_type='employer' AND affiliate_organization_id IS NOT NULL.
@@ -33,8 +33,8 @@ type Draft = {
   organization_id: string | null;
   affiliate_organization_id: string | null;
   window_type: "initial" | "annual" | "new_joiner" | "special";
-  start_date: string;
-  end_date: string;
+  enrollment_start_date: string;
+  enrollment_end_date: string;
   default_effective_date: string;
   carrier: string;
   gi_eligible: boolean;
@@ -50,8 +50,8 @@ function emptyDraft(): Draft {
     organization_id: null,
     affiliate_organization_id: null,
     window_type: "annual",
-    start_date: "",
-    end_date: "",
+    enrollment_start_date: "",
+    enrollment_end_date: "",
     default_effective_date: "",
     carrier: CARRIERS[0]?.carrier_name ?? "",
     gi_eligible: true,
@@ -68,8 +68,8 @@ function toDraft(w: EnrollmentWindow): Draft {
     organization_id: w.organization_id,
     affiliate_organization_id: w.affiliate_organization_id,
     window_type: w.window_type,
-    start_date: w.enrollment_start_date ?? "",
-    end_date: w.enrollment_end_date ?? "",
+    enrollment_start_date: w.enrollment_start_date ?? "",
+    enrollment_end_date: w.enrollment_end_date ?? "",
     default_effective_date: w.default_effective_date ?? "",
     carrier: w.carrier,
     gi_eligible: w.gi_eligible,
@@ -95,7 +95,7 @@ function View() {
   const [status, setStatus] = useState("all");
   const [sponsor, setSponsor] = useState("all");
   const [carrier, setCarrier] = useState("all");
-  const sort = useSort<SortKey>("start_date", "desc");
+  const sort = useSort<SortKey>("enrollment_start_date", "desc");
 
   // Local mutable list (session-scoped) so save/edit persists during the wireframe demo.
   const [windows, setWindows] = useState<EnrollmentWindow[]>(() => ENROLLMENT_WINDOWS.map((w) => ({ ...w, channel_partners: [...w.channel_partners] })));
@@ -138,8 +138,8 @@ function View() {
       affiliate_organization_id: draft.sponsor_type === "employer" ? null : draft.affiliate_organization_id,
       affiliate_org: draft.sponsor_type === "employer" ? null : (affRec?.name ?? null),
       window_type: draft.window_type,
-      enrollment_start_date: isNewJoiner ? null : (draft.start_date || null),
-      enrollment_end_date: isNewJoiner ? null : (draft.end_date || null),
+      enrollment_start_date: isNewJoiner ? null : (draft.enrollment_start_date || null),
+      enrollment_end_date: isNewJoiner ? null : (draft.enrollment_end_date || null),
       default_effective_date: isNewJoiner ? null : (draft.default_effective_date || null),
       status: isNewJoiner ? "open" : draft.status,
       // CHECK constraint: only "employer" | "affiliate" — composite shape derived in display.
@@ -185,8 +185,8 @@ function View() {
           cols={[
             { key: "org_name", label: "Sponsor (Org / Affiliate)" },
             { key: "window_type", label: "Type" },
-            { key: "start_date", label: "Start" },
-            { key: "end_date", label: "End" },
+            { key: "enrollment_start_date", label: "Start" },
+            { key: "enrollment_end_date", label: "End" },
             { key: "status", label: "Status" },
             { key: "sponsor_type", label: "Sponsor Shape" },
             { key: "carrier", label: "Carrier" },
@@ -409,11 +409,11 @@ function WindowForm({
           ) : (
             <>
               <Field label="Start Date">
-                <input type="date" value={draft.start_date} onChange={(e) => update("start_date", e.target.value)}
+                <input type="date" value={draft.enrollment_start_date} onChange={(e) => update("enrollment_start_date", e.target.value)}
                   className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white" />
               </Field>
               <Field label="End Date">
-                <input type="date" value={draft.end_date} onChange={(e) => update("end_date", e.target.value)}
+                <input type="date" value={draft.enrollment_end_date} onChange={(e) => update("enrollment_end_date", e.target.value)}
                   className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white" />
               </Field>
               <Field label="Default Effective Date">

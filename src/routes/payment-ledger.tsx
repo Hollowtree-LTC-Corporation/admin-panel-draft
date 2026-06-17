@@ -8,7 +8,7 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/payment-ledger")({ component: View });
 
-type SortKey = "date" | "individual_name" | "billing_group_id" | "charge_type" | "amount_cents" | "status" | "funding_source" | "contribution_source" | "coverage_type";
+type SortKey = "event_date" | "individual_name" | "billing_group_id" | "event_type" | "amount_cents" | "status" | "funding_source" | "contribution_source" | "coverage_type";
 
 function ContributionSourceBadge({ value }: { value: string }) {
   const map: Record<string, { label: string; cls: string }> = {
@@ -37,7 +37,7 @@ function View() {
   const [coverage, setCoverage] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const sort = useSort<SortKey>("date", "desc");
+  const sort = useSort<SortKey>("event_date", "desc");
 
   const productInds = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
@@ -67,10 +67,10 @@ function View() {
   const clearAll = () => { setSearch(""); setOrg("all"); setInd("all"); setStatus("all"); setCtype("all"); setSource("all"); setCoverage("all"); setFrom(""); setTo(""); sort.reset(); };
 
   const cols: { key: SortKey; label: string }[] = [
-    { key: "date", label: "Date" },
+    { key: "event_date", label: "Date" },
     { key: "individual_name", label: "Individual" },
     { key: "billing_group_id", label: "Group" },
-    { key: "charge_type", label: "Charge Type" },
+    { key: "event_type", label: "Charge Type" },
     { key: "amount_cents", label: "Amount" },
     { key: "funding_source", label: "Funding" },
     { key: "contribution_source", label: "Source" },
@@ -88,7 +88,7 @@ function View() {
         <FilterSearch value={search} onChange={setSearch} placeholder="Search individual or email…" />
         <FilterCombobox value={org} onChange={setOrg} placeholder="All orgs" options={orgOptions} />
         <FilterCombobox value={ind} onChange={setInd} placeholder="All individuals" options={indOptions} />
-        <FilterSelect value={status} onChange={setStatus} allLabel="All statuses" options={[{ value: "successful" }, { value: "failed" }, { value: "pending" }]} />
+        <FilterSelect value={status} onChange={setStatus} allLabel="All statuses" options={[{ value: "successful", label: "Successful" }, { value: "failed", label: "Failed" }, { value: "pending", label: "Pending" }, { value: "reversed", label: "Reversed" }]} />
         <FilterSelect value={ctype} onChange={setCtype} allLabel="All charge types" options={chargeOptions} />
         <FilterSelect value={source} onChange={setSource} allLabel="All sources" options={[
           { value: "voluntary", label: "Voluntary" },
@@ -125,7 +125,7 @@ function View() {
               <TCell className="capitalize">{p.funding_source}</TCell>
               <TCell><ContributionSourceBadge value={p.contribution_source} /></TCell>
               {product === "DI" && <TCell><CoverageTypeBadge value={p.coverage_type} /></TCell>}
-              <TCell><Pill tone={p.status === "successful" ? "ok" : p.status === "failed" ? "bad" : "info"}>{p.status}</Pill></TCell>
+              <TCell><Pill tone={p.status === "successful" ? "ok" : p.status === "failed" ? "bad" : p.status === "reversed" ? "neutral" : "info"}>{p.status}</Pill></TCell>
             </TRow>
           ))}
           {rows.length === 0 && (

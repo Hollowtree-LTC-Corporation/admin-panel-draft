@@ -119,7 +119,6 @@ function OrgsView() {
         <FilterCombobox value={situs} onChange={setSitus} placeholder="All states" options={US_STATE_OPTIONS()} />
         <FilterSelect value={owner} onChange={setOwner} allLabel="All owner types" options={[
           { value: "employer_group", label: "Employer Group" },
-          { value: "individual", label: "Individual" },
           { value: "cca", label: "CCA" },
         ]} />
         <ClearFiltersLink show={active} onClick={clearAll} />
@@ -188,7 +187,7 @@ function OrgsView() {
           <select className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white" defaultValue="employer_group">
             <option value="employer_group">Employer Group</option>
             <option value="cca">CCA</option>
-            <option value="individual">Individual</option>
+            
           </select>
         </Field>
         <Field label="Domain"><Input placeholder="acme.com" /></Field>
