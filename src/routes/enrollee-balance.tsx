@@ -333,7 +333,7 @@ function BalanceDrawer({ row, onClose }: { row: Row | null; onClose: () => void 
 
   const org = ORGS.find((o) => o.id === row.i.organization_id);
   const ledgerRows = PAYMENT_LEDGER
-    .filter((p) => p.enrollment_id === row.i.id && p.funding_source === "employee" && (p.event_type === "premium" || p.event_type === "fee"))
+    .filter((p) => p.enrollment_id === row.i.id && p.funding_source === "employee_account" && (p.event_type === "premium" || p.event_type === "fee"))
     .slice(0, 10);
   const adjustments = ACCOUNT_ADJUSTMENTS.filter((a) => a.individual_id === row.i.id);
 
