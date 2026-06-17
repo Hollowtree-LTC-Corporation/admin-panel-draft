@@ -101,10 +101,9 @@ function emptyDraft(): AffiliateOrganization {
     affiliation_level: "individual",
     industry: null,
     is_external: true,
+    is_active: true,
     legal_entity_status: null,
     notes: "",
-    deleted_at: null,
-    logo_url: null,
   };
 }
 
