@@ -42,22 +42,22 @@ function View() {
   const productInds = INDIVIDUALS.filter((i) => i.product === product);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
   const indOptions = productInds.map((i) => ({ value: i.id, label: i.full_name }));
-  const chargeOptions = Array.from(new Set(PAYMENT_LEDGER.map((p) => p.charge_type))).map((v) => ({ value: v }));
+  const chargeOptions = Array.from(new Set(PAYMENT_LEDGER.map((p) => p.event_type))).map((v) => ({ value: v }));
 
   const rows = useMemo(() => {
     const s = search.trim().toLowerCase();
     const filtered = PAYMENT_LEDGER.filter((p) => {
-      const indRec = INDIVIDUALS.find((i) => i.id === p.individual_id);
+      const indRec = INDIVIDUALS.find((i) => i.id === p.enrollment_id);
       if (!indRec || indRec.product !== product) return false;
       if (s && !(p.individual_name.toLowerCase().includes(s) || (indRec?.email.toLowerCase().includes(s) ?? false))) return false;
       if (org !== "all" && indRec.organization_id !== org) return false;
-      if (ind !== "all" && p.individual_id !== ind) return false;
+      if (ind !== "all" && p.enrollment_id !== ind) return false;
       if (status !== "all" && p.status !== status) return false;
-      if (ctype !== "all" && p.charge_type !== ctype) return false;
+      if (ctype !== "all" && p.event_type !== ctype) return false;
       if (source !== "all" && p.contribution_source !== source) return false;
       if (product === "DI" && coverage !== "all" && p.coverage_type !== coverage) return false;
-      if (from && p.date < from) return false;
-      if (to && p.date > to) return false;
+      if (from && p.event_date < from) return false;
+      if (to && p.event_date > to) return false;
       return true;
     });
     return sort.applySort(filtered, (r, k) => (r as unknown as Record<string, string | number>)[k]);
@@ -117,10 +117,10 @@ function View() {
         <tbody>
           {rows.map((p) => (
             <TRow key={p.id}>
-              <TCell className="font-mono text-[11px]">{p.date}</TCell>
+              <TCell className="font-mono text-[11px]">{p.event_date}</TCell>
               <TCell>{p.individual_name}</TCell>
               <TCell className="text-black/60">{p.billing_group_id}</TCell>
-              <TCell className="capitalize">{p.charge_type.replace(/_/g, " ")}</TCell>
+              <TCell className="capitalize">{p.event_type.replace(/_/g, " ")}</TCell>
               <TCell>{formatCents(p.amount_cents)}</TCell>
               <TCell className="capitalize">{p.funding_source}</TCell>
               <TCell><ContributionSourceBadge value={p.contribution_source} /></TCell>

@@ -421,8 +421,8 @@ function View() {
                 <tbody>
                   {detailCharges.map((p) => (
                     <tr key={p.id} className="border-t border-black/5">
-                      <td className="px-2 py-1.5">{p.date}</td>
-                      <td className="px-2 py-1.5 text-black/70">{p.charge_type}</td>
+                      <td className="px-2 py-1.5">{p.event_date}</td>
+                      <td className="px-2 py-1.5 text-black/70">{p.event_type}</td>
                       <td className="px-2 py-1.5">{formatCents(p.amount_cents)}</td>
                       <td className="px-2 py-1.5"><Pill tone={statusTone(p.status)}>{p.status}</Pill></td>
                     </tr>
