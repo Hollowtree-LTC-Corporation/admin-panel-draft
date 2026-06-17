@@ -119,7 +119,6 @@ function OrgsView() {
         <FilterCombobox value={situs} onChange={setSitus} placeholder="All states" options={US_STATE_OPTIONS()} />
         <FilterSelect value={owner} onChange={setOwner} allLabel="All owner types" options={[
           { value: "employer_group", label: "Employer Group" },
-          { value: "individual", label: "Individual" },
           { value: "cca", label: "CCA" },
         ]} />
         <ClearFiltersLink show={active} onClick={clearAll} />
