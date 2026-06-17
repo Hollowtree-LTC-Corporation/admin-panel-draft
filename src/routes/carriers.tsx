@@ -616,7 +616,7 @@ function ProductDrawerBody({
                 ) : null}
                 {schedules.map((s) => {
                   const expanded = expandedScheduleId === s.id;
-                  const sTiers = tiers.filter((t) => t.schedule_id === s.id).sort((a, b) => a.year_from - b.year_from);
+                  const sTiers = tiers.filter((t) => t.schedule_id === s.id).sort((a, b) => a.from_year - b.from_year);
                   return (
                     <Fragment key={s.id}>
                       <tr
@@ -651,9 +651,9 @@ function ProductDrawerBody({
                               <tbody>
                                 {sTiers.map((t) => (
                                   <tr key={t.id}>
-                                    <td className="pr-8 py-0.5">{t.year_from}</td>
-                                    <td className="pr-8 py-0.5">{t.year_to >= 99 ? "—" : t.year_to}</td>
-                                    <td className="py-0.5 font-mono">{t.pct.toFixed(2)}%</td>
+                                    <td className="pr-8 py-0.5">{t.from_year}</td>
+                                    <td className="pr-8 py-0.5">{t.to_year >= 99 ? "—" : t.to_year}</td>
+                                    <td className="py-0.5 font-mono">{t.rate_pct.toFixed(2)}%</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -833,14 +833,14 @@ function NewScheduleForm({
   const [effFrom, setEffFrom] = useState(new Date().toISOString().slice(0, 10));
   const [effTo, setEffTo] = useState("");
   const [notes, setNotes] = useState("");
-  const [tierRows, setTierRows] = useState<Array<{ from: number; to: number; pct: number }>>([
-    { from: 1, to: 1, pct: 100 },
-    { from: 2, to: 10, pct: 5 },
+  const [tierRows, setTierRows] = useState<Array<{ from: number; to: number; rate_pct: number }>>([
+    { from: 1, to: 1, rate_pct: 100 },
+    { from: 2, to: 10, rate_pct: 5 },
   ]);
 
-  function addTier() { setTierRows((r) => [...r, { from: 1, to: 1, pct: 0 }]); }
+  function addTier() { setTierRows((r) => [...r, { from: 1, to: 1, rate_pct: 0 }]); }
   function rmTier(i: number) { setTierRows((r) => r.filter((_, idx) => idx !== i)); }
-  function updTier(i: number, patch: Partial<{ from: number; to: number; pct: number }>) {
+  function updTier(i: number, patch: Partial<{ from: number; to: number; rate_pct: number }>) {
     setTierRows((r) => r.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
   }
 
@@ -856,7 +856,7 @@ function NewScheduleForm({
     void notes; // notes not on existing schedule type; would be added in production schema
     const newTiers = tierRows.map((t, i) => ({
       id: `${id}_t${i}`, schedule_id: id,
-      year_from: Number(t.from), year_to: Number(t.to), pct: Number(t.pct),
+      from_year: Number(t.from), to_year: Number(t.to), rate_pct: Number(t.rate_pct),
     }));
     onSave(sched, newTiers);
   }
@@ -913,7 +913,7 @@ function NewScheduleForm({
               <tr key={i}>
                 <td className="pr-2 py-1"><input type="number" className={`${FIELD_INPUT} w-20`} value={t.from} onChange={(e) => updTier(i, { from: Number(e.target.value) })} /></td>
                 <td className="pr-2 py-1"><input type="number" className={`${FIELD_INPUT} w-20`} value={t.to} onChange={(e) => updTier(i, { to: Number(e.target.value) })} /></td>
-                <td className="pr-2 py-1"><input type="number" step="0.01" className={`${FIELD_INPUT} w-24`} value={t.pct} onChange={(e) => updTier(i, { pct: Number(e.target.value) })} /></td>
+                <td className="pr-2 py-1"><input type="number" step="0.01" className={`${FIELD_INPUT} w-24`} value={t.rate_pct} onChange={(e) => updTier(i, { rate_pct: Number(e.target.value) })} /></td>
                 <td className="py-1"><button onClick={() => rmTier(i)} className="text-black/40 hover:text-rose-600"><Trash2 className="h-3 w-3" /></button></td>
               </tr>
             ))}

@@ -76,7 +76,7 @@ const ALL_PARTNERS: Partner[] = [
     .filter((p) => p.partner_type !== "House")
     .filter((p) => PARTNER_EXT[p.id])
     .map((p) => ({
-      id: p.id, name: p.name,
+      id: p.id, name: p.partner_name,
       default_split_pct: p.default_split_pct,
       payment_method: p.payment_method as PaymentMethodSetting,
       ...PARTNER_EXT[p.id],
@@ -125,7 +125,7 @@ type ActiveSplit = {
 };
 const ACTIVE_SPLITS_SEED: ActiveSplit[] = POLICY_SPLITS_INITIAL.map((s) => {
   const pol = POLICIES.find((p) => p.id === s.policy_id);
-  const partner = ALL_PARTNERS.find((p) => p.name === s.payee_name);
+  const partner = ALL_PARTNERS.find((p) => p.partner_name === s.payee_name);
   return {
     id: s.id, policy_id: s.policy_id, org_name: pol?.org_name ?? "—",
     payee_type: s.payee_type,
@@ -298,19 +298,19 @@ function stateChip(s: string | null) {
   return <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-black/5 text-black/70">{s} only</span>;
 }
 function tiersFor(scheduleId: string) {
-  return COMMISSION_RATE_TIERS.filter((t) => t.schedule_id === scheduleId).sort((a, b) => a.year_from - b.year_from);
+  return COMMISSION_RATE_TIERS.filter((t) => t.schedule_id === scheduleId).sort((a, b) => a.from_year - b.from_year);
 }
 function tierPreview(scheduleId: string): string {
   const tiers = tiersFor(scheduleId);
   if (tiers.length === 0) return "—";
-  const fmt = (t: { year_from: number; year_to: number | null; pct: number }) => {
-    if (t.year_to === null || t.year_to >= 99) return `${t.pct}% Y${t.year_from}+`;
-    if (t.year_to === t.year_from) return `${t.pct}% Y${t.year_from}`;
-    return `${t.pct}% Y${t.year_from}–${t.year_to}`;
+  const fmt = (t: { from_year: number; to_year: number | null; rate_pct: number }) => {
+    if (t.to_year === null || t.to_year >= 99) return `${t.rate_pct}% Y${t.from_year}+`;
+    if (t.to_year === t.from_year) return `${t.rate_pct}% Y${t.from_year}`;
+    return `${t.rate_pct}% Y${t.from_year}–${t.to_year}`;
   };
   if (tiers.length === 1) {
     const t = tiers[0];
-    if ((t.year_to === null || t.year_to >= 99) && t.year_from === 1) return `${t.pct}% all years`;
+    if ((t.to_year === null || t.to_year >= 99) && t.from_year === 1) return `${t.rate_pct}% all years`;
   }
   if (tiers.length <= 4) return tiers.map(fmt).join(" → ");
   return `${tiers.slice(0, 3).map(fmt).join(" → ")} … (${tiers.length} tiers)`;
@@ -322,7 +322,7 @@ function policyYearFor(effectiveDate: string, periodStart: string): number {
   return Math.max(1, Math.floor(months / 12) + 1);
 }
 function matchTier(scheduleId: string, year: number) {
-  return tiersFor(scheduleId).find((t) => year >= t.year_from && (t.year_to === null || year <= t.year_to));
+  return tiersFor(scheduleId).find((t) => year >= t.from_year && (t.to_year === null || year <= t.to_year));
 }
 function carrierProductLabel(cpId: string): string {
   const cp = CARRIER_PRODUCTS.find((p) => p.id === cpId);
@@ -375,7 +375,7 @@ function View() {
   const filteredPartners = useMemo(() => {
     const q = pSearch.trim().toLowerCase();
     return partners.filter((p) => {
-      if (q && !p.name.toLowerCase().includes(q)) return false;
+      if (q && !p.partner_name.toLowerCase().includes(q)) return false;
       if (pTypes.size > 0 && !pTypes.has(p.partner_type_v2)) return false;
       if (pEntity !== "all" && p.partner_entity_type !== pEntity) return false;
       if (pActivations.size > 0 && !pActivations.has(p.activation_status)) return false;
@@ -571,7 +571,7 @@ function View() {
           {filteredPartners.map((p) => (
             <TRow key={p.id} onClick={() => setPartnerDrawer({ open: true, id: p.id })}>
               <TCell className="font-medium">
-                <a id={`partner-${p.id}`}>{p.name}</a>
+                <a id={`partner-${p.id}`}>{p.partner_name}</a>
               </TCell>
               <TCell><PartnerTypeBadge t={p.partner_type_v2} /></TCell>
               <TCell><EntityCell et={p.partner_entity_type} /></TCell>
@@ -617,7 +617,7 @@ function View() {
       </div>
       <FilterRow>
         <FilterCombobox value={dPartner} onChange={setDPartner} placeholder="All channel partners"
-          options={partners.map((p) => ({ value: p.id, label: p.name }))} />
+          options={partners.map((p) => ({ value: p.id, label: p.partner_name }))} />
         <FilterSelect value={dPayeeType} onChange={setDPayeeType} allLabel="All payee types"
           options={[{value:"house"},{value:"internal_rep",label:"internal rep"},{value:"channel_partner",label:"channel partner"},{value:"override"}]} />
         <FilterSelect value={dPayMethod} onChange={setDPayMethod} allLabel="All payment methods"
@@ -785,7 +785,7 @@ function View() {
 
       <FilterRow>
         <FilterCombobox value={sPartner} onChange={setSPartner} placeholder="All channel partners"
-          options={[{ value: "house", label: "Hollowtree (House)" }, ...partners.map((p) => ({ value: p.id, label: p.name }))]} />
+          options={[{ value: "house", label: "Hollowtree (House)" }, ...partners.map((p) => ({ value: p.id, label: p.partner_name }))]} />
         <FilterCombobox value={sPolicy} onChange={setSPolicy} placeholder="All policies" options={policyOptions} />
         <FilterSelect value={sPayeeType} onChange={setSPayeeType} allLabel="All payee types"
           options={[{value:"house"},{value:"internal_rep",label:"internal rep"},{value:"channel_partner",label:"channel partner"},{value:"override"}]} />
@@ -826,7 +826,7 @@ function View() {
             const polYear = product === "LTC" && pol ? policyYearFor(pol.initial_effective_date, s.period_start) : null;
             const matched = sched && polYear ? matchTier(sched.id, polYear) : null;
             const rateTooltip = sched && matched
-              ? `Rate derived from ${sched.schedule_name}, Year ${polYear} tier (${matched.year_from}–${matched.year_to === 99 ? "perpetual" : matched.year_to})`
+              ? `Rate derived from ${sched.schedule_name}, Year ${polYear} tier (${matched.from_year}–${matched.to_year === 99 ? "perpetual" : matched.to_year})`
               : undefined;
             return (
               <TRow key={s.id} onClick={() => setStmtDrawer({ open: true, id: s.id })}>
@@ -1339,7 +1339,7 @@ function ActiveSplitsDrawer({ open, policyId, partners, rows, onClose, onSave }:
                         const p = partners.find((x) => x.id === id);
                         setRow(i, { payee_ref_id: id, payee_name: p?.name ?? "" });
                       }} className="px-1 py-0.5 text-xs border border-black/15 rounded">
-                        {partners.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        {partners.map((p) => <option key={p.id} value={p.id}>{p.partner_name}</option>)}
                       </select>}
                 </td>
                 <td className="px-2 py-1">
@@ -1443,7 +1443,7 @@ function StatementDrawerView({ open, stmt, product, onClose, onApprove, onMarkPa
                 <div><span className="text-black/50">Billing period:</span> {fmtPeriod(stmt.period_start, stmt.period_end)}</div>
                 <div><span className="text-black/50">Policy year:</span> <span className="font-mono">Y{polYear}</span></div>
                 {matched ? (
-                  <div><span className="text-black/50">Tier matched:</span> from_year={matched.year_from}, to_year={matched.year_to === 99 ? "perpetual" : matched.year_to}, rate_pct={matched.pct}</div>
+                  <div><span className="text-black/50">Tier matched:</span> from_year={matched.from_year}, to_year={matched.to_year === 99 ? "perpetual" : matched.to_year}, rate_pct={matched.rate_pct}</div>
                 ) : (
                   <div className="text-rose-700">No tier matches policy year {polYear}.</div>
                 )}
@@ -1513,7 +1513,7 @@ function GenerateModal({ open, onClose, existingStatements, activeSplits, onGene
     const rows: Statement[] = [];
     let idx = 0;
     for (const s of activeSplits) {
-      const partner = ALL_PARTNERS.find((p) => p.name === s.payee_name && s.payee_type !== "house");
+      const partner = ALL_PARTNERS.find((p) => p.partner_name === s.payee_name && s.payee_type !== "house");
       const premium = 800000; // dummy per-policy/period base
       const ratePct = 12;
       const owed = Math.round(premium * (ratePct / 100) * (s.split_pct / 100));
@@ -1697,7 +1697,7 @@ function AddPayeeModal({ partnerId, partners, onCancel, onAdd }: {
   const partner = partners.find((p) => p.id === partnerId)!;
   const [payeeType, setPayeeType] = useState<PayeeType>("internal_rep");
   const [payeeRefId, setPayeeRefId] = useState<string>(partners[0]?.id ?? "");
-  const [pct, setPct] = useState<number>(10);
+  const [rate_pct, setPct] = useState<number>(10);
   const [method, setMethod] = useState<PaymentMethodSetting>("hollowtree_paid");
 
   const payeeName = payeeType === "house"
@@ -1709,14 +1709,14 @@ function AddPayeeModal({ partnerId, partners, onCancel, onAdd }: {
       footer={
         <>
           <Btn onClick={onCancel}>Cancel</Btn>
-          <Btn variant="primary" disabled={pct <= 0 || pct > 100} onClick={() => onAdd({
+          <Btn variant="primary" disabled={rate_pct <= 0 || rate_pct > 100} onClick={() => onAdd({
             id: `csd_new_${Date.now()}`,
             channel_partner_id: partnerId,
             channel_partner_name: partner.name,
             payee_type: payeeType,
             payee_ref_id: payeeType === "house" ? null : payeeRefId,
             payee_name: payeeName,
-            default_split_pct: Number(pct),
+            default_split_pct: Number(rate_pct),
             payment_method: method,
           })}>Add</Btn>
         </>
@@ -1735,11 +1735,11 @@ function AddPayeeModal({ partnerId, partners, onCancel, onAdd }: {
           ? <input value="Hollowtree" disabled className="px-2 py-1 text-sm border border-black/15 rounded w-full bg-stone-50 text-black/60" />
           : <select value={payeeRefId} onChange={(e) => setPayeeRefId(e.target.value)}
               className="px-2 py-1 text-sm border border-black/15 rounded w-full">
-              {partners.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {partners.map((p) => <option key={p.id} value={p.id}>{p.partner_name}</option>)}
             </select>}
       </Field>
       <Field label="Default Split %">
-        <input type="number" min={0} max={100} step={0.5} value={pct}
+        <input type="number" min={0} max={100} step={0.5} value={rate_pct}
           onChange={(e) => setPct(Number(e.target.value))}
           className="px-2 py-1 text-sm border border-black/15 rounded w-full" />
       </Field>
@@ -1761,16 +1761,16 @@ function EditDefaultModal({ row, activeCount, onCancel, onSave }: {
   row: DefaultRow; activeCount: number;
   onCancel: () => void; onSave: (row: DefaultRow) => void;
 }) {
-  const [pct, setPct] = useState(row.default_split_pct);
+  const [rate_pct, setPct] = useState(row.default_split_pct);
   const [method, setMethod] = useState<PaymentMethodSetting>(row.payment_method);
   return (
     <Modal title={`Edit default — ${row.payee_name}`} warn onCancel={onCancel}
-      footer={<><Btn onClick={onCancel}>Cancel</Btn><Btn variant="primary" onClick={() => onSave({ ...row, default_split_pct: Number(pct), payment_method: method })}>Save</Btn></>}>
+      footer={<><Btn onClick={onCancel}>Cancel</Btn><Btn variant="primary" onClick={() => onSave({ ...row, default_split_pct: Number(rate_pct), payment_method: method })}>Save</Btn></>}>
       <div className="rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900 mb-3">
         Edits apply to NEW policies only. Existing {activeCount} commission_splits row{activeCount === 1 ? "" : "s"} for this channel partner are unaffected. Use Active Commission Splits below to override an individual policy.
       </div>
       <Field label="Default Split %">
-        <input type="number" min={0} max={100} step={0.5} value={pct} onChange={(e) => setPct(Number(e.target.value))}
+        <input type="number" min={0} max={100} step={0.5} value={rate_pct} onChange={(e) => setPct(Number(e.target.value))}
           className="px-2 py-1 text-sm border border-black/15 rounded w-full" />
       </Field>
       <Field label="Payment Method">
@@ -1812,7 +1812,7 @@ type SchedDraft = {
   effective_from: string;
   effective_to: string;
   notes: string;
-  tiers: Array<{ key: string; year_from: number; year_to: number | null; pct: number }>;
+  tiers: Array<{ key: string; from_year: number; to_year: number | null; rate_pct: number }>;
 };
 
 function ltcCarrierProducts() {
@@ -1982,7 +1982,7 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
 }) {
   const ltcProducts = ltcCarrierProducts();
   const isNew = !schedule;
-  const initialTiers = schedule ? tiersFor(schedule.id) : [{ id: `crt_new_1`, schedule_id: "new", year_from: 1, year_to: null as number | null, pct: 0 }];
+  const initialTiers = schedule ? tiersFor(schedule.id) : [{ id: `crt_new_1`, schedule_id: "new", from_year: 1, to_year: null as number | null, rate_pct: 0 }];
   const [draft, setDraft] = useState<SchedDraft>({
     id: schedule?.id ?? `ccs_new_${Date.now()}`,
     carrier_product_id: schedule?.carrier_product_id ?? (ltcProducts[0]?.id ?? ""),
@@ -1993,28 +1993,28 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
     effective_from: schedule?.effective_from ?? new Date().toISOString().slice(0, 10),
     effective_to: schedule?.effective_to ?? "",
     notes: "",
-    tiers: initialTiers.map((t, i) => ({ key: `${t.id}_${i}`, year_from: t.year_from, year_to: t.year_to === 99 ? null : t.year_to, pct: t.pct })),
+    tiers: initialTiers.map((t, i) => ({ key: `${t.id}_${i}`, from_year: t.from_year, to_year: t.to_year === 99 ? null : t.to_year, rate_pct: t.rate_pct })),
   });
 
   const otherDefault = allSchedules.find((s) => s.carrier_product_id === draft.carrier_product_id && s.is_default && s.id !== draft.id);
   const onlySchedule = allSchedules.filter((s) => s.carrier_product_id === draft.carrier_product_id && s.id !== draft.id).length === 0;
 
   // Validation
-  const sorted = [...draft.tiers].sort((a, b) => a.year_from - b.year_from);
+  const sorted = [...draft.tiers].sort((a, b) => a.from_year - b.from_year);
   let overlap = false;
   let gap: number | null = null;
   for (let i = 0; i < sorted.length; i++) {
     const cur = sorted[i];
     const nxt = sorted[i + 1];
-    if (cur.year_to !== null && cur.year_from > cur.year_to) overlap = true;
+    if (cur.to_year !== null && cur.from_year > cur.to_year) overlap = true;
     if (nxt) {
-      const curEnd = cur.year_to ?? Infinity;
-      if (nxt.year_from <= curEnd) overlap = true;
-      else if (nxt.year_from > curEnd + 1 && gap === null) gap = curEnd + 1;
+      const curEnd = cur.to_year ?? Infinity;
+      if (nxt.from_year <= curEnd) overlap = true;
+      else if (nxt.from_year > curEnd + 1 && gap === null) gap = curEnd + 1;
     }
   }
-  const allClosed = sorted.length > 0 && sorted.every((t) => t.year_to !== null);
-  const canSave = draft.schedule_name.trim().length > 0 && draft.carrier_product_id && !overlap && draft.tiers.every((t) => t.pct >= 0 && t.year_from >= 1);
+  const allClosed = sorted.length > 0 && sorted.every((t) => t.to_year !== null);
+  const canSave = draft.schedule_name.trim().length > 0 && draft.carrier_product_id && !overlap && draft.tiers.every((t) => t.rate_pct >= 0 && t.from_year >= 1);
 
   function updateTier(idx: number, patch: Partial<SchedDraft["tiers"][number]>) {
     setDraft((d) => ({ ...d, tiers: d.tiers.map((t, i) => i === idx ? { ...t, ...patch } : t) }));
@@ -2035,9 +2035,9 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
     const newTiers = draft.tiers.map((t, i) => ({
       id: `${draft.id}_t${i}`,
       schedule_id: draft.id,
-      year_from: Number(t.year_from),
-      year_to: t.year_to === null ? 99 : Number(t.year_to),
-      pct: Number(t.pct),
+      from_year: Number(t.from_year),
+      to_year: t.to_year === null ? 99 : Number(t.to_year),
+      rate_pct: Number(t.rate_pct),
     }));
     onSave(sched, newTiers);
   }
@@ -2108,13 +2108,13 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
           <tbody>
             {draft.tiers.map((t, i) => (
               <tr key={t.key} className="border-t border-black/5">
-                <td className="px-2 py-1"><input type="number" min={1} value={t.year_from} onChange={(e) => updateTier(i, { year_from: Number(e.target.value) })} className="px-1 py-0.5 text-xs border border-black/15 rounded w-16" /></td>
+                <td className="px-2 py-1"><input type="number" min={1} value={t.from_year} onChange={(e) => updateTier(i, { from_year: Number(e.target.value) })} className="px-1 py-0.5 text-xs border border-black/15 rounded w-16" /></td>
                 <td className="px-2 py-1">
-                  <input type="number" min={1} value={t.year_to ?? ""} placeholder="∞"
-                    onChange={(e) => updateTier(i, { year_to: e.target.value === "" ? null : Number(e.target.value) })}
+                  <input type="number" min={1} value={t.to_year ?? ""} placeholder="∞"
+                    onChange={(e) => updateTier(i, { to_year: e.target.value === "" ? null : Number(e.target.value) })}
                     className="px-1 py-0.5 text-xs border border-black/15 rounded w-16" />
                 </td>
-                <td className="px-2 py-1"><input type="number" min={0} step={0.5} value={t.pct} onChange={(e) => updateTier(i, { pct: Number(e.target.value) })} className="px-1 py-0.5 text-xs border border-black/15 rounded w-20" />%</td>
+                <td className="px-2 py-1"><input type="number" min={0} step={0.5} value={t.rate_pct} onChange={(e) => updateTier(i, { rate_pct: Number(e.target.value) })} className="px-1 py-0.5 text-xs border border-black/15 rounded w-20" />%</td>
                 <td className="px-2 py-1 text-right">
                   <button className="text-[11px] text-rose-600 hover:underline" onClick={() => setDraft((d) => ({ ...d, tiers: d.tiers.filter((_, j) => j !== i) }))}>
                     <Trash2 className="h-3 w-3 inline" />
@@ -2126,7 +2126,7 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
         </table>
         <div className="px-2 py-1">
           <button className="text-[11px] text-[#0a3d3e] hover:underline inline-flex items-center gap-1"
-            onClick={() => setDraft((d) => ({ ...d, tiers: [...d.tiers, { key: `new_${Date.now()}`, year_from: (d.tiers.at(-1)?.year_to ?? 0) + 1, year_to: null, pct: 0 }] }))}>
+            onClick={() => setDraft((d) => ({ ...d, tiers: [...d.tiers, { key: `new_${Date.now()}`, from_year: (d.tiers.at(-1)?.to_year ?? 0) + 1, to_year: null, rate_pct: 0 }] }))}>
             <Plus className="h-3 w-3" /> Add Tier
           </button>
         </div>

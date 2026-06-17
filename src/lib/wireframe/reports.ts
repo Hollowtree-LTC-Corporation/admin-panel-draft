@@ -398,7 +398,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
           { key: "total", label: "YTD Commission" },
         ],
         rows: CHANNEL_PARTNERS.map((cp, i) => ({
-          partner: cp.name,
+          partner: cp.partner_name,
           type: cp.partner_type,
           policies: 1 + (i % 4),
           total: fmtCents(100000 + i * 23500),
