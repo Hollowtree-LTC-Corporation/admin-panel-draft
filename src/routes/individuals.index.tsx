@@ -129,7 +129,7 @@ function IndividualsView() {
     const rows = productRows.filter((i) => {
       const n = parseInt(i.id.replace("ind_", ""), 10) || 1;
       if (s && !(i.full_name.toLowerCase().includes(s) || i.email.toLowerCase().includes(s))) return false;
-      if (orgFilter !== "all" && i.org_id !== orgFilter) return false;
+      if (orgFilter !== "all" && i.organization_id !== orgFilter) return false;
       if (coverageFilter !== "all" && i.coverage_status !== coverageFilter) return false;
       if (stageFilter !== "all" && i.stage !== stageFilter) return false;
       if (isLTC && issueFilter !== "all" && issueTypeFor(i) !== issueFilter) return false;

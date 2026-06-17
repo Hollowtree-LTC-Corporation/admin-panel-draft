@@ -148,8 +148,8 @@ function View() {
       base.push({
         id: sep.newGroupId,
         name: `Billing Group ${sep.newGroupId.split("_")[1]}`,
-        organization_id: departing.org_id,
-        org_name: ORGS.find((o) => o.id === departing.org_id)?.name ?? "—",
+        organization_id: departing.organization_id,
+        org_name: ORGS.find((o) => o.id === departing.organization_id)?.name ?? "—",
         primary_individual_id: departing.id,
         status: "pending",
         moov_account_id: null,

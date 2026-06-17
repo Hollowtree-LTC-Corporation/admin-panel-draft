@@ -202,15 +202,15 @@ function languageLabel(code: string): string {
 
 // Dummy enrollment windows scoped per org for this iteration
 const DUMMY_WINDOWS = [
-  { id: "ew_a", org_id: "org_1", window_type: "initial", sponsor_type: "employer", affiliate: null, start: "2025-01-01", end: "2025-01-31", effective: "2025-02-01", status: "closed", gi_eligible: true, carrier: "Northstar Mutual", notes: "Launch window" },
-  { id: "ew_b", org_id: "org_1", window_type: "annual", sponsor_type: "employer", affiliate: null, start: "2025-09-01", end: "2025-09-30", effective: "2025-10-01", status: "upcoming", gi_eligible: false, carrier: "Northstar Mutual", notes: "" },
-  { id: "ew_c", org_id: "org_1", window_type: "new_joiner", sponsor_type: "employer", affiliate: null, start: null, end: null, effective: "first_of_next_month", status: "open", gi_eligible: true, carrier: "Northstar Mutual", notes: "Always-on" },
-  { id: "ew_d", org_id: "org_2", window_type: "initial", sponsor_type: "employer", affiliate: null, start: "2025-02-01", end: "2025-02-28", effective: "2025-03-01", status: "closed", gi_eligible: true, carrier: "Pacific Reserve Life", notes: "" },
-  { id: "ew_e", org_id: "org_2", window_type: "new_joiner", sponsor_type: "employer", affiliate: null, start: null, end: null, effective: "first_of_next_month", status: "open", gi_eligible: true, carrier: "Pacific Reserve Life", notes: "" },
-  { id: "ew_f", org_id: "org_3", window_type: "annual", sponsor_type: "employer", affiliate: "CCA", start: "2025-08-01", end: "2025-08-31", effective: "2025-09-01", status: "open", gi_eligible: true, carrier: "Heritage LTC Group", notes: "Co-sponsored" },
-  { id: "ew_g", org_id: "org_3", window_type: "new_joiner", sponsor_type: "employer", affiliate: null, start: null, end: null, effective: "first_of_next_month", status: "open", gi_eligible: false, carrier: "Heritage LTC Group", notes: "" },
-  { id: "ew_h", org_id: "org_5", window_type: "annual", sponsor_type: "employer", affiliate: null, start: "2025-07-01", end: "2025-07-31", effective: "2025-08-01", status: "closed", gi_eligible: true, carrier: "Heritage LTC Group", notes: "" },
-  { id: "ew_i", org_id: "org_6", window_type: "special", sponsor_type: "affiliate", affiliate: "Foxtail Alumni Assoc", start: "2025-07-15", end: "2025-08-15", effective: "2025-09-01", status: "open", gi_eligible: false, carrier: "Sequoia Care Partners", notes: "Affiliate-sponsored" },
+  { id: "ew_a", organization_id: "org_1", window_type: "initial", sponsor_type: "employer", affiliate: null, start: "2025-01-01", end: "2025-01-31", effective: "2025-02-01", status: "closed", gi_eligible: true, carrier: "Northstar Mutual", notes: "Launch window" },
+  { id: "ew_b", organization_id: "org_1", window_type: "annual", sponsor_type: "employer", affiliate: null, start: "2025-09-01", end: "2025-09-30", effective: "2025-10-01", status: "upcoming", gi_eligible: false, carrier: "Northstar Mutual", notes: "" },
+  { id: "ew_c", organization_id: "org_1", window_type: "new_joiner", sponsor_type: "employer", affiliate: null, start: null, end: null, effective: "first_of_next_month", status: "open", gi_eligible: true, carrier: "Northstar Mutual", notes: "Always-on" },
+  { id: "ew_d", organization_id: "org_2", window_type: "initial", sponsor_type: "employer", affiliate: null, start: "2025-02-01", end: "2025-02-28", effective: "2025-03-01", status: "closed", gi_eligible: true, carrier: "Pacific Reserve Life", notes: "" },
+  { id: "ew_e", organization_id: "org_2", window_type: "new_joiner", sponsor_type: "employer", affiliate: null, start: null, end: null, effective: "first_of_next_month", status: "open", gi_eligible: true, carrier: "Pacific Reserve Life", notes: "" },
+  { id: "ew_f", organization_id: "org_3", window_type: "annual", sponsor_type: "employer", affiliate: "CCA", start: "2025-08-01", end: "2025-08-31", effective: "2025-09-01", status: "open", gi_eligible: true, carrier: "Heritage LTC Group", notes: "Co-sponsored" },
+  { id: "ew_g", organization_id: "org_3", window_type: "new_joiner", sponsor_type: "employer", affiliate: null, start: null, end: null, effective: "first_of_next_month", status: "open", gi_eligible: false, carrier: "Heritage LTC Group", notes: "" },
+  { id: "ew_h", organization_id: "org_5", window_type: "annual", sponsor_type: "employer", affiliate: null, start: "2025-07-01", end: "2025-07-31", effective: "2025-08-01", status: "closed", gi_eligible: true, carrier: "Heritage LTC Group", notes: "" },
+  { id: "ew_i", organization_id: "org_6", window_type: "special", sponsor_type: "affiliate", affiliate: "Foxtail Alumni Assoc", start: "2025-07-15", end: "2025-08-15", effective: "2025-09-01", status: "open", gi_eligible: false, carrier: "Sequoia Care Partners", notes: "Affiliate-sponsored" },
 ];
 
 const DI_PLAN_DETAILS = {
@@ -331,7 +331,7 @@ function synthesize(org: typeof ORGS[number]) {
     inbound_type: "Broker Referral",
     ltd_benefit_pct: 60,
     std_benefit_pct: 66.7,
-    next_sun_life_report_date: "2026-07-15",
+    next_sunlife_report_date: "2026-07-15",
     contact_email: idx % 4 === 0 ? null : `hr@${slug}.example.com`,
     // Carrier & Product (dummy) — carrier_product_id is the FK; name fields derive from it
     carrier_product_id: idx === 4 ? null : pickCarrierProductId(product, idx),
@@ -449,16 +449,16 @@ function OrgDetail() {
   const org = synthesize(orgBase);
 
   const readOnly = !can("organizations", "update");
-  const windows = DUMMY_WINDOWS.filter((w) => w.org_id === id);
+  const windows = DUMMY_WINDOWS.filter((w) => w.organization_id === id);
 
   // Per-org benefit classes; synthesize a default for orgs with none
-  let classes = BENEFIT_CLASSES.filter((b) => b.org_id === id);
+  let classes = BENEFIT_CLASSES.filter((b) => b.organization_id === id);
   if (product === "LTC" && classes.length === 0) {
-    classes = [{ id: `bc_synth_${id}`, org_id: id, name: "All Employees", gi_offer_cents: 15000000, bronze: 0, silver: 7500000, gold: 15000000, platinum: 20000000, diamond: 25000000, is_default: true }];
+    classes = [{ id: `bc_synth_${id}`, organization_id: id, name: "All Employees", gi_offer_cents: 15000000, bronze: 0, silver: 7500000, gold: 15000000, platinum: 20000000, diamond: 25000000, is_default: true }];
   }
 
   // Summary metrics
-  const orgIndividuals = INDIVIDUALS.filter((i) => i.org_id === id);
+  const orgIndividuals = INDIVIDUALS.filter((i) => i.organization_id === id);
   const activeEnrollees = orgIndividuals.filter((i) => i.coverage_status === "active").length;
   const enrolledLives = orgIndividuals.filter((i) =>
     i.coverage_status === "active" || i.coverage_status === "purchased" || i.coverage_status === "suspended"
@@ -778,7 +778,7 @@ function WindowDrawerBody({
       : "",
   );
   const [orgId, setOrgId] = useState<string>(
-    wd?.org_id ?? (initialShape === "affiliate_only" ? "" : currentOrgId),
+    wd?.organization_id ?? (initialShape === "affiliate_only" ? "" : currentOrgId),
   );
 
   const wStatus = wd?.status;
@@ -3003,7 +3003,7 @@ function LinksRefsSection({ org, product, readOnly, variant }: { org: OrgDetail;
           <ExtLink href={`https://app.attio.com/companies/${org.attio_company_id}`}><span className="font-mono text-xs">{org.attio_company_id}</span></ExtLink>
         </RField>
         {product === "DI" && (
-          <RField label="Next Sun Life Report Date">{e.editing ? <input className={inputCls} defaultValue={org.next_sun_life_report_date} /> : fmtDate(org.next_sun_life_report_date)}</RField>
+          <RField label="Next Sun Life Report Date">{e.editing ? <input className={inputCls} defaultValue={org.next_sunlife_report_date} /> : fmtDate(org.next_sunlife_report_date)}</RField>
         )}
       </Grid2>
       {e.editing && <SectionActions onCancel={e.onCancel} onSave={e.onSave} />}
@@ -3326,7 +3326,7 @@ function individualsForClass(classes: BCRow[], classId: string, orgId: string): 
   if (!classes.length) return 0;
   const idx = classes.findIndex((c) => c.id === classId);
   if (idx < 0) return 0;
-  const orgInds = INDIVIDUALS.filter((i) => i.org_id === orgId);
+  const orgInds = INDIVIDUALS.filter((i) => i.organization_id === orgId);
   return orgInds.filter((_, i) => i % classes.length === idx).length;
 }
 
@@ -3450,7 +3450,7 @@ function BenefitClassDrawerBody({
 
   // Edit-mode warnings
   const rateCount = initial ? LTC_RATE_CELLS.filter((r) => r.benefit_class_id === initial.id).length : 0;
-  const indCount = initial ? individualsForClass(classes, initial.id, initial.org_id) : 0;
+  const indCount = initial ? individualsForClass(classes, initial.id, initial.organization_id) : 0;
 
   function handleTierChange(setter: (s: string) => void, setAuto: (b: boolean) => void) {
     return (v: string) => { setter(v); setAuto(false); };
@@ -3572,13 +3572,13 @@ function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
   const [setDefaultFor, setSetDefaultFor] = useState<BCRow | null>(null);
   const [deleteFor, setDeleteFor] = useState<BCRow | null>(null);
 
-  const orgId = classes[0]?.org_id ?? "";
+  const orgId = classes[0]?.organization_id ?? "";
   const currentDefault = classes.find((c) => c.is_default);
 
   function blockedDeleteReason(c: BCRow): string | null {
     if (c.is_default && classes.length > 1) return "Cannot delete the default class. Set another class as default first.";
     if (classes.length <= 1) return "Cannot delete the only benefit class. Every organization must have at least one class.";
-    const inds = individualsForClass(classes, c.id, c.org_id);
+    const inds = individualsForClass(classes, c.id, c.organization_id);
     if (inds > 0) return `Cannot delete this class while ${inds} individuals are assigned to it. Reassign them to another class first.`;
     return null;
   }
@@ -3625,7 +3625,7 @@ function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
             const cells = LTC_RATE_CELLS.filter((r) => r.benefit_class_id === c.id);
             const lastUpdate = cells.length > 0 ? cells.map((r) => r.effective_date).sort().slice(-1)[0] : null;
             const isOpen = expanded === c.id;
-            const indCount = individualsForClass(classes, c.id, c.org_id);
+            const indCount = individualsForClass(classes, c.id, c.organization_id);
             return (
               <React.Fragment key={c.id}>
                 <TRow>

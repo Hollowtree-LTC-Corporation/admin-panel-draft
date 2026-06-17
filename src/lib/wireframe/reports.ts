@@ -82,9 +82,9 @@ export const PENDING_SUBMISSIONS = [
 
 // Onboarding checklist completion (item count out of 12).
 export const ONBOARDING_PROGRESS = [
-  { org_id: "org_6", org: "Foxtail Education Trust", status: "onboarding", completed: 7, total: 12, owner: "Casey Rep", days_in_stage: 11 },
-  { org_id: "org_9", org: "Ironwood Tech Co-op", status: "not_started", completed: 0, total: 12, owner: "Jamie Rep", days_in_stage: 3 },
-  { org_id: "org_10", org: "Juniper Health Network", status: "not_started", completed: 2, total: 12, owner: "Jamie Rep", days_in_stage: 6 },
+  { organization_id: "org_6", org: "Foxtail Education Trust", status: "onboarding", completed: 7, total: 12, owner: "Casey Rep", days_in_stage: 11 },
+  { organization_id: "org_9", org: "Ironwood Tech Co-op", status: "not_started", completed: 0, total: 12, owner: "Jamie Rep", days_in_stage: 3 },
+  { organization_id: "org_10", org: "Juniper Health Network", status: "not_started", completed: 2, total: 12, owner: "Jamie Rep", days_in_stage: 6 },
 ];
 
 const MONTHS_2025 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -169,7 +169,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
         ],
         monthlyPivot: true,
         rows: activeIndiv.slice(0, 25).map((ind) => {
-          const org = ORGS.find((o) => o.id === ind.org_id);
+          const org = ORGS.find((o) => o.id === ind.organization_id);
           const isCca = !!org?.cca_group;
           const row: Record<string, any> = { individual: ind.full_name, org: ind.org_name, cca: isCca ? "Yes" : "No" };
           MONTHS_2025.slice(0, 6).forEach((m) => { row[m] = fmtCents(isCca ? 2099 : 99); });
@@ -253,7 +253,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
 
     case "enrollment-summary": {
       const grouped = ORGS.filter((o) => o.product === product).map((o) => {
-        const orgInd = INDIVIDUALS.filter((i) => i.org_id === o.id);
+        const orgInd = INDIVIDUALS.filter((i) => i.organization_id === o.id);
         const enrolled = orgInd.filter((i) => i.coverage_status === "active").length;
         const eligible = orgInd.length;
         return {
@@ -282,9 +282,9 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
       const today = new Date("2025-06-15");
       const extra = [{
         id: "ew_6",
-        org_id: "org_1",
+        organization_id: "org_1",
         org_name: "Acme Widgets Co",
-        affiliate_org_id: null,
+        affiliate_organization_id: null,
         affiliate_org: null,
         window_type: "special" as const,
         start_date: "2025-06-01",
@@ -494,7 +494,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
           { key: "gap", label: "Gap" },
         ],
         rows: ORGS.filter((o) => o.product === product).map((o, idx) => {
-          const orgInd = INDIVIDUALS.filter((i) => i.org_id === o.id);
+          const orgInd = INDIVIDUALS.filter((i) => i.organization_id === o.id);
           const enrolled = orgInd.filter((i) => i.coverage_status === "active").length;
           const inCensus = Math.max(0, enrolled - (idx % 3));
           return {

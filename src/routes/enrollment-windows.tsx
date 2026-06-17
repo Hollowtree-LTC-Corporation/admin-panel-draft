@@ -27,8 +27,8 @@ type DraftPartner = { id: string; channel_partner_id: string; role: string };
 type Draft = {
   id: string | null;
   sponsor_type: SponsorShape;
-  org_id: string | null;
-  affiliate_org_id: string | null;
+  organization_id: string | null;
+  affiliate_organization_id: string | null;
   window_type: "initial" | "annual" | "new_joiner" | "special";
   start_date: string;
   end_date: string;
@@ -44,8 +44,8 @@ function emptyDraft(): Draft {
   return {
     id: null,
     sponsor_type: "employer",
-    org_id: null,
-    affiliate_org_id: null,
+    organization_id: null,
+    affiliate_organization_id: null,
     window_type: "annual",
     start_date: "",
     end_date: "",
@@ -62,8 +62,8 @@ function toDraft(w: EnrollmentWindow): Draft {
   return {
     id: w.id,
     sponsor_type: w.sponsor_type,
-    org_id: w.org_id,
-    affiliate_org_id: w.affiliate_org_id,
+    organization_id: w.organization_id,
+    affiliate_organization_id: w.affiliate_organization_id,
     window_type: w.window_type,
     start_date: w.start_date ?? "",
     end_date: w.end_date ?? "",
@@ -125,14 +125,14 @@ function View() {
   const openEdit = (w: EnrollmentWindow) => { setDraft(toDraft(w)); setDrawerOpen(true); };
 
   const saveDraft = () => {
-    const orgRec = draft.org_id ? ORGS.find((o) => o.id === draft.org_id) ?? null : null;
-    const affRec = draft.affiliate_org_id ? affiliates.find((a) => a.id === draft.affiliate_org_id) ?? null : null;
+    const orgRec = draft.organization_id ? ORGS.find((o) => o.id === draft.organization_id) ?? null : null;
+    const affRec = draft.affiliate_organization_id ? affiliates.find((a) => a.id === draft.affiliate_organization_id) ?? null : null;
     const isNewJoiner = draft.window_type === "new_joiner";
     const next: EnrollmentWindow = {
       id: draft.id ?? `ew_${Date.now()}`,
-      org_id: draft.sponsor_type === "affiliate" ? null : draft.org_id,
+      organization_id: draft.sponsor_type === "affiliate" ? null : draft.organization_id,
       org_name: draft.sponsor_type === "affiliate" ? null : (orgRec?.name ?? null),
-      affiliate_org_id: draft.sponsor_type === "employer" ? null : draft.affiliate_org_id,
+      affiliate_organization_id: draft.sponsor_type === "employer" ? null : draft.affiliate_organization_id,
       affiliate_org: draft.sponsor_type === "employer" ? null : (affRec?.name ?? null),
       window_type: draft.window_type,
       start_date: isNewJoiner ? null : (draft.start_date || null),
@@ -296,8 +296,8 @@ function WindowForm({
             {showOrg && (
               <Field label="Organization">
                 <select
-                  value={draft.org_id ?? ""}
-                  onChange={(e) => update("org_id", e.target.value || null)}
+                  value={draft.organization_id ?? ""}
+                  onChange={(e) => update("organization_id", e.target.value || null)}
                   className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
                 >
                   <option value="">Select organization…</option>
@@ -308,9 +308,9 @@ function WindowForm({
             {showAffiliate && (
               <Field label="Affiliate">
                 <AffiliateDropdown
-                  value={draft.affiliate_org_id}
+                  value={draft.affiliate_organization_id}
                   affiliates={affiliates}
-                  onChange={(id) => update("affiliate_org_id", id)}
+                  onChange={(id) => update("affiliate_organization_id", id)}
                   onNew={() => setInlineOpen(true)}
                 />
                 {inlineOpen && (
@@ -363,7 +363,7 @@ function WindowForm({
                               deleted_at: null,
                               logo_url: null,
                             });
-                            update("affiliate_org_id", id);
+                            update("affiliate_organization_id", id);
                             setInlineOpen(false);
                             setInlineName("");
                             setInlineType("industry_association");

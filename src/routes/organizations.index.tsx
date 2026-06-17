@@ -15,7 +15,7 @@ type SortKey = "name" | "carrier" | "situs_state" | "status" | "individuals_coun
 // Derive carrier via the org's policy (prefer active). Per v13 schema the
 // carrier link lives on POLICIES.carrier_product_id, not on the org row.
 function carrierForOrg(orgId: string): string | null {
-  const orgPolicies = POLICIES.filter((p) => p.org_id === orgId);
+  const orgPolicies = POLICIES.filter((p) => p.organization_id === orgId);
   if (orgPolicies.length === 0) return null;
   const pol = orgPolicies.find((p) => p.status === "active") ?? orgPolicies[0];
   const cp = CARRIER_PRODUCTS.find((c) => c.id === pol.carrier_product_id);
@@ -59,7 +59,7 @@ function OrgsView() {
   const productRows = ORGS.filter((o) => o.product === product);
 
   const enriched = useMemo(() => productRows.map((o) => {
-    const orgInds = INDIVIDUALS.filter((i) => i.org_id === o.id);
+    const orgInds = INDIVIDUALS.filter((i) => i.organization_id === o.id);
     const failed = ALL_CURRENT_OVERRIDE.has(o.id) ? 0 : orgInds.filter((i) => i.last_payment_status === "Failed").length;
     return {
       ...o,

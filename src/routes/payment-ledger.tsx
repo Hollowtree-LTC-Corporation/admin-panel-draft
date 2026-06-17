@@ -50,7 +50,7 @@ function View() {
       const indRec = INDIVIDUALS.find((i) => i.id === p.individual_id);
       if (!indRec || indRec.product !== product) return false;
       if (s && !(p.individual_name.toLowerCase().includes(s) || (indRec?.email.toLowerCase().includes(s) ?? false))) return false;
-      if (org !== "all" && indRec.org_id !== org) return false;
+      if (org !== "all" && indRec.organization_id !== org) return false;
       if (ind !== "all" && p.individual_id !== ind) return false;
       if (status !== "all" && p.status !== status) return false;
       if (ctype !== "all" && p.charge_type !== ctype) return false;

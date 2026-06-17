@@ -118,7 +118,7 @@ function View() {
       };
     }).filter((p) => {
       if (s && !(p.org_name.toLowerCase().includes(s) || p.id.toLowerCase().includes(s) || (p.policy_number ?? "").toLowerCase().includes(s) || (p.policy_name ?? "").toLowerCase().includes(s))) return false;
-      if (org !== "all" && p.org_id !== org) return false;
+      if (org !== "all" && p.organization_id !== org) return false;
       if (status !== "all" && p.status !== status) return false;
       if (ownerType !== "all" && p.policy_owner_type !== ownerType) return false;
       if (cp !== "all" && p.carrier_product_id !== cp) return false;
@@ -290,7 +290,7 @@ type DraftSplit = PolicySplit & { _isNew?: boolean };
 function emptyPolicy(product: "DI" | "LTC"): Policy {
   const id = `pol_${Math.floor(Math.random() * 9000) + 1000}`;
   return {
-    id, policy_name: "", policy_number: null, org_id: "", org_name: "", carrier_product_id: "",
+    id, policy_name: "", policy_number: null, organization_id: "", org_name: "", carrier_product_id: "",
     product, status: "pending",
     policy_owner_type: "employer_group",
     carrier_commission_pct: product === "DI" ? 12 : null,
@@ -358,9 +358,9 @@ function PolicyDrawer({
   // Auto-load splits in CREATE mode when org chosen.
   useEffect(() => {
     if (!isCreate) return;
-    if (!draft.org_id) return;
+    if (!draft.organization_id) return;
     if (splitsLoadedFromDefaults) return;
-    const cpnId = ORG_PRIMARY_CHANNEL_PARTNER[draft.org_id];
+    const cpnId = ORG_PRIMARY_CHANNEL_PARTNER[draft.organization_id];
     const partner = CHANNEL_PARTNERS.find((c) => c.id === cpnId);
     setSplitsLoadedFromDefaults(true);
     if (!partner) {
@@ -376,7 +376,7 @@ function PolicyDrawer({
     ]);
     toast.success(`Defaults loaded from ${partner.name}`);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.org_id, isCreate]);
+  }, [draft.organization_id, isCreate]);
 
   const setCarrierProduct = (cpId: string) => {
     setDraft((d) => ({ ...d, carrier_product_id: cpId, commission_schedule_id: null }));
@@ -384,7 +384,7 @@ function PolicyDrawer({
 
   const setOrgId = (id: string) => {
     const o = ORGS.find((x) => x.id === id);
-    setDraft((d) => ({ ...d, org_id: id, org_name: o?.name ?? "" }));
+    setDraft((d) => ({ ...d, organization_id: id, org_name: o?.name ?? "" }));
     if (isCreate) { setSplitsLoadedFromDefaults(false); setDefaultsPartner(null); }
   };
 
@@ -397,7 +397,7 @@ function PolicyDrawer({
   const totalOk = Math.abs(total - 100) < 0.005;
 
   // Determine first missing requirement for tooltip
-  const missing = !draft.org_id ? "Select an organization"
+  const missing = !draft.organization_id ? "Select an organization"
     : !draft.policy_name?.trim() ? "Enter a policy name"
     : !draft.carrier_product_id ? "Select a carrier product"
     : !draft.status ? "Select a status"
@@ -465,7 +465,7 @@ function PolicyDrawer({
     .map((c) => ({ value: c.id, label: carrierProductLabel(c.id) }));
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
 
-  const orgHasPartner = draft.org_id ? !!ORG_PRIMARY_CHANNEL_PARTNER[draft.org_id] : true;
+  const orgHasPartner = draft.organization_id ? !!ORG_PRIMARY_CHANNEL_PARTNER[draft.organization_id] : true;
 
   const inputCls = "w-full px-2 py-1 text-sm border border-black/15 rounded bg-white disabled:bg-black/5 disabled:text-black/60";
 
@@ -488,7 +488,7 @@ function PolicyDrawer({
         {readOnly || isEdit ? (
           <div className="text-sm text-black/80 py-1">{draft.org_name || "—"}</div>
         ) : (
-          <FilterCombobox value={draft.org_id || "all"} onChange={(v) => v !== "all" && setOrgId(v)} placeholder="Select organization…" options={orgOptions} width="w-full" />
+          <FilterCombobox value={draft.organization_id || "all"} onChange={(v) => v !== "all" && setOrgId(v)} placeholder="Select organization…" options={orgOptions} width="w-full" />
         )}
       </Field>
 
@@ -690,7 +690,7 @@ function PolicyDrawer({
       {/* Commission Splits */}
       <SectionHeader title="Commission Splits" subtitle="Per-policy payment waterfall. Must total 100%." />
 
-      {isCreate && draft.org_id && !orgHasPartner && (
+      {isCreate && draft.organization_id && !orgHasPartner && (
         <div className="mb-2 border border-amber-300 bg-amber-50 rounded px-3 py-2 text-xs text-amber-800 flex items-start gap-2">
           <CircleAlert className="h-3.5 w-3.5 mt-0.5 shrink-0" />
           <div>This organization has no primary channel partner set. Splits must be entered manually.</div>

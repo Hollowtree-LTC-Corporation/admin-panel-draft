@@ -119,7 +119,7 @@ function View() {
     const ids = new Set<string>();
     for (const t of tokens) {
       const ind = INDIVIDUAL_BY_ID[t.individual_id];
-      if (ind?.org_id) ids.add(ind.org_id);
+      if (ind?.organization_id) ids.add(ind.organization_id);
     }
     return Array.from(ids)
       .map((id) => ({ value: id, label: ORG_BY_ID[id]?.name ?? id }))
@@ -134,7 +134,7 @@ function View() {
       if (status !== "all" && t.status !== status) return false;
       if (orgFilter !== "all") {
         const ind = INDIVIDUAL_BY_ID[t.individual_id];
-        if (ind?.org_id !== orgFilter) return false;
+        if (ind?.organization_id !== orgFilter) return false;
       }
       return true;
     });
@@ -412,7 +412,7 @@ function View() {
         {tokenDrawer.state.data && (() => {
           const t = tokenDrawer.state.data;
           const ind = INDIVIDUAL_BY_ID[t.individual_id];
-          const org = ind ? ORG_BY_ID[ind.org_id] : null;
+          const org = ind ? ORG_BY_ID[ind.organization_id] : null;
           const related = TOKEN_AUDIT_LOG.filter((e) => e.token_id === t.id).sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 10);
           return (
             <div>

@@ -38,7 +38,7 @@ function Dashboard() {
 
   const productOrgs = ORGS.filter((o) => o.product === product);
   const allInds = INDIVIDUALS.filter((i) => i.product === product);
-  const inds = orgFilter === "all" ? allInds : allInds.filter((i) => i.org_id === orgFilter);
+  const inds = orgFilter === "all" ? allInds : allInds.filter((i) => i.organization_id === orgFilter);
 
   const coverageCounts = COVERAGE_STATUSES.map((s) => ({
     status: s,
@@ -47,7 +47,7 @@ function Dashboard() {
 
   const enrolledLives = inds.filter((i) => ["active", "purchased", "in_progress"].includes(i.coverage_status)).length;
   const activePremium = inds.filter((i) => i.coverage_status === "active").reduce((sum, i) => sum + i.monthly_premium_cents, 0);
-  const numOrgs = new Set(inds.map((i) => i.org_id)).size;
+  const numOrgs = new Set(inds.map((i) => i.organization_id)).size;
 
   // DI funnel stages (Airtable-aligned). LTC keeps the legacy microsite stages.
   const DI_FUNNEL_STAGES = [
@@ -176,7 +176,7 @@ function Dashboard() {
   const suspensionRisk = failedInds.filter((i) => i.retry_count >= 5).length;
 
   const orgRows = useMemo(() => productOrgs.map((o) => {
-    const orgInds = allInds.filter((i) => i.org_id === o.id);
+    const orgInds = allInds.filter((i) => i.organization_id === o.id);
     const failed = orgInds.filter((i) => i.last_payment_status === "Failed").length;
     let healthTone: "ok" | "warn" | "bad" = "ok";
     if (failed >= 3) healthTone = "bad";

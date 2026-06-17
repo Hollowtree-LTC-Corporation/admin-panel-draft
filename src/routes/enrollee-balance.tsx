@@ -111,7 +111,7 @@ function View() {
         || r.email.toLowerCase().includes(s)
         || r.billing.toLowerCase().includes(s)
       )) return false;
-      if (org !== "all" && r.i.org_id !== org) return false;
+      if (org !== "all" && r.i.organization_id !== org) return false;
       if (covStatus !== "all" && r.status !== covStatus) return false;
       if (balStatus !== "all") {
         if (balStatus === "owes" && !(r.balance > 0)) return false;
@@ -331,7 +331,7 @@ function BalanceDrawer({ row, onClose }: { row: Row | null; onClose: () => void 
   const open = !!row;
   if (!row) return <Drawer open={open} onClose={onClose} title="Enrollee Balance">{null}</Drawer>;
 
-  const org = ORGS.find((o) => o.id === row.i.org_id);
+  const org = ORGS.find((o) => o.id === row.i.organization_id);
   const ledgerRows = PAYMENT_LEDGER
     .filter((p) => p.individual_id === row.i.id && p.funding_source === "employee" && (p.charge_type === "monthly_premium" || p.charge_type === "fee"))
     .slice(0, 10);
