@@ -68,8 +68,8 @@ function toDraft(w: EnrollmentWindow): Draft {
     organization_id: w.organization_id,
     affiliate_organization_id: w.affiliate_organization_id,
     window_type: w.window_type,
-    enrollment_start_date: w.enrollment_enrollment_start_date ?? "",
-    enrollment_end_date: w.enrollment_enrollment_end_date ?? "",
+    enrollment_start_date: w.enrollment_start_date ?? "",
+    enrollment_end_date: w.enrollment_end_date ?? "",
     default_effective_date: w.default_effective_date ?? "",
     carrier: w.carrier,
     gi_eligible: w.gi_eligible,
@@ -138,8 +138,8 @@ function View() {
       affiliate_organization_id: draft.sponsor_type === "employer" ? null : draft.affiliate_organization_id,
       affiliate_org: draft.sponsor_type === "employer" ? null : (affRec?.name ?? null),
       window_type: draft.window_type,
-      enrollment_enrollment_start_date: isNewJoiner ? null : (draft.enrollment_start_date || null),
-      enrollment_enrollment_end_date: isNewJoiner ? null : (draft.enrollment_end_date || null),
+      enrollment_start_date: isNewJoiner ? null : (draft.enrollment_start_date || null),
+      enrollment_end_date: isNewJoiner ? null : (draft.enrollment_end_date || null),
       default_effective_date: isNewJoiner ? null : (draft.default_effective_date || null),
       status: isNewJoiner ? "open" : draft.status,
       // CHECK constraint: only "employer" | "affiliate" — composite shape derived in display.
@@ -204,8 +204,8 @@ function View() {
                 {w.org_name && w.affiliate_org ? <div className="text-[10px] text-black/50">+ {w.affiliate_org}</div> : null}
               </TCell>
               <TCell className="capitalize">{w.window_type.replace(/_/g, " ")}</TCell>
-              <TCell className="text-black/70">{w.enrollment_enrollment_start_date ?? <span className="text-black/30">—</span>}</TCell>
-              <TCell className="text-black/70">{w.enrollment_enrollment_end_date ?? <span className="text-black/30">—</span>}</TCell>
+              <TCell className="text-black/70">{w.enrollment_start_date ?? <span className="text-black/30">—</span>}</TCell>
+              <TCell className="text-black/70">{w.enrollment_end_date ?? <span className="text-black/30">—</span>}</TCell>
               <TCell><Pill tone={w.status === "open" ? "ok" : w.status === "upcoming" ? "info" : "bad"}>{w.status}</Pill></TCell>
               <TCell>{w.sponsor_type}</TCell>
               <TCell>{w.carrier}</TCell>
