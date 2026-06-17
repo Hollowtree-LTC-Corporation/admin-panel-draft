@@ -8,7 +8,7 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/payment-ledger")({ component: View });
 
-type SortKey = "date" | "individual_name" | "billing_group_id" | "charge_type" | "amount_cents" | "status" | "funding_source" | "contribution_source" | "coverage_type";
+type SortKey = "event_date" | "individual_name" | "billing_group_id" | "event_type" | "amount_cents" | "status" | "funding_source" | "contribution_source" | "coverage_type";
 
 function ContributionSourceBadge({ value }: { value: string }) {
   const map: Record<string, { label: string; cls: string }> = {
