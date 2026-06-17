@@ -4,7 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Btn, ProductBadge } from "@/components/wireframe/Bits";
 import { Switch } from "@/components/ui/switch";
 import { ChevronLeft, ChevronDown, ChevronRight, Lock, Pencil, AlertTriangle, Copy, ExternalLink, Eye, EyeOff } from "lucide-react";
-import { INDIVIDUALS, ORGS, BILLING_GROUPS, formatCents } from "@/lib/wireframe/data";
+import { INDIVIDUALS, ORGS, BILLING_GROUPS, formatCents, DEPARTURE_REASON_LABELS, type DepartureReason } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 
 export const Route = createFileRoute("/individuals/$id")({ component: IndividualDetail });
@@ -255,6 +255,8 @@ function IndividualDetail() {
   const [deactReason, setDeactReason] = useState("");
   const [deactDate, setDeactDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [confirm, setConfirm] = useState<null | { title: string; message: string; onConfirm: () => void }>(null);
+  const [departureOpen, setDepartureOpen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
 
   return (
     <div className="pb-10">
@@ -314,6 +316,7 @@ function IndividualDetail() {
             <LTCCoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
             <PaymentSection i={i} bg={bg} readOnly={readOnly} />
             <ContributionSection i={i} readOnly={readOnly} />
+            <EmploymentStatusSection i={i} onOpenDeparture={() => setDepartureOpen(true)} />
             <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} isLTC={isLTC} />
             <UnderwritingSection i={i} readOnly={readOnly} />
             <SpouseSection i={i} linked={linked ?? undefined} linkedDetail={linkedDetail} readOnly={readOnly} />
@@ -326,6 +329,9 @@ function IndividualDetail() {
             <DICoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
             <PaymentSection i={i} bg={bg} readOnly={readOnly} />
             <ContributionSection i={i} readOnly={readOnly} />
+            <EmploymentStatusSection i={i} onOpenDeparture={() => setDepartureOpen(true)} />
+            <DIConversionSection i={i} onOpenConvert={() => setConvertOpen(true)} />
+            <GILifeSection i={i} />
             <IdentitySection i={i} readOnly={readOnly} setConfirm={setConfirm} isLTC={isLTC} />
             <ProfessionalClassificationSection i={i} readOnly={readOnly} />
             <EnrollmentSection i={i} isLTC={isLTC} />
@@ -333,6 +339,13 @@ function IndividualDetail() {
           </>
         )}
       </div>
+
+      {departureOpen && (
+        <RecordDepartureModal i={i} onClose={() => setDepartureOpen(false)} />
+      )}
+      {convertOpen && (
+        <ConvertCoverageModal i={i} onClose={() => setConvertOpen(false)} />
+      )}
 
 
 
