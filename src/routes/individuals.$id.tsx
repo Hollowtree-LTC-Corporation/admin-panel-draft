@@ -427,7 +427,7 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
       <Grid cols={4}>
         <CoverageStatusField editing={editing} status={status} setStatus={setStatus} allowed={allowed} current={i.coverage_status} />
         <RField label="Coverage Plan" value={unfunded ? "—" : i.coverage_plan} editing={editing}>
-          <select defaultValue={i.coverage_plan} className={inputCls}>{DI_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
+          <select defaultValue={i.coverage_plan ?? ""} className={inputCls}>{DI_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
         </RField>
         <RField label="Monthly Premium">
           {unfunded ? <span className="text-gray-400">—</span> : (
@@ -477,7 +477,7 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
         <RField label="Riders" value={i._riders} />
 
         <RField label="Purchased Plan" value={unfunded ? "—" : i.purchased_plan} editing={editing}>
-          <select defaultValue={i.purchased_plan} className={inputCls}>{LTC_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
+          <select defaultValue={i.purchased_plan ?? ""} className={inputCls}>{LTC_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
         </RField>
         <RField label="Issue Type" editing={editing}>
           {editing

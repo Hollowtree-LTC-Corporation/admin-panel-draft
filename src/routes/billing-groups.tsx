@@ -198,7 +198,7 @@ function View() {
       const members = memberMap[g.id] ?? [];
       if (s) {
         const inGroup =
-          g.name.toLowerCase().includes(s) ||
+          (g.name ?? "").toLowerCase().includes(s) ||
           g.id.toLowerCase().includes(s) ||
           g.org_name.toLowerCase().includes(s) ||
           members.some((m) => m.full_name.toLowerCase().includes(s));
@@ -340,7 +340,7 @@ function View() {
             <div className="flex items-start justify-between gap-3 mb-2">
               <div>
                 <input
-                  defaultValue={detailGroup.name}
+                  defaultValue={detailGroup.name ?? ""}
                   disabled={!can("billing_groups", "update")}
                   className="text-sm font-medium border border-transparent hover:border-black/15 rounded px-1 py-0.5 disabled:bg-transparent"
                 />

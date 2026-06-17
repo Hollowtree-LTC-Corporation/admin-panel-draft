@@ -365,7 +365,6 @@ function WindowForm({
                               legal_entity_status: null,
                               notes: "",
                               is_active: true,
-                              logo_url: null,
                             });
                             update("affiliate_organization_id", id);
                             setInlineOpen(false);
@@ -498,7 +497,7 @@ function WindowForm({
                     className="flex-1 px-2 py-1 text-sm border border-black/15 rounded bg-white"
                   >
                     <option value="">Select partner…</option>
-                    {CHANNEL_PARTNERS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {CHANNEL_PARTNERS.map((c) => <option key={c.id} value={c.id}>{c.partner_name}</option>)}
                   </select>
                   <Input
                     defaultValue={p.role}
