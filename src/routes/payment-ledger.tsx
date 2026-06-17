@@ -88,7 +88,7 @@ function View() {
         <FilterSearch value={search} onChange={setSearch} placeholder="Search individual or email…" />
         <FilterCombobox value={org} onChange={setOrg} placeholder="All orgs" options={orgOptions} />
         <FilterCombobox value={ind} onChange={setInd} placeholder="All individuals" options={indOptions} />
-        <FilterSelect value={status} onChange={setStatus} allLabel="All statuses" options={[{ value: "successful" }, { value: "failed" }, { value: "pending" }]} />
+        <FilterSelect value={status} onChange={setStatus} allLabel="All statuses" options={[{ value: "successful", label: "Successful" }, { value: "failed", label: "Failed" }, { value: "pending", label: "Pending" }, { value: "reversed", label: "Reversed" }]} />
         <FilterSelect value={ctype} onChange={setCtype} allLabel="All charge types" options={chargeOptions} />
         <FilterSelect value={source} onChange={setSource} allLabel="All sources" options={[
           { value: "voluntary", label: "Voluntary" },
