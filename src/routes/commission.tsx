@@ -1702,7 +1702,7 @@ function AddPayeeModal({ partnerId, partners, onCancel, onAdd }: {
 
   const payeeName = payeeType === "house"
     ? "Hollowtree"
-    : (partners.find((p) => p.id === payeeRefId?.partner_name ?? "");
+    : (partners.find((p) => p.id === payeeRefId)?.partner_name ?? "");
 
   return (
     <Modal title={`Add payee row — ${partner.partner_name}`} onCancel={onCancel}
