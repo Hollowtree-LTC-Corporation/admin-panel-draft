@@ -4,16 +4,21 @@
 export type Product = "DI" | "LTC";
 export type Role = "admin" | "ops" | "read-only";
 
-export const ORGS = [
-  { id: "org_1", name: "Acme Widgets Co", product: "DI", situs_state: "TX", status: "active", individuals_count: 12, policy_owner_type: "cca", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: true },
-  { id: "org_2", name: "Bluefin Logistics", product: "DI", situs_state: "CA", status: "active", individuals_count: 7, policy_owner_type: "employer_group", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
-  { id: "org_3", name: "Coastal Credit Union", product: "LTC", situs_state: "FL", status: "active", individuals_count: 9, policy_owner_type: "employer_group", type_of_rate: null, extension_of_benefits_rider: true, benefit_restoration_rider: true, cca_group: false },
-  { id: "org_4", name: "Delta Manufacturing", product: "DI", situs_state: "OH", status: "closed", individuals_count: 4, policy_owner_type: "employer_group", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
-  { id: "org_5", name: "Evergreen Health", product: "LTC", situs_state: "NY", status: "active", individuals_count: 6, policy_owner_type: "employer_group", type_of_rate: null, extension_of_benefits_rider: true, benefit_restoration_rider: false, cca_group: false },
-  { id: "org_6", name: "Foxtail Education Trust", product: "LTC", situs_state: "WA", status: "onboarding", individuals_count: 2, policy_owner_type: "employer_group", type_of_rate: null, extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
-  { id: "org_7", name: "Greylock Partners LLC", product: "DI", situs_state: "MA", status: "active", individuals_count: 5, policy_owner_type: "cca", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: true },
-  { id: "org_8", name: "Harborline Shipping", product: "DI", situs_state: "WA", status: "active", individuals_count: 8, policy_owner_type: "employer_group", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
-  { id: "org_9", name: "Ironwood Robotics", product: "DI", situs_state: "CO", status: "onboarding", individuals_count: 0, policy_owner_type: "employer_group", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false },
+export const ORGS: Array<{
+  id: string; name: string; product: string; situs_state: string; status: string;
+  individuals_count: number; policy_owner_type: string; type_of_rate: string | null;
+  extension_of_benefits_rider: boolean; benefit_restoration_rider: boolean; cca_group: boolean;
+  logo_url: string | null;
+}> = [
+  { id: "org_1", name: "Acme Widgets Co", product: "DI", situs_state: "TX", status: "active", individuals_count: 12, policy_owner_type: "cca", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: true, logo_url: "https://placehold.co/100x100/0a3d3e/white?text=ACME" },
+  { id: "org_2", name: "Bluefin Logistics", product: "DI", situs_state: "CA", status: "active", individuals_count: 7, policy_owner_type: "employer_group", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false, logo_url: "https://placehold.co/100x100/1e40af/white?text=BFL" },
+  { id: "org_3", name: "Coastal Credit Union", product: "LTC", situs_state: "FL", status: "active", individuals_count: 9, policy_owner_type: "employer_group", type_of_rate: null, extension_of_benefits_rider: true, benefit_restoration_rider: true, cca_group: false, logo_url: null },
+  { id: "org_4", name: "Delta Manufacturing", product: "DI", situs_state: "OH", status: "closed", individuals_count: 4, policy_owner_type: "employer_group", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false, logo_url: "https://broken-url-test.invalid/logo.png" },
+  { id: "org_5", name: "Evergreen Health", product: "LTC", situs_state: "NY", status: "active", individuals_count: 6, policy_owner_type: "employer_group", type_of_rate: null, extension_of_benefits_rider: true, benefit_restoration_rider: false, cca_group: false, logo_url: null },
+  { id: "org_6", name: "Foxtail Education Trust", product: "LTC", situs_state: "WA", status: "onboarding", individuals_count: 2, policy_owner_type: "employer_group", type_of_rate: null, extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false, logo_url: null },
+  { id: "org_7", name: "Greylock Partners LLC", product: "DI", situs_state: "MA", status: "active", individuals_count: 5, policy_owner_type: "cca", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: true, logo_url: "https://placehold.co/100x100/047857/white?text=GPL" },
+  { id: "org_8", name: "Harborline Shipping", product: "DI", situs_state: "WA", status: "active", individuals_count: 8, policy_owner_type: "employer_group", type_of_rate: "LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false, logo_url: "https://placehold.co/100x100/0369a1/white?text=HBL" },
+  { id: "org_9", name: "Ironwood Robotics", product: "DI", situs_state: "CO", status: "onboarding", individuals_count: 0, policy_owner_type: "employer_group", type_of_rate: "STD+LTD", extension_of_benefits_rider: false, benefit_restoration_rider: false, cca_group: false, logo_url: null },
 ];
 
 export const LTC_FACE_TIERS_CENTS = [2500000, 5000000, 7500000, 10000000, 15000000, 20000000, 25000000]; // $25K..$250K
