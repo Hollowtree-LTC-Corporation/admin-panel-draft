@@ -105,6 +105,37 @@ const PLANS_LTC = ["Bronze LTC", "Silver LTC", "Gold LTC", "Platinum LTC", "Diam
 // Pre-defined spouse pairs (LTC only): spouse_n -> primary_n, both at same org.
 const SPOUSE_PAIRS: Record<number, number> = { 11: 3, 13: 5, 14: 6 };
 
+// v15 wireframe additions: DI group→individual conversion, employee departure, GI life add-on.
+export type DepartureReason = "voluntary_resignation" | "termination" | "retirement" | "other";
+export const DEPARTURE_REASON_LABELS: Record<DepartureReason, string> = {
+  voluntary_resignation: "Voluntary Resignation",
+  termination: "Termination",
+  retirement: "Retirement",
+  other: "Other",
+};
+export type CoverageMode = "group" | "individual";
+const _V15_CONVERTED = new Set(["ind_10", "ind_19"]);
+const _V15_ELIGIBLE = new Set(["ind_8", "ind_17", "ind_28"]);
+const _V15_DEPARTED: Record<string, { date: string; reason: DepartureReason }> = {
+  ind_19: { date: "2026-04-01", reason: "voluntary_resignation" },
+  ind_25: { date: "2026-03-15", reason: "retirement" },
+  ind_12: { date: "2026-02-10", reason: "voluntary_resignation" },
+  ind_15: { date: "2026-05-01", reason: "retirement" },
+};
+const _V15_LIFE: Record<string, { face_cents: number; premium_cents: number; date: string }> = {
+  ind_10: { face_cents: 5000000, premium_cents: 1500, date: "2025-08-01" },
+  ind_18: { face_cents: 2500000, premium_cents: 800, date: "2026-01-15" },
+  ind_19: { face_cents: 10000000, premium_cents: 3000, date: "2025-09-01" },
+  ind_29: { face_cents: 5000000, premium_cents: 1500, date: "2026-03-10" },
+};
+function _addMonths12(iso: string | null): string | null {
+  if (!iso) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+  dt.setMonth(dt.getMonth() + 12);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+}
+
 export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
   const n = i + 1;
   const org = ORGS[i % ORGS.length];
@@ -196,6 +227,22 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     employer_contribution_start_date: n % 5 !== 0 ? "2025-01-01" : null,
     last_payment_status,
     retry_count,
+    // v15: employee departure tracking (both products)
+    departed_organization_at: _V15_DEPARTED[`ind_${n}`]?.date ?? null,
+    departure_reason: (_V15_DEPARTED[`ind_${n}`]?.reason ?? null) as DepartureReason | null,
+    // v15: DI group→individual conversion (DI only)
+    coverage_mode: (isLTC ? null : (_V15_CONVERTED.has(`ind_${n}`) ? "individual" : "group")) as CoverageMode | null,
+    converted_to_individual_at: !isLTC && _V15_CONVERTED.has(`ind_${n}`) ? (n === 10 ? "2026-04-15" : "2026-05-20") : null,
+    conversion_eligible_date: isLTC ? null : (_V15_ELIGIBLE.has(`ind_${n}`) ? "2024-12-01" : _addMonths12(effective_date)),
+    pre_conversion_monthly_benefit_cents: !isLTC && _V15_CONVERTED.has(`ind_${n}`) ? 500000 : null,
+    pre_conversion_employee_monthly_premium_cents: !isLTC && _V15_CONVERTED.has(`ind_${n}`) ? Math.round(monthly_premium_cents * 1.25) : null,
+    policy_id: !isLTC && _V15_CONVERTED.has(`ind_${n}`) ? (n === 10 ? "pol_10" : "pol_11") : null,
+    // v15: GI Life add-on (DI only)
+    life_enrolled: !isLTC && !!_V15_LIFE[`ind_${n}`],
+    life_face_amount_cents: _V15_LIFE[`ind_${n}`]?.face_cents ?? null,
+    life_premium_cents: _V15_LIFE[`ind_${n}`]?.premium_cents ?? null,
+    life_effective_date: _V15_LIFE[`ind_${n}`]?.date ?? null,
+    life_policy_id: !isLTC && _V15_LIFE[`ind_${n}`] ? "pol_12" : null,
   };
 });
 
@@ -428,7 +475,7 @@ export type CarrierProduct = {
   carrier_id: string;
   product_name: string;
   product_type: string;
-  line_of_business: "DI" | "LTC";
+  line_of_business: "DI" | "LTC" | "life";
   cca_product: boolean;
   payment_methods_allowed: string;
   active: boolean;
@@ -441,6 +488,8 @@ export const CARRIER_PRODUCTS: CarrierProduct[] = [
   { id: "cp_7", attio_product_id: "att_prod_tm_gtl121", carrier_id: "car_5", product_name: "GTL-121 Life + Care", product_type: "Group Term Life", line_of_business: "LTC", cca_product: false, payment_methods_allowed: "ACH, Credit Card", active: true, attio_last_synced_at: "2025-06-11T14:02:00Z" },
   { id: "cp_8", attio_product_id: "att_prod_ta_transelite", carrier_id: "car_6", product_name: "TransElite", product_type: "Universal Life", line_of_business: "LTC", cca_product: false, payment_methods_allowed: "ACH", active: true, attio_last_synced_at: "2025-06-10T11:30:00Z" },
   { id: "cp_9", attio_product_id: "att_prod_ta_ul10", carrier_id: "car_6", product_name: "UL10", product_type: "Universal Life", line_of_business: "LTC", cca_product: false, payment_methods_allowed: "ACH", active: true, attio_last_synced_at: "2025-06-10T11:30:00Z" },
+  // v15: GI Life add-on (DI). Owned by a DI carrier so it appears in DI policy lists.
+  { id: "cp_10", attio_product_id: null, carrier_id: "car_1", product_name: "Group Term Life (GI)", product_type: "group_term_life", line_of_business: "life", cca_product: false, payment_methods_allowed: "ACH, Credit Card", active: true, attio_last_synced_at: null },
 ];
 
 export type CarrierConstraint = {
@@ -495,7 +544,7 @@ export const CARRIER_RIDER_AVAILABILITY: CarrierRiderAvailability[] = [
 
 // 5 canonical PolicyStatus CHECK values (renamed from `status` to `enrollment_status` on Policy).
 export type PolicyStatus = "pending" | "active" | "lapsed" | "closed" | "terminated";
-export type PolicyOwnerType = "employer_group" | "affiliate";
+export type PolicyOwnerType = "employer_group" | "affiliate" | "individual";
 
 export type Policy = {
   id: string;
@@ -507,6 +556,7 @@ export type Policy = {
   product: Product;
   enrollment_status: PolicyStatus;
   policy_owner_type: PolicyOwnerType;
+  individual_id?: string | null;
   carrier_commission_pct: number | null;
   override_pct: number | null;
   channel_partner_id: string | null;
@@ -542,6 +592,11 @@ export const POLICIES: Policy[] = [
   { id: "pol_7", policy_name: "Foxtail Education LTC Trust", policy_number: null, organization_id: "org_6", org_name: "Foxtail Education Trust", carrier_product_id: "cp_8", product: "LTC", enrollment_status: "pending", policy_owner_type: "employer_group", carrier_commission_pct: null, override_pct: null, channel_partner_id: null, commission_schedule_id: "ccs_10", initial_effective_date: "2025-08-15", attio_synced_at: null, updated_at: "2025-06-13T12:00:00Z", attio_record_id: "att_pol_7", attio_policy_id: null, account_manager: "Morgan Rep", google_drive_folder: null, original_enrollee_count: 2, original_monthly_premium: 380, ..._LTC_TIERS },
   { id: "pol_8", policy_name: "Coastal CU LTC Amendment", policy_number: "TM-UL205-2025-CCU-A", organization_id: "org_3", org_name: "Coastal Credit Union", carrier_product_id: "cp_6", product: "LTC", enrollment_status: "lapsed", policy_owner_type: "employer_group", carrier_commission_pct: null, override_pct: null, channel_partner_id: "cpn_2", commission_schedule_id: null, initial_effective_date: "2025-01-15", attio_synced_at: "2025-06-10T08:00:00Z", updated_at: "2025-06-10T07:00:00Z", attio_record_id: "att_pol_8", attio_policy_id: "att_pol_8", account_manager: "Guy Livingstone", google_drive_folder: null, original_enrollee_count: 3, original_monthly_premium: 620, ..._LTC_TIERS },
   { id: "pol_9", policy_name: "Foxtail Closed Pilot", policy_number: "TA-TE-2024-FX", organization_id: "org_6", org_name: "Foxtail Education Trust", carrier_product_id: "cp_8", product: "LTC", enrollment_status: "closed", policy_owner_type: "affiliate", carrier_commission_pct: null, override_pct: null, channel_partner_id: null, commission_schedule_id: "ccs_10", initial_effective_date: "2024-03-01", attio_synced_at: "2024-12-01T10:00:00Z", updated_at: "2024-12-01T10:00:00Z", attio_record_id: "att_pol_9", attio_policy_id: "att_pol_9", account_manager: null, google_drive_folder: null, original_enrollee_count: 1, original_monthly_premium: 180, ..._LTC_TIERS },
+  // v15: individual-type DI policies (converted enrollees)
+  { id: "pol_10", policy_name: "Test Person 10 — Individual DI", policy_number: "DI-IND-2026-010", organization_id: "org_1", org_name: "Acme Widgets Co", carrier_product_id: "cp_1", product: "DI", enrollment_status: "active", policy_owner_type: "individual", individual_id: "ind_10", carrier_commission_pct: 8, override_pct: null, channel_partner_id: null, commission_schedule_id: null, initial_effective_date: "2026-04-15", attio_synced_at: null, updated_at: "2026-04-15T10:00:00Z", attio_record_id: "att_pol_10", attio_policy_id: null, account_manager: null, google_drive_folder: null, original_enrollee_count: 1, original_monthly_premium: 50, ..._NO_TIERS },
+  { id: "pol_11", policy_name: "Test Person 19 — Individual DI", policy_number: "DI-IND-2026-011", organization_id: "org_2", org_name: "Bluefin Logistics", carrier_product_id: "cp_1", product: "DI", enrollment_status: "active", policy_owner_type: "individual", individual_id: "ind_19", carrier_commission_pct: 8, override_pct: null, channel_partner_id: null, commission_schedule_id: null, initial_effective_date: "2026-05-20", attio_synced_at: null, updated_at: "2026-05-20T10:00:00Z", attio_record_id: "att_pol_11", attio_policy_id: null, account_manager: null, google_drive_folder: null, original_enrollee_count: 1, original_monthly_premium: 60, ..._NO_TIERS },
+  // v15: GI Life group policy (DI add-on)
+  { id: "pol_12", policy_name: "GI Life Group Policy", policy_number: "LIFE-2025-001", organization_id: "org_1", org_name: "Acme Widgets Co", carrier_product_id: "cp_10", product: "DI", enrollment_status: "active", policy_owner_type: "employer_group", individual_id: null, carrier_commission_pct: 10, override_pct: null, channel_partner_id: "cpn_1", commission_schedule_id: null, initial_effective_date: "2025-08-01", attio_synced_at: null, updated_at: "2025-08-01T10:00:00Z", attio_record_id: "att_pol_12", attio_policy_id: null, account_manager: "Guy Livingstone", google_drive_folder: null, original_enrollee_count: 4, original_monthly_premium: 200, ..._NO_TIERS },
 ];
 
 export const CHANNEL_PARTNERS = [
