@@ -2,7 +2,7 @@ import * as React from "react";
 import { useState, useEffect, useReducer } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
-  PageHeader, Card, Field, Btn, Pill, TableShell, THead, TRow, TCell, ProductBadge,
+  PageHeader, Card, Field, Btn, Pill, TableShell, THead, TRow, TCell,
   Drawer, useDrawer, Input,
 } from "@/components/wireframe/Bits";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -516,7 +516,6 @@ function OrgDetail() {
             title={
               <span className="inline-flex items-center gap-2">
                 {org.name}
-                {product === "DI" && <ProductBadge product={org.product} />}
                 {showCcaBadge && (
                   <span
                     className="border border-emerald-500 text-emerald-700 bg-emerald-50 rounded px-2 py-0.5 text-xs font-medium"
