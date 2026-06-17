@@ -672,10 +672,10 @@ function ExportModal({ onClose, filtered, product, rangeDesc, filterSummary }: {
       : ["timestamp", "table_name", "record_id", "action", "actor_id", "actor_name", "old_values", "new_values"];
     const lines = [header.join(",")];
     for (const r of filtered) {
-      const base = [r.ts, r.table, r.record_id, r.action, r.actor_id, r.actor_name].map(csvEscape);
+      const base = [r.timestamp, r.table_name, r.record_id, r.action, r.actor_id, r.actor_name].map(csvEscape);
       if (mode === "full") {
-        base.push(csvEscape(r.before ? JSON.stringify(r.before) : ""));
-        base.push(csvEscape(r.after ? JSON.stringify(r.after) : ""));
+        base.push(csvEscape(r.old_values ? JSON.stringify(r.old_values) : ""));
+        base.push(csvEscape(r.new_values ? JSON.stringify(r.new_values) : ""));
       }
       lines.push(base.join(","));
     }
