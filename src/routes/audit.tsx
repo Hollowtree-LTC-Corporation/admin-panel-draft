@@ -119,7 +119,7 @@ function View() {
   }
 
   const tableOptions = useMemo(
-    () => Array.from(new Set(AUDIT_LOG.map((l) => l.table))).sort().map((v) => ({ value: v, label: v })),
+    () => Array.from(new Set(AUDIT_LOG.map((l) => l.table_name))).sort().map((v) => ({ value: v, label: v })),
     [],
   );
   const actorOptions = useMemo(
@@ -131,14 +131,14 @@ function View() {
     const s = debounced.trim().toLowerCase();
     return AUDIT_LOG.filter((l) => {
       if (s && !l.record_id.toLowerCase().includes(s)) return false;
-      if (table !== "all" && l.table !== table) return false;
+      if (table !== "all" && l.table_name !== table) return false;
       if (action !== "all" && l.action !== action) return false;
       if (actor !== "all" && l.actor_name !== actor) return false;
-      const day = l.ts.slice(0, 10);
+      const day = l.timestamp.slice(0, 10);
       if (from && day < from) return false;
       if (to && day > to) return false;
       return true;
-    }).sort((a, b) => b.ts.localeCompare(a.timestamp));
+    }).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   }, [debounced, table, action, actor, from, to]);
 
   // reset page on filter changes
