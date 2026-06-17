@@ -740,7 +740,7 @@ function ContributionSection({ i, readOnly }: { i: Detail; readOnly: boolean }) 
   );
 }
 
-function IdentitySection({ i, readOnly, setConfirm }: { i: Detail; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void }) {
+function IdentitySection({ i, readOnly, setConfirm, isLTC }: { i: Detail; readOnly: boolean; setConfirm: (c: { title: string; message: string; onConfirm: () => void } | null) => void; isLTC: boolean }) {
   const [editing, setEditing] = useState(false);
   const summary = `${i.full_name} · ${i.email} · ${i.org_name ?? "Affiliate-sponsored"} · Hired ${fmtDate(i.hire_date)}`;
   const onSave = () => {
@@ -950,7 +950,7 @@ function UpgradeSection({ i, readOnly }: { i: Detail; readOnly: boolean }) {
 
 
 
-function EnrollmentSection({ i }: { i: Detail }) {
+function EnrollmentSection({ i, isLTC }: { i: Detail; isLTC: boolean }) {
   return (
     <SectionCard title="Enrollment Window & Affiliations">
       <Grid cols={2}>
