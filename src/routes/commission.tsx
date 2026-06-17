@@ -1274,7 +1274,7 @@ function ActiveSplitsDrawer({ open, policyId, partners, rows, onClose, onSave }:
     setEditRows((rs) => rs.map((r, i) => i === idx ? { ...r, ...patch } : r));
   }
   function addRow() {
-    setEditRows((rs) => [...rs, { id: `new_${Date.now()}_${rs.length}`, payee_type: "channel_partner", payee_ref_id: partners[0]?.id ?? null, payee_name: partners[0]?.name ?? "", split_pct: 0, payment_method: "hollowtree_paid" }]);
+    setEditRows((rs) => [...rs, { id: `new_${Date.now()}_${rs.length}`, payee_type: "channel_partner", payee_ref_id: partners[0]?.id ?? null, payee_name: partners[0]?.partner_name ?? "", split_pct: 0, payment_method: "hollowtree_paid" }]);
   }
   function removeRow(idx: number) {
     setEditRows((rs) => rs.filter((_, i) => i !== idx));
@@ -1322,7 +1322,7 @@ function ActiveSplitsDrawer({ open, policyId, partners, rows, onClose, onSave }:
                     setRow(i, {
                       payee_type: pt,
                       payee_ref_id: pt === "house" ? null : (partners[0]?.id ?? null),
-                      payee_name: pt === "house" ? "Hollowtree" : (partners[0]?.name ?? ""),
+                      payee_name: pt === "house" ? "Hollowtree" : (partners[0]?.partner_name ?? ""),
                     });
                   }} className="px-1 py-0.5 text-xs border border-black/15 rounded">
                     <option value="house">house</option>
@@ -1702,7 +1702,7 @@ function AddPayeeModal({ partnerId, partners, onCancel, onAdd }: {
 
   const payeeName = payeeType === "house"
     ? "Hollowtree"
-    : (partners.find((p) => p.id === payeeRefId)?.name ?? "");
+    : (partners.find((p) => p.id === payeeRefId?.partner_name ?? "");
 
   return (
     <Modal title={`Add payee row — ${partner.partner_name}`} onCancel={onCancel}
