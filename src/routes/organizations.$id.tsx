@@ -3507,6 +3507,9 @@ function BenefitClassDrawerBody({
         </div>
       </Field>
 
+      <SpouseGiOfferField initial={initial?.spouse_gi_offer_cents ?? null} />
+
+
       {showBronze ? (
         <Field label="Bronze">
           <div className="flex items-center gap-2">
