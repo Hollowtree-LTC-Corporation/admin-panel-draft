@@ -630,7 +630,7 @@ function PolicyDrawer({
         ) : (
           <select
             value={draft.enrollment_status}
-            onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value as PolicyStatus }))}
+            onChange={(e) => setDraft((d) => ({ ...d, enrollment_status: e.target.value as PolicyStatus }))}
             className={inputCls}
           >
             {(Object.keys(STATUS_LABEL) as PolicyStatus[]).map((s) => (
