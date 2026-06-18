@@ -764,6 +764,7 @@ export type ScheduleType = "heaped" | "flat" | "level";
 export type CarrierCommissionSchedule = {
   id: string;
   carrier_product_id: string;
+  /** Denormalized display — resolved via carrier_product_id. Not a schema column. */
   carrier_product_name: string;
   state_code: string | null;
   schedule_name: string;
