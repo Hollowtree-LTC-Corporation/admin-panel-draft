@@ -25,14 +25,20 @@ export const LTC_FACE_TIERS_CENTS = [2500000, 5000000, 7500000, 10000000, 150000
 
 // v16: spouse_gi_offer_cents added (nullable). Layer 2 of LTC spouse cap waterfall.
 // Populated only when employer group has specifically negotiated spouse GI with carrier (atypical).
-export const BENEFIT_CLASSES: Array<{
+// Tier columns are canonical schema names: tier_<tier>_cents (integer cents).
+export type BenefitClass = {
   id: string; organization_id: string; name: string; gi_offer_cents: number;
-  bronze: number | null; silver: number; gold: number; platinum: number; diamond: number;
+  tier_bronze_cents: number | null;
+  tier_silver_cents: number;
+  tier_gold_cents: number;
+  tier_platinum_cents: number;
+  tier_diamond_cents: number;
   is_default: boolean; spouse_gi_offer_cents: number | null;
-}> = [
-  { id: "bc_1", organization_id: "org_3", name: "Class A — Full Time", gi_offer_cents: 200000, bronze: 50000, silver: 100000, gold: 150000, platinum: 200000, diamond: 250000, is_default: true, spouse_gi_offer_cents: 2500000 },
-  { id: "bc_2", organization_id: "org_3", name: "Class B — Part Time", gi_offer_cents: 100000, bronze: 25000, silver: 50000, gold: 75000, platinum: 100000, diamond: 125000, is_default: false, spouse_gi_offer_cents: null },
-  { id: "bc_3", organization_id: "org_5", name: "Default Class", gi_offer_cents: 150000, bronze: 50000, silver: 75000, gold: 100000, platinum: 150000, diamond: 200000, is_default: true, spouse_gi_offer_cents: null },
+};
+export const BENEFIT_CLASSES: BenefitClass[] = [
+  { id: "bc_1", organization_id: "org_3", name: "Class A — Full Time", gi_offer_cents: 200000, tier_bronze_cents: 50000, tier_silver_cents: 100000, tier_gold_cents: 150000, tier_platinum_cents: 200000, tier_diamond_cents: 250000, is_default: true, spouse_gi_offer_cents: 2500000 },
+  { id: "bc_2", organization_id: "org_3", name: "Class B — Part Time", gi_offer_cents: 100000, tier_bronze_cents: 25000, tier_silver_cents: 50000, tier_gold_cents: 75000, tier_platinum_cents: 100000, tier_diamond_cents: 125000, is_default: false, spouse_gi_offer_cents: null },
+  { id: "bc_3", organization_id: "org_5", name: "Default Class", gi_offer_cents: 150000, tier_bronze_cents: 50000, tier_silver_cents: 75000, tier_gold_cents: 100000, tier_platinum_cents: 150000, tier_diamond_cents: 200000, is_default: true, spouse_gi_offer_cents: null },
 ];
 
 export const COVERAGE_STATUSES = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"] as const;
