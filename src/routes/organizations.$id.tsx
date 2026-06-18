@@ -3419,11 +3419,11 @@ function BenefitClassDrawerBody({
   const [name, setName] = useState(initial?.name ?? "");
   const [giStr, setGiStr] = useState(centsToDollarStr(initial?.gi_offer_cents));
   const initialDerived = initial ? {
-    bronze: initial.bronze ?? null,
-    silver: initial.silver,
-    gold: initial.gold,
-    platinum: initial.platinum,
-    diamond: initial.diamond,
+    bronze: initial.tier_bronze_cents ?? null,
+    silver: initial.tier_silver_cents,
+    gold: initial.tier_gold_cents,
+    platinum: initial.tier_platinum_cents,
+    diamond: initial.tier_diamond_cents,
   } : deriveTiers(0);
   const [silverStr, setSilverStr] = useState(centsToDollarStr(initialDerived.silver));
   const [bronzeStr, setBronzeStr] = useState(centsToDollarStr(initialDerived.bronze));
