@@ -8,7 +8,7 @@ import {
 import {
   CARRIERS, CARRIER_PRODUCTS, CARRIER_COMMISSION_SCHEDULES, COMMISSION_RATE_TIERS,
   CARRIER_CONSTRAINTS, CARRIER_RIDER_AVAILABILITY,
-  CARRIER_SPOUSE_STATE_CAPS, ENROLLMENT_QUESTION_TEMPLATES,
+  CARRIER_SPOUSE_STATE_CAPS,
   formatCents,
   type Carrier, type CarrierType, type CarrierProduct, type CarrierCommissionSchedule,
   type ScheduleType, type CarrierConstraint, type CarrierRiderAvailability,
