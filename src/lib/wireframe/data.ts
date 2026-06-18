@@ -589,17 +589,18 @@ export type Policy = {
   ltc_gold: number | null;
   ltc_platinum: number | null;
   ltc_diamond: number | null;
-  // v15-audit: hollowtree_paid (default) vs carrier_direct affects commission payable
-  payment_method: PaymentMethodSetting;
+  // v15-audit: hollowtree_paid (default) vs carrier_direct affects commission payable.
+  // Optional in data layer; consumers default to 'hollowtree_paid'. See getPolicyPaymentMethod().
+  payment_method?: "hollowtree_paid" | "carrier_direct";
 };
 
 // Whole-dollar tier defaults for LTC policies.
 const _LTC_TIERS = { ltc_bronze: 50000, ltc_silver: 100000, ltc_gold: 150000, ltc_platinum: 200000, ltc_diamond: 250000 };
 const _NO_TIERS = { ltc_bronze: null, ltc_silver: null, ltc_gold: null, ltc_platinum: null, ltc_diamond: null };
-// PaymentMethodSetting is declared later in the file; we use a string union here to keep DDL order.
-export type PaymentMethodSetting = "hollowtree_paid" | "carrier_direct";
 const _CARRIER_DIRECT_POL_IDS = new Set(["pol_4", "pol_8"]);
-function _pm(id: string): PaymentMethodSetting { return _CARRIER_DIRECT_POL_IDS.has(id) ? "carrier_direct" : "hollowtree_paid"; }
+export function getPolicyPaymentMethod(id: string): "hollowtree_paid" | "carrier_direct" {
+  return _CARRIER_DIRECT_POL_IDS.has(id) ? "carrier_direct" : "hollowtree_paid";
+}
 
 export const POLICIES: Policy[] = [
   { id: "pol_1", policy_name: "Acme Widgets Group DI 2025", policy_number: "DI-AC-2025-001", organization_id: "org_1", org_name: "Acme Widgets Co", carrier_product_id: "cp_1", product: "DI", enrollment_status: "active", policy_owner_type: "affiliate", carrier_commission_pct: 12, override_pct: 3, channel_partner_id: "cpn_1", commission_schedule_id: null, initial_effective_date: "2025-02-01", attio_synced_at: "2025-06-10T14:14:00Z", updated_at: "2025-06-09T11:00:00Z", attio_record_id: "att_pol_1", attio_policy_id: "att_pol_1", account_manager: "Guy Livingstone", google_drive_folder: "https://drive.google.com/drive/folders/acme-2025", original_enrollee_count: 12, original_monthly_premium: 2450, ..._NO_TIERS },
