@@ -463,6 +463,7 @@ export type Carrier = {
   billing_email: string;
   primary_contact_name: string;
   primary_contact_email: string;
+  /** Denormalized display — projection of updated_at from Attio sync. Not a separate schema column. */
   attio_last_synced_at: string | null;
 };
 
