@@ -8,7 +8,7 @@ import {
 import {
   POLICIES, CARRIER_PRODUCTS, ORGS, CARRIERS, CHANNEL_PARTNERS,
   INTERNAL_REPS, ORG_PRIMARY_CHANNEL_PARTNER, CARRIER_COMMISSION_SCHEDULES,
-  POLICY_SPLITS_INITIAL, INDIVIDUALS,
+  POLICY_SPLITS_INITIAL, INDIVIDUALS, getPolicyPaymentMethod,
   type Policy, type PolicySplit, type PolicyStatus, type PayeeType,
   type PaymentMethodSetting, type PolicyOwnerType,
 } from "@/lib/wireframe/data";
