@@ -191,7 +191,7 @@ function View() {
   const productGroups = useMemo(() => workingGroups.filter((g) => orgIds.has(g.organization_id)), [workingGroups, orgIds]);
 
   const orgOptions = orgsByProduct.map((o) => ({ value: o.id, label: o.name }));
-  const pmOptions = Array.from(new Set(productGroups.map((g) => pmTypeLabel(g.payment_method_type)).filter((v) => v !== "—"))).map((v) => ({ value: v }));
+  const pmOptions = Array.from(new Set(productGroups.map((g) => pmTypeFilterLabel(g.payment_method_type)).filter((v) => v !== "—"))).map((v) => ({ value: v }));
   const statusOptions: { value: BillingGroupStatus; label: string }[] = [
     { value: "pending", label: STATUS_LABELS.pending },
     { value: "active", label: STATUS_LABELS.active },
