@@ -408,7 +408,7 @@ function View() {
                 </div>
               </div>
             )}
-            <Field label="Payment Method Type"><div className="text-sm">{pmTypeLabel(detailGroup.payment_method_type)}</div></Field>
+            <Field label="Payment Method Type"><div className="text-sm">{pmTypeLabel(detailGroup.payment_method_type, detailGroup.card_last4)}</div></Field>
             <Field label="Display Label"><div className="text-sm">{detailGroup.payment_method_display_label ?? "—"}</div></Field>
             <Field label="Moov Account ID"><CopyChip value={detailGroup.moov_account_id} /></Field>
             <Field label="Payment Method ID"><CopyChip value={detailGroup.payment_method_id} /></Field>
