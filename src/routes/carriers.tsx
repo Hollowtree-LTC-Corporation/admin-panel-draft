@@ -1245,7 +1245,7 @@ function QuestionTemplatesPanel({ productId }: { productId: string }) {
     });
     return Array.from(map.entries()).map(([k, items]) => ({
       key: k,
-      label: k === "__default__" ? "Default (all states)" : k,
+      label: k === "__default__" ? "Generic (default form — covers all states without overrides)" : `${k}-specific variant`,
       caNote: k === "CA",
       items: [...items].sort((a, b) => a.display_order - b.display_order),
     }));
