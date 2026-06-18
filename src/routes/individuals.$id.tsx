@@ -533,7 +533,14 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
             : <IssueTypeBadge value={i.issue_type} />}
         </RField>
         <RField label="Employee Plan Selected" value={i.employee_plan_selected || "—"} />
-        <RField label="Face Amount" value={unfunded ? "—" : formatCents(i.face_amount_cents)} />
+        <RField label="Face Amount">
+          {unfunded ? "—" : (
+            <div>
+              <div>{formatCents(i.face_amount_cents)}</div>
+              {i.relationship_type === "spouse" ? <EffectiveSpouseCapBreakdown i={i} /> : null}
+            </div>
+          )}
+        </RField>
         <RField label="Monthly Premium" value={unfunded ? "—" : formatCents(i.monthly_premium_cents)} />
 
         <RField label="Premium Structure" editing={editing}>
