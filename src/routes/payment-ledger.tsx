@@ -35,6 +35,7 @@ function View() {
   const [ctype, setCtype] = useState("all");
   const [source, setSource] = useState("all");
   const [coverage, setCoverage] = useState("all");
+  const [cycleMonth, setCycleMonth] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const sort = useSort<SortKey>("event_date", "desc");
