@@ -9,7 +9,7 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/account-adjustments")({ component: View });
 
-type SortKey = "individual_name" | "billing_group_id" | "adjustment_type" | "amount_cents" | "reason" | "effective_date" | "applied_to_balance" | "approved_by";
+type SortKey = "individual_name" | "billing_group_id" | "adjustment_type" | "amount_cents" | "reason" | "effective_date" | "applied_to_next_charge" | "approved_by";
 
 const ADJ_TYPES = ["premium_correction", "penalty_waiver", "refund", "write_off", "other"] as const;
 const ADJ_TYPE_LABELS: Record<typeof ADJ_TYPES[number], string> = {
@@ -60,7 +60,7 @@ function View() {
   const clearAll = () => { setSearch(""); setInd("all"); setType("all"); setApprover("all"); sort.reset(); };
 
   const openRow = (a: Adjustment) => {
-    setAppliedDraft(a.applied_to_balance);
+    setAppliedDraft(a.applied_to_next_charge);
     d.open(a);
   };
   const openNew = () => {
@@ -98,7 +98,7 @@ function View() {
             { key: "billing_group_id", label: "Group" },
             { key: "adjustment_type", label: "Type" },
             { key: "amount_cents", label: "Amount" },
-            { key: "applied_to_balance", label: "Applied" },
+            { key: "applied_to_next_charge", label: "Applied" },
             { key: "reason", label: "Reason" },
             { key: "effective_date", label: "Effective" },
             { key: "approved_by", label: "Approved By" },
@@ -115,7 +115,7 @@ function View() {
               <TCell className="capitalize">{a.adjustment_type.replace(/_/g, " ")}</TCell>
               <TCell className={a.amount_cents < 0 ? "text-rose-700" : ""}>{formatCents(a.amount_cents)}</TCell>
               <TCell>
-                {a.applied_to_balance
+                {a.applied_to_next_charge
                   ? <Check className="h-4 w-4 text-emerald-600" aria-label="Applied to balance" />
                   : <Minus className="h-4 w-4 text-black/30" aria-label="Not applied" />}
               </TCell>
