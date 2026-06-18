@@ -802,10 +802,9 @@ function IdentitySection({ i, readOnly, setConfirm, isLTC }: { i: Detail; readOn
       <Grid cols={4}>
         <RField label="First Name" value={i.first_name} editing={editing}><input defaultValue={i.first_name} className={inputCls} /></RField>
         <RField label="Last Name" value={i.last_name} editing={editing}><input defaultValue={i.last_name} className={inputCls} /></RField>
-        <RField label="Email" value={i.email} editing={editing}><input type="email" defaultValue={i.email} className={inputCls} /></RField>
-        <RField label="Work Email" value={(i as unknown as { work_email?: string }).work_email ?? "—"} editing={editing}>
-          <input type="email" defaultValue={(i as unknown as { work_email?: string }).work_email ?? ""} placeholder="name@company.com" className={inputCls} />
-        </RField>
+        <RField label="Email (work)" value={i.email} editing={editing}><input type="email" defaultValue={i.email} className={inputCls} /></RField>
+        {/* work_email is not a canonical column. Use the primary email for the work address. */}
+
 
         <RField label="Phone" value={i.phone} editing={editing}><input defaultValue={i.phone} className={inputCls} /></RField>
         <RField label="Secondary Phone" value={i.secondary_phone ?? "—"} editing={editing}><input defaultValue={i.secondary_phone ?? ""} className={inputCls} /></RField>
