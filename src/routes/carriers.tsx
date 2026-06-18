@@ -505,6 +505,10 @@ function ProductDrawerBody({
   const [showNewRider, setShowNewRider] = useState(false);
   const [riderStateFilter, setRiderStateFilter] = useState<string>("all");
   const [riderAvailFilter, setRiderAvailFilter] = useState<RiderAvailability | "all">("all");
+  // v16: rider_type filter (inherent vs elected)
+  const [riderTypeFilter, setRiderTypeFilter] = useState<"all" | "inherent" | "elected">("all");
+  // v16: sub-tab inside Constraints section — 'constraints' | 'spouse_caps'
+  const [constraintsTab, setConstraintsTab] = useState<"constraints" | "spouse_caps">("constraints");
 
   const stateOptions = useMemo(() => {
     const set = new Set(riders.map((r) => r.state));
@@ -513,7 +517,8 @@ function ProductDrawerBody({
 
   const filteredRiders = riders.filter((r) =>
     (riderStateFilter === "all" || r.state === riderStateFilter) &&
-    (riderAvailFilter === "all" || r.available === riderAvailFilter)
+    (riderAvailFilter === "all" || r.available === riderAvailFilter) &&
+    (riderTypeFilter === "all" || r.rider_type === riderTypeFilter)
   );
 
   return (
