@@ -3693,12 +3693,12 @@ function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
                   <TCell>
                     {bronzeAbsent
                       ? <span className="text-black/30 italic">---</span>
-                      : formatCents(c.bronze ?? 0)}
+                      : formatCents(c.tier_bronze_cents ?? 0)}
                   </TCell>
-                  <TCell>{formatCents(c.silver)}</TCell>
+                  <TCell>{formatCents(c.tier_silver_cents)}</TCell>
                   <TCell>{formatCents(c.gi_offer_cents)} <span className="text-[10px] text-black/40">(= GI)</span></TCell>
-                  <TCell>{formatCents(c.platinum)}</TCell>
-                  <TCell>{formatCents(c.diamond)}</TCell>
+                  <TCell>{formatCents(c.tier_platinum_cents)}</TCell>
+                  <TCell>{formatCents(c.tier_diamond_cents)}</TCell>
                   <TCell>{cells.length}</TCell>
                   <TCell>{lastUpdate ? fmtDate(lastUpdate) : <span className="text-black/30">---</span>}</TCell>
                   <TCell>{c.is_default ? <Pill tone="ok">Default</Pill> : null}</TCell>
