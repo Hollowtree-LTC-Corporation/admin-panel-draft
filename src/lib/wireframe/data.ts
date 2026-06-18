@@ -202,7 +202,6 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     : null;
   // v15-audit: realistic job titles (both products)
   const JOB_TITLES = ["Operations Manager", "Staff Accountant", "Warehouse Supervisor", "Senior Engineer", "Account Analyst", "Director of HR", "Project Manager", "Field Technician"];
-  void org;
   return {
     id: `ind_${n}`,
     full_name: `Test Person ${n}`,
