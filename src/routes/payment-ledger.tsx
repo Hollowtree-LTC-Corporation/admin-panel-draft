@@ -44,6 +44,7 @@ function View() {
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
   const indOptions = productInds.map((i) => ({ value: i.id, label: i.full_name }));
   const chargeOptions = Array.from(new Set(PAYMENT_LEDGER.map((p) => p.event_type))).map((v) => ({ value: v }));
+  const cycleOptions = Array.from(new Set(PAYMENT_LEDGER.map((p) => p.billing_cycle_month))).sort().reverse().map((v) => ({ value: v }));
 
   const rows = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -56,19 +57,21 @@ function View() {
       if (status !== "all" && p.status !== status) return false;
       if (ctype !== "all" && p.event_type !== ctype) return false;
       if (source !== "all" && p.contribution_source !== source) return false;
+      if (cycleMonth !== "all" && p.billing_cycle_month !== cycleMonth) return false;
       if (product === "DI" && coverage !== "all" && p.coverage_type !== coverage) return false;
       if (from && p.event_date < from) return false;
       if (to && p.event_date > to) return false;
       return true;
     });
     return sort.applySort(filtered, (r, k) => (r as unknown as Record<string, string | number>)[k]);
-  }, [search, org, ind, status, ctype, source, coverage, from, to, sort, product]);
+  }, [search, org, ind, status, ctype, source, coverage, cycleMonth, from, to, sort, product]);
 
-  const active = search !== "" || org !== "all" || ind !== "all" || status !== "all" || ctype !== "all" || source !== "all" || coverage !== "all" || from !== "" || to !== "" || !sort.isDefault;
-  const clearAll = () => { setSearch(""); setOrg("all"); setInd("all"); setStatus("all"); setCtype("all"); setSource("all"); setCoverage("all"); setFrom(""); setTo(""); sort.reset(); };
+  const active = search !== "" || org !== "all" || ind !== "all" || status !== "all" || ctype !== "all" || source !== "all" || coverage !== "all" || cycleMonth !== "all" || from !== "" || to !== "" || !sort.isDefault;
+  const clearAll = () => { setSearch(""); setOrg("all"); setInd("all"); setStatus("all"); setCtype("all"); setSource("all"); setCoverage("all"); setCycleMonth("all"); setFrom(""); setTo(""); sort.reset(); };
 
   const cols: { key: SortKey; label: string }[] = [
     { key: "event_date", label: "Date" },
+    { key: "billing_cycle_month", label: "Billing Cycle" },
     { key: "individual_name", label: "Individual" },
     { key: "billing_group_id", label: "Group" },
     { key: "event_type", label: "Charge Type" },
