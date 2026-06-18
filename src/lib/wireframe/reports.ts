@@ -292,7 +292,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
         default_effective_date: "2025-07-01",
         status: "open" as const,
         sponsor_type: "employer" as const,
-        carrier: "Northstar Mutual",
+        carrier_id: "car_1",
         gi_eligible: true,
         notes: "",
         channel_partners: [],
