@@ -1008,12 +1008,12 @@ const _AL_TABLES = [
   "billing_groups", "enrollment_responses", "benefit_classes",
   "enrollment_windows", "magic_tokens", "commission_statements",
 ] as const;
-const _AL_ACTORS: Array<[string, string]> = [
-  ["user_2abcDEF123", "Alex Admin"],
-  ["user_2ghiJKL456", "Jordan Ops"],
-  ["user_2mnoPQR789", "Riley Ops"],
-  ["user_2stuVWX012", "Morgan Admin"],
-  ["system", "System"],
+const _AL_ACTORS: Array<[string, string, AuditActorType, string | null]> = [
+  ["user_2abcDEF123", "Alex Admin",   "human",  null],
+  ["user_2ghiJKL456", "Jordan Ops",   "human",  null],
+  ["agent_renewals_bot_1", "Renewals Agent", "agent", "user_2abcDEF123"],
+  ["user_2stuVWX012", "Morgan Admin", "human",  null],
+  ["system",          "System",       "system", null],
 ];
 const _AL_REASONS = [
   "Reviewing enrollment for carrier handoff",
