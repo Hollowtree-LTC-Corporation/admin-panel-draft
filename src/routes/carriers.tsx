@@ -956,6 +956,8 @@ function NewConstraintForm({
       increment: Math.round(Number(increment) * 100),
       tier_floor_cents: Math.round(Number(tierFloor) * 100),
       round_preference_threshold_cents: Math.round(Number(roundThreshold) * 100),
+      spouse_max_face_cents: null,
+      child_max_face_cents: null,
       effective_from: effFrom,
       effective_to: effTo || null,
       verified_by: verifiedBy,
