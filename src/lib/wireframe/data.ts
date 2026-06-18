@@ -284,16 +284,16 @@ export type BillingGroup = {
   payment_method_id: string | null;
   payment_method_type: BillingGroupPMType;
   payment_method_display_label: string | null;
-  /** Denormalized display — resolved from payment_method_type + plaid_institution / card_last4. Not a column. */
-  _display_payment_method: string;
-  /** Denormalized display — resolved from Plaid metadata via Moov. Not a column. */
-  _display_plaid_institution: string | null;
-  /** Denormalized display — last4 of card tokenized at Moov. Not a column. */
-  _display_card_last4: string | null;
+  /** Denormalized display — derived from payment_method_type + plaid/last4. Not a schema column. */
+  payment_method: string;
+  /** Denormalized display — fetched from Plaid via Moov. Not a schema column. */
+  plaid_institution: string | null;
+  /** Denormalized display — last4 of card tokenized at Moov. Not a schema column. */
+  card_last4: string | null;
   created_at: string;
   updated_at: string;
-  /** Denormalized display — COUNT(individuals WHERE billing_group_id = ...). Not a column. */
-  _display_individuals_count: number;
+  /** Denormalized display — COUNT(individuals WHERE billing_group_id = ...). Not a schema column. */
+  individuals_count: number;
 };
 
 const SEPARATED_SPOUSES = new Set<string>(["ind_11"]);
