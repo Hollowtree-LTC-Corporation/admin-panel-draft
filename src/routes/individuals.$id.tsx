@@ -646,8 +646,16 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
         <RField label="Canceled Date">
           {i.canceled_date ? <span className="text-red-700">{fmtDate(i.canceled_date)}</span> : <span className="text-gray-400">—</span>}
         </RField>
-        <div />
-        <div />
+        <RField label="Coverage Effective" value={fmtDate((i as unknown as { coverage_effective_date: string | null }).coverage_effective_date)} editing={editing}>
+          <input type="date" defaultValue={(i as unknown as { coverage_effective_date: string | null }).coverage_effective_date ?? ""} className={inputCls} />
+        </RField>
+        <RField label="Coverage End" editing={editing}>
+          {editing
+            ? <input type="date" defaultValue={(i as unknown as { coverage_end_date: string | null }).coverage_end_date ?? ""} className={inputCls} />
+            : ((i as unknown as { coverage_end_date: string | null }).coverage_end_date
+                ? <span className="text-red-700">{fmtDate((i as unknown as { coverage_end_date: string | null }).coverage_end_date)}</span>
+                : <span className="text-gray-400">—</span>)}
+        </RField>
       </Grid>
       <div className="mt-3">
         <Link to="/payment-ledger" className="text-xs text-[#0a3d3e] hover:underline inline-flex items-center gap-1">
