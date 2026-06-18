@@ -322,7 +322,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
             end_date: w.enrollment_end_date ?? "—",
             status: w.status,
             indicator,
-            carrier: w.carrier ?? "—",
+            carrier: CARRIERS.find((c) => c.id === w.carrier_id)?.carrier_name ?? "—",
           };
         }),
       };
