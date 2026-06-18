@@ -202,12 +202,11 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     : null;
   // v15-audit: realistic job titles (both products)
   const JOB_TITLES = ["Operations Manager", "Staff Accountant", "Warehouse Supervisor", "Senior Engineer", "Account Analyst", "Director of HR", "Project Manager", "Field Technician"];
-  const orgSlug = org.name.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 12) || "org";
+  void org;
   return {
     id: `ind_${n}`,
     full_name: `Test Person ${n}`,
     email: `person${n}@example.com`,
-    phone: `555-0${100 + n}`,
     phone: `555-0${100 + n}`,
     organization_id: org.id,
     org_name: org.name,
