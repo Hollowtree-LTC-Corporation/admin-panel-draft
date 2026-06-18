@@ -271,7 +271,8 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
 
 // v14 billing_groups
 export type BillingGroupStatus = "pending" | "active" | "suspended" | "terminated";
-export type BillingGroupPMType = "ach" | "card" | "card-payment" | "apple_pay" | "apple-pay" | null;
+// Canonical CHECK: 'ach' | 'card' | 'apple_pay'. Legacy spellings removed in 2026-06-18 sync.
+export type BillingGroupPMType = "ach" | "card" | "apple_pay" | null;
 
 export type BillingGroup = {
   id: string;
@@ -283,12 +284,16 @@ export type BillingGroup = {
   payment_method_id: string | null;
   payment_method_type: BillingGroupPMType;
   payment_method_display_label: string | null;
-  payment_method: string;
-  plaid_institution: string | null;
-  card_last4: string | null;
+  /** Denormalized display — resolved from payment_method_type + plaid_institution / card_last4. Not a column. */
+  _display_payment_method: string;
+  /** Denormalized display — resolved from Plaid metadata via Moov. Not a column. */
+  _display_plaid_institution: string | null;
+  /** Denormalized display — last4 of card tokenized at Moov. Not a column. */
+  _display_card_last4: string | null;
   created_at: string;
   updated_at: string;
-  individuals_count: number;
+  /** Denormalized display — COUNT(individuals WHERE billing_group_id = ...). Not a column. */
+  _display_individuals_count: number;
 };
 
 const SEPARATED_SPOUSES = new Set<string>(["ind_11"]);
