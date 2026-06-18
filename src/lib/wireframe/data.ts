@@ -603,7 +603,7 @@ export type Policy = {
 // Whole-dollar tier defaults for LTC policies.
 const _LTC_TIERS = { ltc_bronze: 50000, ltc_silver: 100000, ltc_gold: 150000, ltc_platinum: 200000, ltc_diamond: 250000 };
 const _NO_TIERS = { ltc_bronze: null, ltc_silver: null, ltc_gold: null, ltc_platinum: null, ltc_diamond: null };
-const _CARRIER_DIRECT_POL_IDS = new Set(["pol_4", "pol_8"]);
+const _CARRIER_DIRECT_POL_IDS = new Set(["pol_4", "pol_8", "pol_9"]);
 export function getPolicyPaymentMethod(id: string): "hollowtree_paid" | "carrier_direct" {
   return _CARRIER_DIRECT_POL_IDS.has(id) ? "carrier_direct" : "hollowtree_paid";
 }
