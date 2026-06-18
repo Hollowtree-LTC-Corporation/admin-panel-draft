@@ -37,7 +37,7 @@ export function useStore() {
 type Action = "create" | "update" | "delete" | "revoke" | "approve" | "status_only";
 type Resource =
   | "organizations" | "benefit_classes" | "individuals" | "billing_groups"
-  | "payment_ledger" | "account_adjustments" | "fee_config" | "rate_config"
+  | "payment_ledger" | "account_adjustments" | "fee_schedules" | "rate_config"
   | "enrollment_responses" | "carriers" | "carrier_products" | "policies"
   | "channel_partners" | "commission_statements" | "carrier_commission_schedules"
   | "commission_rate_tiers" | "commission_split_defaults" | "commission_splits"
@@ -52,7 +52,7 @@ const RESOURCE_CAPS: Record<Resource, Partial<Record<Action, boolean>>> = {
   billing_groups: { create: true, update: true },
   payment_ledger: {},
   account_adjustments: { create: true, approve: true },
-  fee_config: { create: true, update: true },
+  fee_schedules: { create: true, update: true },
   rate_config: { create: true, update: true },
   enrollment_responses: {},
   carriers: { create: true, update: true },

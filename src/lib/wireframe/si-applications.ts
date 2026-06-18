@@ -164,10 +164,10 @@ export const SI_APPLICATIONS: SiApplication[] = INDIVIDUALS
   .map((i, idx) => {
     const org = ORGS.find((o) => o.id === i.organization_id);
     const ew = ENROLLMENT_WINDOWS.find((w) => w.organization_id === i.organization_id) ?? ENROLLMENT_WINDOWS[2];
-    // Map ew.carrier (free-text name) to CARRIERS row; fall back to first LTC carrier.
+    // Resolve carrier via FK; fall back to first LTC carrier if none.
     const ltcCarriers = CARRIERS.filter((c) => c.product === "LTC");
     const carrier =
-      ltcCarriers.find((c) => c.carrier_name === ew.carrier) ??
+      ltcCarriers.find((c) => c.id === ew.carrier_id) ??
       ltcCarriers[idx % ltcCarriers.length];
     const isSpouse = i.relationship_type === "spouse";
     const linked = isSpouse && i.linked_individual_id

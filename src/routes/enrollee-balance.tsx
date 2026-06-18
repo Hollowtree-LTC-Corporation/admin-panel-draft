@@ -147,7 +147,7 @@ function View() {
       return;
     }
     writePhiAudit({
-      table_name: "enrollment_responses",
+      table_name: "individuals",
       record_id: "enrollee_balance:bulk_export",
       action: "export_phi",
       actor_id: "current_user",

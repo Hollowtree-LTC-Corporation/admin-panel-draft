@@ -326,7 +326,7 @@ function synthesize(org: typeof ORGS[number]) {
     situs_city: ["Austin","Portland","Boston","Miami","Seattle","Chicago","Denver","Atlanta"][idx % 8],
     eligible_lives: org.individuals_count * 3,
     // DI
-    gi_offer_cents: 15000000,
+    // gi_offer_cents removed from organizations in v3.4 — canonical location is benefit_classes.gi_offer_cents.
     microsite_url: micrositeUrl,
     di_healthcare_type: "Healthcare Practice",
     inbound_type: "Broker Referral",
@@ -344,7 +344,7 @@ function synthesize(org: typeof ORGS[number]) {
     group_policy_effective_date: product === "DI"
       ? (idx % 5 === 0 ? null : `2024-${String(((idx * 2) % 12) + 1).padStart(2, "0")}-01`)
       : null,
-    policy_effective_date: "2025-01-01",
+    // policy_effective_date does not exist on organizations — source from linked policy or active window.
     // Klaviyo
     klaviyo_list_id: ["TfRk9b","X4mP2q","Lz8Yhn","aQ3Wpv","R7nB2k","dE9Lto","Vc5Mxs","Jh1Knu"][idx % 8],
     // Localization (v13)
@@ -353,9 +353,7 @@ function synthesize(org: typeof ORGS[number]) {
     // Coverage / Billing
     contribution_type: cca ? "voluntary" : "employer_paid",
     available_premium_structures: (product === "LTC" ? (idx % 3 === 0 ? ["lifetime","ten_pay"] : ["lifetime"]) : ["lifetime"]) as PremiumStructure[],
-    tpa_fee_cents: cca ? 2000 : 800,
-    service_fee_retained_cents: cca ? 500 : null,
-    tpa_fee_name: cca ? "CCA Membership Fee" : "Processing Fee",
+    // tpa_fee_cents, tpa_fee_name, service_fee_retained_cents migrated to fee_schedules in v3.13.
     // Versioned TPA fee schedules (DI v12 / LTC v3.12)
     fee_schedules: (cca
       ? [
@@ -411,7 +409,7 @@ function synthesize(org: typeof ORGS[number]) {
     max_age: 75,
     // LTC carrier/operational
     case_id: `CASE-${10000 + idx}`,
-    enrollment_id_carrier: `ENR-${50000 + idx}`,
+    enrollment_id_carrier: 50000 + idx,
     form_number: "LTC-2024-A",
     agent_number: `AGT-${1000 + idx}`,
     // benefit_system set above with snake_case canonical value
@@ -422,8 +420,7 @@ function synthesize(org: typeof ORGS[number]) {
       "Are you currently receiving disability benefits?",
     ],
     // LTC system
-    ltc_enrollment_phase: "open_enrollment",
-    ltc_one_week_to_go: "2025-08-24",
+    // ltc_enrollment_phase and ltc_one_week_to_go dropped in v3.17 (legacy Klaviyo flow triggers).
     // New joiner policy (LTC)
     new_joiner_enrollment_period_days: 30,
     new_joiner_waiting_period_days: 90,
@@ -455,7 +452,7 @@ function OrgDetail() {
   // Per-org benefit classes; synthesize a default for orgs with none
   let classes = BENEFIT_CLASSES.filter((b) => b.organization_id === id);
   if (product === "LTC" && classes.length === 0) {
-    classes = [{ id: `bc_synth_${id}`, organization_id: id, name: "All Employees", gi_offer_cents: 15000000, bronze: 0, silver: 7500000, gold: 15000000, platinum: 20000000, diamond: 25000000, is_default: true, spouse_gi_offer_cents: null }];
+    classes = [{ id: `bc_synth_${id}`, organization_id: id, name: "All Employees", gi_offer_cents: 15000000, tier_bronze_cents: 0, tier_silver_cents: 7500000, tier_gold_cents: 15000000, tier_platinum_cents: 20000000, tier_diamond_cents: 25000000, is_default: true, spouse_gi_offer_cents: null }];
   }
 
   // Summary metrics
@@ -1929,8 +1926,8 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
         </div>
         <RField label="Effective Date">
           {e.editing
-            ? <input className={inputCls} type="date" defaultValue={org.policy_effective_date} />
-            : fmtDate(org.policy_effective_date)}
+            ? <input className={inputCls} type="date" defaultValue={org.group_policy_effective_date ?? ""} />
+            : fmtDate(org.group_policy_effective_date)}
         </RField>
         {product === "LTC" ? (
           <RField label="Carrier Commission Schedule">
@@ -3280,12 +3277,7 @@ function SystemRefsSection({ org, product, variant }: { org: OrgDetail; product:
         <Ref label="Attio Company ID" value={org.attio_company_id} />
         <Ref label="Rate Sheet ID (legacy)" value={org.rate_sheet_id} muted />
         <Ref label="Gmail Label ID" value={org.gmail_label_id} muted />
-        {product === "LTC" && (
-          <>
-            <Ref label="LTC Enrollment Phase" value={org.ltc_enrollment_phase} />
-            <Ref label="LTC One Week To Go" value={fmtDate(org.ltc_one_week_to_go)} />
-          </>
-        )}
+        {/* ltc_enrollment_phase / ltc_one_week_to_go dropped in v3.17. */}
       </div>
     </SectionCard>
   );
@@ -3419,11 +3411,11 @@ function BenefitClassDrawerBody({
   const [name, setName] = useState(initial?.name ?? "");
   const [giStr, setGiStr] = useState(centsToDollarStr(initial?.gi_offer_cents));
   const initialDerived = initial ? {
-    bronze: initial.bronze ?? null,
-    silver: initial.silver,
-    gold: initial.gold,
-    platinum: initial.platinum,
-    diamond: initial.diamond,
+    bronze: initial.tier_bronze_cents ?? null,
+    silver: initial.tier_silver_cents,
+    gold: initial.tier_gold_cents,
+    platinum: initial.tier_platinum_cents,
+    diamond: initial.tier_diamond_cents,
   } : deriveTiers(0);
   const [silverStr, setSilverStr] = useState(centsToDollarStr(initialDerived.silver));
   const [bronzeStr, setBronzeStr] = useState(centsToDollarStr(initialDerived.bronze));
@@ -3693,12 +3685,12 @@ function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
                   <TCell>
                     {bronzeAbsent
                       ? <span className="text-black/30 italic">---</span>
-                      : formatCents(c.bronze ?? 0)}
+                      : formatCents(c.tier_bronze_cents ?? 0)}
                   </TCell>
-                  <TCell>{formatCents(c.silver)}</TCell>
+                  <TCell>{formatCents(c.tier_silver_cents)}</TCell>
                   <TCell>{formatCents(c.gi_offer_cents)} <span className="text-[10px] text-black/40">(= GI)</span></TCell>
-                  <TCell>{formatCents(c.platinum)}</TCell>
-                  <TCell>{formatCents(c.diamond)}</TCell>
+                  <TCell>{formatCents(c.tier_platinum_cents)}</TCell>
+                  <TCell>{formatCents(c.tier_diamond_cents)}</TCell>
                   <TCell>{cells.length}</TCell>
                   <TCell>{lastUpdate ? fmtDate(lastUpdate) : <span className="text-black/30">---</span>}</TCell>
                   <TCell>{c.is_default ? <Pill tone="ok">Default</Pill> : null}</TCell>
@@ -3811,11 +3803,11 @@ function LTCRatePanel({ benefitClass }: { benefitClass: BCRow }) {
 
   // Tiers defined on the class (face amount present and not zero for non-bronze)
   const classTierFace: Record<TierKey, number | null> = {
-    bronze: benefitClass.gi_offer_cents > CENT_50K ? (benefitClass.bronze ?? null) : null,
-    silver: benefitClass.silver,
+    bronze: benefitClass.gi_offer_cents > CENT_50K ? (benefitClass.tier_bronze_cents ?? null) : null,
+    silver: benefitClass.tier_silver_cents,
     gold: benefitClass.gi_offer_cents,
-    platinum: benefitClass.platinum,
-    diamond: benefitClass.diamond,
+    platinum: benefitClass.tier_platinum_cents,
+    diamond: benefitClass.tier_diamond_cents,
   };
   const definedTiers = TIER_KEYS.filter((t) => classTierFace[t] != null && classTierFace[t]! > 0);
   const tiersWithData = new Set(visible.map((r) => r.tier));

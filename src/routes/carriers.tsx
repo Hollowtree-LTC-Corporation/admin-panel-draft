@@ -8,12 +8,13 @@ import {
 import {
   CARRIERS, CARRIER_PRODUCTS, CARRIER_COMMISSION_SCHEDULES, COMMISSION_RATE_TIERS,
   CARRIER_CONSTRAINTS, CARRIER_RIDER_AVAILABILITY,
-  CARRIER_SPOUSE_STATE_CAPS, ENROLLMENT_QUESTION_TEMPLATES,
+  CARRIER_SPOUSE_STATE_CAPS,
   formatCents,
   type Carrier, type CarrierType, type CarrierProduct, type CarrierCommissionSchedule,
   type ScheduleType, type CarrierConstraint, type CarrierRiderAvailability,
   type RiderAvailability,
 } from "@/lib/wireframe/data";
+import { ENROLLMENT_QUESTION_TEMPLATES } from "@/lib/wireframe/question-templates-yaml-fixture";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
@@ -658,7 +659,7 @@ function ProductDrawerBody({
                                 {sTiers.map((t) => (
                                   <tr key={t.id}>
                                     <td className="pr-8 py-0.5">{t.from_year}</td>
-                                    <td className="pr-8 py-0.5">{t.to_year >= 99 ? "—" : t.to_year}</td>
+                                    <td className="pr-8 py-0.5">{t.to_year == null ? "+" : t.to_year}</td>
                                     <td className="py-0.5 font-mono">{t.rate_pct.toFixed(2)}%</td>
                                   </tr>
                                 ))}

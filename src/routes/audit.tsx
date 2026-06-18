@@ -19,7 +19,8 @@ const ACTION_META: Record<AuditAction, { label: string; chip: string; border: st
 };
 const ALL_ACTIONS: AuditAction[] = ["create", "update", "soft_delete", "view_phi", "export_phi"];
 
-const PHI_TABLES = new Set(["individuals", "enrollment_responses", "spouses"]);
+// 'spouses' removed: PHI for spouses is captured under individuals (relationship_type='spouse').
+const PHI_TABLES = new Set(["individuals", "enrollment_responses"]);
 const PHI_FIELDS = new Set([
   "ssn_encrypted", "date_of_birth", "address_line_1", "city", "state",
   "zip_code", "phone", "personal_email", "secondary_phone", "income",
@@ -449,10 +450,16 @@ function RowAndDiff({
           </span>
         </td>
         <td className="px-3 py-2" title={`User ID: ${row.actor_id}`}>
-          {row.actor_name === "System" ? (
+          {row.actor_type === "system" ? (
             <span className="inline-flex items-center gap-1 text-black/40 italic">
               <Bot className="h-3 w-3" />
               System
+            </span>
+          ) : row.actor_type === "agent" ? (
+            <span className="inline-flex items-center gap-1 text-violet-700" title={row.on_behalf_of ? `On behalf of ${row.on_behalf_of}` : undefined}>
+              <Bot className="h-3 w-3" />
+              {row.actor_name}
+              {row.on_behalf_of ? <span className="text-[10px] text-violet-700/70">· on behalf of {row.on_behalf_of}</span> : null}
             </span>
           ) : (
             row.actor_name

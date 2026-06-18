@@ -4,7 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Btn, ProductBadge } from "@/components/wireframe/Bits";
 import { Switch } from "@/components/ui/switch";
 import { ChevronLeft, ChevronDown, ChevronRight, Lock, Pencil, AlertTriangle, Copy, ExternalLink, Eye, EyeOff } from "lucide-react";
-import { INDIVIDUALS, ORGS, BILLING_GROUPS, formatCents, DEPARTURE_REASON_LABELS, getEzValueForIndividual, type DepartureReason, type EzValueStatus } from "@/lib/wireframe/data";
+import { INDIVIDUALS, ORGS, BILLING_GROUPS, BENEFIT_CLASSES, formatCents, DEPARTURE_REASON_LABELS, getEzValueForIndividual, type DepartureReason, type EzValueStatus } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 
 export const Route = createFileRoute("/individuals/$id")({ component: IndividualDetail });
@@ -152,7 +152,7 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     enrollment_cycle: "2025-Q3",
     persona: ["standard","high_value","new_hire"][n % 3],
     employee_plan_selected: isLTC ? base.purchased_plan : "",
-    benefit_class_name: isLTC ? (n % 2 === 0 ? "All Employees" : "Management") : "",
+    benefit_class_id: isLTC ? (n % 2 === 0 ? "bc_1" : "bc_2") : null,
     upgrade_carrier_decision: isLTC && base.applied_for_upgrade ? UPGRADE_DECISIONS[n % 3] : null,
     pre_upgrade_premium_cents: isLTC && base.applied_for_upgrade ? Math.round(base.monthly_premium_cents * 0.8) : null,
     upgrade_submitted_at: isLTC && base.applied_for_upgrade ? `2025-05-1${n % 9}` : null,
@@ -191,7 +191,7 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     // LTC-only extras
     employee_upgrade_option: isLTC && base.applied_for_upgrade ? ["Silver→Gold","Gold→Platinum","Platinum→Diamond"][n % 3] : null,
     applied_for_upgrade: isLTC ? base.applied_for_upgrade : null,
-    // v14: individuals.premium_structure — TODO: confirm column migrated; default 'lifetime'
+    // individuals.premium_structure is canonical in v3.17 / v15.
     premium_structure: isLTC ? (n % 4 === 0 ? "ten_pay" : "lifetime") : null,
     // Mocked from organizations.available_premium_structures
     org_available_premium_structures: isLTC ? (n % 3 === 0 ? ["lifetime", "ten_pay"] : ["lifetime"]) : ["lifetime"],
@@ -297,7 +297,7 @@ function IndividualDetail() {
             <SummaryChip label="Issue Type" value={<IssueTypeBadge value={i.issue_type} />} />
           )}
           {isLTC && (
-            <SummaryChip label="Benefit Class" value={i.benefit_class_name || "—"} />
+            <SummaryChip label="Benefit Class" value={BENEFIT_CLASSES.find((b) => b.id === i.benefit_class_id)?.name ?? "—"} />
           )}
           <SummaryChip label="Last Payment"
             value={<span className="inline-flex items-center gap-1">{paymentBadge(i.last_payment_status, i.retry_count)}<span className="text-[11px] text-black/50">{fmtDate(i.last_charge_date)}</span></span>}
@@ -519,9 +519,17 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
       <Grid cols={4}>
         <CoverageStatusField editing={editing} status={status} setStatus={setStatus} allowed={allowed} current={i.coverage_status} />
         <RField label="Current Stage"><Badge map={STAGE_BADGE} value={i.current_stage} /></RField>
-        <RField label="Benefit Class" value={i.benefit_class_name} editing={editing}>
-          <select defaultValue={i.benefit_class_name} className={inputCls}>{["All Employees","Management"].map((o) => <option key={o}>{o}</option>)}</select>
-        </RField>
+        {(() => {
+          const orgClasses = BENEFIT_CLASSES.filter((b) => b.organization_id === i.organization_id);
+          const className = BENEFIT_CLASSES.find((b) => b.id === i.benefit_class_id)?.name ?? "—";
+          return (
+            <RField label="Benefit Class" value={className} editing={editing}>
+              <select defaultValue={i.benefit_class_id ?? ""} className={inputCls}>
+                {orgClasses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </RField>
+          );
+        })()}
         <RField label="Riders" value={i._riders} />
 
         <RField label="Purchased Plan" value={unfunded ? "—" : i.purchased_plan} editing={editing}>
@@ -601,8 +609,8 @@ function paymentMethodLabel(bg: ReturnType<typeof BILLING_GROUPS.find>): React.R
   const t = bg?.payment_method_type;
   if (!t) return <span className="text-black/40">No method on file</span>;
   if (t === "ach") return bg?.plaid_institution ? `ACH · ${bg.plaid_institution}` : "ACH (Bank Account)";
-  if (t === "card-payment") return bg?.card_last4 ? `Card ending ${bg.card_last4}` : "Credit Card";
-  if (t === "apple-pay") return "Apple Pay";
+  if (t === "card") return bg?.card_last4 ? `Card ending ${bg.card_last4}` : "Credit Card";
+  if (t === "apple_pay") return "Apple Pay";
   return String(t);
 }
 
@@ -794,10 +802,9 @@ function IdentitySection({ i, readOnly, setConfirm, isLTC }: { i: Detail; readOn
       <Grid cols={4}>
         <RField label="First Name" value={i.first_name} editing={editing}><input defaultValue={i.first_name} className={inputCls} /></RField>
         <RField label="Last Name" value={i.last_name} editing={editing}><input defaultValue={i.last_name} className={inputCls} /></RField>
-        <RField label="Email" value={i.email} editing={editing}><input type="email" defaultValue={i.email} className={inputCls} /></RField>
-        <RField label="Work Email" value={(i as unknown as { work_email?: string }).work_email ?? "—"} editing={editing}>
-          <input type="email" defaultValue={(i as unknown as { work_email?: string }).work_email ?? ""} placeholder="name@company.com" className={inputCls} />
-        </RField>
+        <RField label="Email (work)" value={i.email} editing={editing}><input type="email" defaultValue={i.email} className={inputCls} /></RField>
+        {/* work_email is not a canonical column. Use the primary email for the work address. */}
+
 
         <RField label="Phone" value={i.phone} editing={editing}><input defaultValue={i.phone} className={inputCls} /></RField>
         <RField label="Secondary Phone" value={i.secondary_phone ?? "—"} editing={editing}><input defaultValue={i.secondary_phone ?? ""} className={inputCls} /></RField>
@@ -839,7 +846,6 @@ function IdentitySection({ i, readOnly, setConfirm, isLTC }: { i: Detail; readOn
         {!isLTC && (
           <RField label="Union Local Name" value={i.union_local_name ?? "—"} editing={editing}><input defaultValue={i.union_local_name ?? ""} className={inputCls} /></RField>
         )}
-        {/* TODO: v14 schema add individuals.assigned_rep TEXT for LTC parity with DI. Currently shared free-text from dummy data. */}
         <RField label="Assigned Rep" value={i.assigned_rep ?? "—"} editing={editing}>
           <input defaultValue={i.assigned_rep ?? ""} className={inputCls} placeholder="e.g., Casey Rep" />
         </RField>

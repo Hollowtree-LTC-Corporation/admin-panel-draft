@@ -321,7 +321,6 @@ function IndividualsView() {
                   <TCell className="text-[12px]">{premiumStructureLabel(ps)}</TCell>
                   <TCell className="text-right">{unpurchased ? "—" : formatFaceAmount(i.face_amount_cents)}</TCell>
                   <TCell>{unpurchased ? "—" : formatCents(i.monthly_premium_cents)}</TCell>
-                  {/* TODO: v14 schema add individuals.assigned_rep TEXT for LTC (parity with DI). Currently sourced from DI-shared dummy data. */}
                   <TCell>{i.assigned_rep ?? <span className="text-black/40">—</span>}</TCell>
                   <TCell>{unpurchased ? <span className="text-black/40">—</span> : paymentBadge(i.last_payment_status, i.retry_count)}</TCell>
                 </TRow>

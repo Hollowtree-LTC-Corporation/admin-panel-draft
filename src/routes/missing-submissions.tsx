@@ -8,7 +8,7 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/missing-submissions")({ component: View });
 
-type SortKey = "full_name" | "created_at" | "email" | "phone" | "org_name" | "origin_url" | "status" | "reviewed_by" | "reviewed_at";
+type SortKey = "full_name" | "created_at" | "email" | "phone" | "organization_name" | "origin_url" | "status" | "reviewed_by" | "reviewed_at";
 
 function todayISO() {
   return new Date().toISOString();
@@ -70,7 +70,7 @@ function View() {
     const s = search.trim().toLowerCase();
     const filtered = data.filter((m) => {
       if (s && !(m.full_name.toLowerCase().includes(s) || m.email.toLowerCase().includes(s) || (m.phone?.toLowerCase().includes(s) ?? false))) return false;
-      if (org !== "all" && m.org_name !== org) return false;
+      if (org !== "all" && m.organization_name !== org) return false;
       if (status !== "all" && m.status !== status) return false;
       return true;
     });
@@ -105,7 +105,7 @@ function View() {
             { key: "created_at", label: "Submitted" },
             { key: "email", label: "Email" },
             { key: "phone", label: "Phone" },
-            { key: "org_name", label: "Org" },
+            { key: "organization_name", label: "Org" },
             { key: "origin_url", label: "Origin" },
             { key: "status", label: "Status" },
             { key: "reviewed_by", label: "Reviewed By" },
@@ -123,7 +123,7 @@ function View() {
               <TCell>{m.email}</TCell>
 
               <TCell>{m.phone ?? "—"}</TCell>
-              <TCell>{m.org_name ?? <span className="text-black/40">unknown</span>}</TCell>
+              <TCell>{m.organization_name ?? <span className="text-black/40">unknown</span>}</TCell>
               <TCell className="font-mono text-[11px]">{m.origin_url}</TCell>
               <TCell>
                 <select

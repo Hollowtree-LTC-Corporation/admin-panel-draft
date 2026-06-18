@@ -5,7 +5,7 @@ import {
   ORGS, INDIVIDUALS, PAYMENT_LEDGER, ACCOUNT_ADJUSTMENTS,
   ENROLLMENT_WINDOWS, CHANNEL_PARTNERS, COMMISSION_STATEMENTS,
   POLICY_SPLITS_INITIAL, POLICIES, MISSING_SUBMISSIONS, BILLING_GROUPS,
-  AUDIT_LOG, TOKEN_AUDIT_LOG,
+  AUDIT_LOG, TOKEN_AUDIT_LOG, CARRIERS,
 } from "./data";
 import type { Product } from "./data";
 
@@ -292,7 +292,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
         default_effective_date: "2025-07-01",
         status: "open" as const,
         sponsor_type: "employer" as const,
-        carrier: "Northstar Mutual",
+        carrier_id: "car_1",
         gi_eligible: true,
         notes: "",
         channel_partners: [],
@@ -322,7 +322,7 @@ export function buildPreview(slug: string, product: Product): PreviewTable {
             end_date: w.enrollment_end_date ?? "—",
             status: w.status,
             indicator,
-            carrier: w.carrier ?? "—",
+            carrier: CARRIERS.find((c) => c.id === w.carrier_id)?.carrier_name ?? "—",
           };
         }),
       };

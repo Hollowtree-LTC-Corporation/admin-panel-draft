@@ -8,7 +8,7 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/payment-ledger")({ component: View });
 
-type SortKey = "event_date" | "individual_name" | "billing_group_id" | "event_type" | "amount_cents" | "status" | "funding_source" | "contribution_source" | "coverage_type";
+type SortKey = "event_date" | "billing_cycle_month" | "individual_name" | "billing_group_id" | "event_type" | "amount_cents" | "status" | "funding_source" | "contribution_source" | "coverage_type";
 
 function ContributionSourceBadge({ value }: { value: string }) {
   const map: Record<string, { label: string; cls: string }> = {
@@ -35,6 +35,7 @@ function View() {
   const [ctype, setCtype] = useState("all");
   const [source, setSource] = useState("all");
   const [coverage, setCoverage] = useState("all");
+  const [cycleMonth, setCycleMonth] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const sort = useSort<SortKey>("event_date", "desc");
@@ -43,6 +44,7 @@ function View() {
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
   const indOptions = productInds.map((i) => ({ value: i.id, label: i.full_name }));
   const chargeOptions = Array.from(new Set(PAYMENT_LEDGER.map((p) => p.event_type))).map((v) => ({ value: v }));
+  const cycleOptions = Array.from(new Set(PAYMENT_LEDGER.map((p) => p.billing_cycle_month))).sort().reverse().map((v) => ({ value: v }));
 
   const rows = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -55,19 +57,21 @@ function View() {
       if (status !== "all" && p.status !== status) return false;
       if (ctype !== "all" && p.event_type !== ctype) return false;
       if (source !== "all" && p.contribution_source !== source) return false;
+      if (cycleMonth !== "all" && p.billing_cycle_month !== cycleMonth) return false;
       if (product === "DI" && coverage !== "all" && p.coverage_type !== coverage) return false;
       if (from && p.event_date < from) return false;
       if (to && p.event_date > to) return false;
       return true;
     });
     return sort.applySort(filtered, (r, k) => (r as unknown as Record<string, string | number>)[k]);
-  }, [search, org, ind, status, ctype, source, coverage, from, to, sort, product]);
+  }, [search, org, ind, status, ctype, source, coverage, cycleMonth, from, to, sort, product]);
 
-  const active = search !== "" || org !== "all" || ind !== "all" || status !== "all" || ctype !== "all" || source !== "all" || coverage !== "all" || from !== "" || to !== "" || !sort.isDefault;
-  const clearAll = () => { setSearch(""); setOrg("all"); setInd("all"); setStatus("all"); setCtype("all"); setSource("all"); setCoverage("all"); setFrom(""); setTo(""); sort.reset(); };
+  const active = search !== "" || org !== "all" || ind !== "all" || status !== "all" || ctype !== "all" || source !== "all" || coverage !== "all" || cycleMonth !== "all" || from !== "" || to !== "" || !sort.isDefault;
+  const clearAll = () => { setSearch(""); setOrg("all"); setInd("all"); setStatus("all"); setCtype("all"); setSource("all"); setCoverage("all"); setCycleMonth("all"); setFrom(""); setTo(""); sort.reset(); };
 
   const cols: { key: SortKey; label: string }[] = [
     { key: "event_date", label: "Date" },
+    { key: "billing_cycle_month", label: "Billing Cycle" },
     { key: "individual_name", label: "Individual" },
     { key: "billing_group_id", label: "Group" },
     { key: "event_type", label: "Charge Type" },
@@ -90,6 +94,7 @@ function View() {
         <FilterCombobox value={ind} onChange={setInd} placeholder="All individuals" options={indOptions} />
         <FilterSelect value={status} onChange={setStatus} allLabel="All statuses" options={[{ value: "successful", label: "Successful" }, { value: "failed", label: "Failed" }, { value: "pending", label: "Pending" }, { value: "reversed", label: "Reversed" }]} />
         <FilterSelect value={ctype} onChange={setCtype} allLabel="All charge types" options={chargeOptions} />
+        <FilterSelect value={cycleMonth} onChange={setCycleMonth} allLabel="All cycles" options={cycleOptions} />
         <FilterSelect value={source} onChange={setSource} allLabel="All sources" options={[
           { value: "voluntary", label: "Voluntary" },
           { value: "employer_paid", label: "Employer" },
@@ -118,6 +123,7 @@ function View() {
           {rows.map((p) => (
             <TRow key={p.id}>
               <TCell className="font-mono text-[11px]">{p.event_date}</TCell>
+              <TCell className="font-mono text-[11px]">{p.billing_cycle_month}</TCell>
               <TCell>{p.individual_name}</TCell>
               <TCell className="text-black/60">{p.billing_group_id}</TCell>
               <TCell className="capitalize">{p.event_type.replace(/_/g, " ")}</TCell>
