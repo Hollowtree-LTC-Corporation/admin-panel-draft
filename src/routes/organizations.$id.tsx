@@ -326,7 +326,7 @@ function synthesize(org: typeof ORGS[number]) {
     situs_city: ["Austin","Portland","Boston","Miami","Seattle","Chicago","Denver","Atlanta"][idx % 8],
     eligible_lives: org.individuals_count * 3,
     // DI
-    gi_offer_cents: 15000000,
+    // gi_offer_cents removed from organizations in v3.4 — canonical location is benefit_classes.gi_offer_cents.
     microsite_url: micrositeUrl,
     di_healthcare_type: "Healthcare Practice",
     inbound_type: "Broker Referral",
