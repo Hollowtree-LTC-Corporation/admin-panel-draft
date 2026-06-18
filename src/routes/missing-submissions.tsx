@@ -11,8 +11,37 @@ export const Route = createFileRoute("/missing-submissions")({ component: View }
 type SortKey = "full_name" | "created_at" | "email" | "phone" | "org_name" | "origin_url" | "status" | "reviewed_by" | "reviewed_at";
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toISOString();
 }
+
+const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtSubmitted(iso: string): string {
+  if (!iso) return "—";
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return iso;
+  const now = new Date("2026-06-18T12:00:00Z");
+  const diffMs = now.getTime() - dt.getTime();
+  const hours = Math.floor(diffMs / 3600000);
+  if (hours < 1) {
+    const mins = Math.max(1, Math.floor(diffMs / 60000));
+    return `${mins} min${mins === 1 ? "" : "s"} ago`;
+  }
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
+  return `${MONTH_ABBR[dt.getMonth()]} ${dt.getDate()}`;
+}
+function fmtReviewedAt(iso: string | null): string {
+  if (!iso) return "—";
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return iso;
+  let h = dt.getHours();
+  const m = dt.getMinutes();
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${MONTH_ABBR[dt.getMonth()]} ${dt.getDate()}, ${h}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
 
 function View() {
   const { product, role } = useStore();
