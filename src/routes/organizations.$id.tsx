@@ -344,7 +344,7 @@ function synthesize(org: typeof ORGS[number]) {
     group_policy_effective_date: product === "DI"
       ? (idx % 5 === 0 ? null : `2024-${String(((idx * 2) % 12) + 1).padStart(2, "0")}-01`)
       : null,
-    policy_effective_date: "2025-01-01",
+    // policy_effective_date does not exist on organizations — source from linked policy or active window.
     // Klaviyo
     klaviyo_list_id: ["TfRk9b","X4mP2q","Lz8Yhn","aQ3Wpv","R7nB2k","dE9Lto","Vc5Mxs","Jh1Knu"][idx % 8],
     // Localization (v13)
