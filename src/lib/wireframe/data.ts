@@ -944,7 +944,9 @@ export type TokenAuditEntry = {
   id: string;
   token_id: string | null;
   individual_id: string | null;
+  /** Denormalized display — resolved via individual_id. Not a schema column. */
   individual_name: string | null;
+  /** Denormalized display — resolved via token_id. Not a schema column. */
   token_class: MagicTokenClass | null;
   attempted_token_hash: string;
   outcome: TokenAuditOutcome;
