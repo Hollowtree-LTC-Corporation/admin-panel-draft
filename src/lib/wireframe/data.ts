@@ -300,19 +300,18 @@ const SEPARATED_SPOUSES = new Set<string>(["ind_11"]);
 
 const _PM_SAMPLES: Array<{
   v14: "ach" | "card" | "apple_pay";
-  legacy: "ach" | "card-payment" | "apple-pay";
   label: string;
   institution: string | null;
   last4: string | null;
   display: string;
 }> = [
-  { v14: "ach",       legacy: "ach",          label: "ACH", institution: "Chase",            last4: null,   display: "Chase ACH ··7890" },
-  { v14: "card",      legacy: "card-payment", label: "Card", institution: null,              last4: "4242", display: "Visa ending 4242" },
-  { v14: "ach",       legacy: "ach",          label: "ACH", institution: "Wells Fargo",      last4: null,   display: "Wells Fargo ACH ··3344" },
-  { v14: "apple_pay", legacy: "apple-pay",    label: "Apple Pay", institution: null,         last4: null,   display: "Apple Pay" },
-  { v14: "ach",       legacy: "ach",          label: "ACH", institution: "Bank of America",  last4: null,   display: "Bank of America ACH ··2211" },
-  { v14: "card",      legacy: "card-payment", label: "Card", institution: null,              last4: "1881", display: "Mastercard ending 1881" },
-  { v14: "ach",       legacy: "ach",          label: "ACH", institution: "Citibank",         last4: null,   display: "Citibank ACH ··5566" },
+  { v14: "ach",       label: "ACH", institution: "Chase",            last4: null,   display: "Chase ACH ··7890" },
+  { v14: "card",      label: "Card", institution: null,              last4: "4242", display: "Visa ending 4242" },
+  { v14: "ach",       label: "ACH", institution: "Wells Fargo",      last4: null,   display: "Wells Fargo ACH ··3344" },
+  { v14: "apple_pay", label: "Apple Pay", institution: null,         last4: null,   display: "Apple Pay" },
+  { v14: "ach",       label: "ACH", institution: "Bank of America",  last4: null,   display: "Bank of America ACH ··2211" },
+  { v14: "card",      label: "Card", institution: null,              last4: "1881", display: "Mastercard ending 1881" },
+  { v14: "ach",       label: "ACH", institution: "Citibank",         last4: null,   display: "Citibank ACH ··5566" },
 ];
 
 // Demo: a few groups have a user-set name, rest leave name=null so the list
