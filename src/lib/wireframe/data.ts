@@ -23,10 +23,16 @@ export const ORGS: Array<{
 
 export const LTC_FACE_TIERS_CENTS = [2500000, 5000000, 7500000, 10000000, 15000000, 20000000, 25000000]; // $25K..$250K
 
-export const BENEFIT_CLASSES = [
-  { id: "bc_1", organization_id: "org_3", name: "Class A — Full Time", gi_offer_cents: 200000, bronze: 50000, silver: 100000, gold: 150000, platinum: 200000, diamond: 250000, is_default: true },
-  { id: "bc_2", organization_id: "org_3", name: "Class B — Part Time", gi_offer_cents: 100000, bronze: 25000, silver: 50000, gold: 75000, platinum: 100000, diamond: 125000, is_default: false },
-  { id: "bc_3", organization_id: "org_5", name: "Default Class", gi_offer_cents: 150000, bronze: 50000, silver: 75000, gold: 100000, platinum: 150000, diamond: 200000, is_default: true },
+// v16: spouse_gi_offer_cents added (nullable). Layer 2 of LTC spouse cap waterfall.
+// Populated only when employer group has specifically negotiated spouse GI with carrier (atypical).
+export const BENEFIT_CLASSES: Array<{
+  id: string; organization_id: string; name: string; gi_offer_cents: number;
+  bronze: number | null; silver: number; gold: number; platinum: number; diamond: number;
+  is_default: boolean; spouse_gi_offer_cents: number | null;
+}> = [
+  { id: "bc_1", organization_id: "org_3", name: "Class A — Full Time", gi_offer_cents: 200000, bronze: 50000, silver: 100000, gold: 150000, platinum: 200000, diamond: 250000, is_default: true, spouse_gi_offer_cents: 2500000 },
+  { id: "bc_2", organization_id: "org_3", name: "Class B — Part Time", gi_offer_cents: 100000, bronze: 25000, silver: 50000, gold: 75000, platinum: 100000, diamond: 125000, is_default: false, spouse_gi_offer_cents: null },
+  { id: "bc_3", organization_id: "org_5", name: "Default Class", gi_offer_cents: 150000, bronze: 50000, silver: 75000, gold: 100000, platinum: 150000, diamond: 200000, is_default: true, spouse_gi_offer_cents: null },
 ];
 
 export const COVERAGE_STATUSES = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"] as const;
