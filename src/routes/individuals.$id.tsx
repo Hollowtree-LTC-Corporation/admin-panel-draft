@@ -472,6 +472,11 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
         <RField label="Coverage Plan" value={unfunded ? "—" : i.coverage_plan} editing={editing}>
           <select defaultValue={i.coverage_plan ?? ""} className={inputCls}>{DI_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
         </RField>
+        <RField label="Monthly Benefit" editing={editing}>
+          {editing
+            ? <input type="number" defaultValue={i.monthly_benefit_cents != null ? Math.round(i.monthly_benefit_cents / 100) : ""} className={inputCls} placeholder="3500" />
+            : (i.monthly_benefit_cents != null ? formatCents(i.monthly_benefit_cents) : "—")}
+        </RField>
         <RField label="Monthly Premium">
           {unfunded ? <span className="text-gray-400">—</span> : (
             <span className="inline-flex items-center gap-1">
@@ -481,7 +486,6 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
           )}
         </RField>
         <RField label="Weekly Covered Benefit" value={unfunded ? "—" : formatCents(i.weekly_covered_benefit_cents)} />
-        <RField label="Monthly Benefit" value={i.monthly_benefit_cents != null ? formatCents(i.monthly_benefit_cents) : "—"} />
         <RField label="Current Stage" editing={editing}>
           {editing
             ? <select defaultValue={i.current_stage} className={inputCls}>{DI_STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select>
