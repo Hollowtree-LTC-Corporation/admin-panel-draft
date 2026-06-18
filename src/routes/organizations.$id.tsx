@@ -455,7 +455,7 @@ function OrgDetail() {
   // Per-org benefit classes; synthesize a default for orgs with none
   let classes = BENEFIT_CLASSES.filter((b) => b.organization_id === id);
   if (product === "LTC" && classes.length === 0) {
-    classes = [{ id: `bc_synth_${id}`, organization_id: id, name: "All Employees", gi_offer_cents: 15000000, bronze: 0, silver: 7500000, gold: 15000000, platinum: 20000000, diamond: 25000000, is_default: true, spouse_gi_offer_cents: null }];
+    classes = [{ id: `bc_synth_${id}`, organization_id: id, name: "All Employees", gi_offer_cents: 15000000, tier_bronze_cents: 0, tier_silver_cents: 7500000, tier_gold_cents: 15000000, tier_platinum_cents: 20000000, tier_diamond_cents: 25000000, is_default: true, spouse_gi_offer_cents: null }];
   }
 
   // Summary metrics
