@@ -516,6 +516,7 @@ export type CarrierProduct = {
   cca_product: boolean;
   payment_methods_allowed: string;
   active: boolean;
+  /** Denormalized display — projection of updated_at from Attio sync. Not a separate schema column. */
   attio_last_synced_at: string | null;
 };
 
