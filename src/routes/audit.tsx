@@ -19,7 +19,8 @@ const ACTION_META: Record<AuditAction, { label: string; chip: string; border: st
 };
 const ALL_ACTIONS: AuditAction[] = ["create", "update", "soft_delete", "view_phi", "export_phi"];
 
-const PHI_TABLES = new Set(["individuals", "enrollment_responses", "spouses"]);
+// 'spouses' removed: PHI for spouses is captured under individuals (relationship_type='spouse').
+const PHI_TABLES = new Set(["individuals", "enrollment_responses"]);
 const PHI_FIELDS = new Set([
   "ssn_encrypted", "date_of_birth", "address_line_1", "city", "state",
   "zip_code", "phone", "personal_email", "secondary_phone", "income",
