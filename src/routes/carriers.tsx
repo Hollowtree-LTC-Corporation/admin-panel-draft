@@ -1035,7 +1035,7 @@ function NewRiderForm({
     onSave({
       id, carrier_product_id: productId,
       state, rider_code: riderCode.trim(), rider_full_name: riderFullName,
-      available,
+      available, rider_type: "inherent",
       effective_from: effFrom, effective_to: effTo || null,
       last_verified: lastVerified, verified_by: verifiedBy,
       source_document: sourceDoc, notes,
