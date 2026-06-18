@@ -25,7 +25,14 @@ function statusPillTone(s: BillingGroupStatus): "ok" | "warn" | "neutral" | "bad
   if (s === "suspended") return "neutral";
   return "bad";
 }
-function pmTypeLabel(t: BillingGroup["payment_method_type"]): string {
+function pmTypeLabel(t: BillingGroup["payment_method_type"], last4?: string | null): string {
+  if (!t) return "No payment method";
+  if (t === "ach") return "Bank Account (ACH)";
+  if (t === "card" || t === "card-payment") return last4 ? `Card ending ${last4}` : "Card";
+  return "Apple Pay";
+}
+// Short label for the filter dropdown (group multiple cards together).
+function pmTypeFilterLabel(t: BillingGroup["payment_method_type"]): string {
   if (!t) return "—";
   if (t === "ach") return "ACH";
   if (t === "card" || t === "card-payment") return "Card";
