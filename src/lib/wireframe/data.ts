@@ -1029,10 +1029,12 @@ export const AUDIT_LOG: AuditEntry[] = Array.from({ length: 84 }, (_, i) => {
   const table_name = action === "view_phi" || action === "export_phi"
     ? ["individuals", "enrollment_responses", "individuals"][i % 3]
     : _AL_TABLES[i % _AL_TABLES.length];
-  const [actor_id, actor_name] = _AL_ACTORS[i % _AL_ACTORS.length];
+  const [actor_id, actor_name, actor_type, on_behalf_of] = _AL_ACTORS[i % _AL_ACTORS.length];
   const daysAgo = i % 30;
   const d = new Date(Date.UTC(2026, 5, 16) - daysAgo * 86400000 - (i % 8) * 3600000);
   const timestamp = d.toISOString();
+  // v15: created_at is server-assigned; offset slightly to demonstrate distinction from timestamp.
+  const created_at = new Date(d.getTime() + 200).toISOString();
   const record_id = action === "view_phi" || action === "export_phi"
     ? `ind_${(i % 40) + 1}`
     : `rec_${String(100 + i).padStart(6, "0")}-${(i * 7 % 9999).toString(16)}`;
@@ -1062,8 +1064,8 @@ export const AUDIT_LOG: AuditEntry[] = Array.from({ length: 84 }, (_, i) => {
   }
   return {
     id: `al_${String(i + 1).padStart(4, "0")}-${(i * 11).toString(16)}`,
-    timestamp, table_name, record_id, action,
-    actor_id, actor_name,
+    timestamp, created_at, table_name, record_id, action,
+    actor_id, actor_name, actor_type, on_behalf_of,
     old_values, new_values,
   };
 });
