@@ -191,7 +191,7 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     // LTC-only extras
     employee_upgrade_option: isLTC && base.applied_for_upgrade ? ["Silver→Gold","Gold→Platinum","Platinum→Diamond"][n % 3] : null,
     applied_for_upgrade: isLTC ? base.applied_for_upgrade : null,
-    // v14: individuals.premium_structure — TODO: confirm column migrated; default 'lifetime'
+    // individuals.premium_structure is canonical in v3.17 / v15.
     premium_structure: isLTC ? (n % 4 === 0 ? "ten_pay" : "lifetime") : null,
     // Mocked from organizations.available_premium_structures
     org_available_premium_structures: isLTC ? (n % 3 === 0 ? ["lifetime", "ten_pay"] : ["lifetime"]) : ["lifetime"],
