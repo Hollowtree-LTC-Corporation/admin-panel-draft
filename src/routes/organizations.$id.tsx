@@ -3662,7 +3662,7 @@ function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
                   <TCell>
                     {bronzeAbsent
                       ? <span className="text-black/30 italic">---</span>
-                      : formatCents(c.bronze)}
+                      : formatCents(c.bronze ?? 0)}
                   </TCell>
                   <TCell>{formatCents(c.silver)}</TCell>
                   <TCell>{formatCents(c.gi_offer_cents)} <span className="text-[10px] text-black/40">(= GI)</span></TCell>
