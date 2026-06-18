@@ -10,11 +10,11 @@ import {
   CARRIER_CONSTRAINTS, CARRIER_RIDER_AVAILABILITY,
   CARRIER_SPOUSE_STATE_CAPS,
   formatCents,
-import { ENROLLMENT_QUESTION_TEMPLATES } from "@/lib/wireframe/question-templates-yaml-fixture";
   type Carrier, type CarrierType, type CarrierProduct, type CarrierCommissionSchedule,
   type ScheduleType, type CarrierConstraint, type CarrierRiderAvailability,
   type RiderAvailability,
 } from "@/lib/wireframe/data";
+import { ENROLLMENT_QUESTION_TEMPLATES } from "@/lib/wireframe/question-templates-yaml-fixture";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
 import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
