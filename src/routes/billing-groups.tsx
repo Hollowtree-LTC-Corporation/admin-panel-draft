@@ -313,7 +313,16 @@ function View() {
             return (
               <TRow key={g.id} onClick={() => detail.open(g)}>
                 <TCell className="font-medium underline decoration-dotted underline-offset-2">{g.name}</TCell>
-                <TCell className="text-black/70">{g.org_name}</TCell>
+                <TCell>
+                  <Link
+                    to="/organizations/$id"
+                    params={{ id: g.organization_id }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-[#0a3d3e] hover:underline"
+                  >
+                    {g.org_name}
+                  </Link>
+                </TCell>
                 <TCell>
                   {members.length} · <span className="text-black/50 text-[11px]">{preview || "—"}{members.length > 2 ? "…" : ""}</span>
                 </TCell>
