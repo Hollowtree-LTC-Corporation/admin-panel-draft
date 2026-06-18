@@ -601,8 +601,8 @@ function paymentMethodLabel(bg: ReturnType<typeof BILLING_GROUPS.find>): React.R
   const t = bg?.payment_method_type;
   if (!t) return <span className="text-black/40">No method on file</span>;
   if (t === "ach") return bg?.plaid_institution ? `ACH · ${bg.plaid_institution}` : "ACH (Bank Account)";
-  if (t === "card-payment") return bg?.card_last4 ? `Card ending ${bg.card_last4}` : "Credit Card";
-  if (t === "apple-pay") return "Apple Pay";
+  if (t === "card") return bg?.card_last4 ? `Card ending ${bg.card_last4}` : "Credit Card";
+  if (t === "apple_pay") return "Apple Pay";
   return String(t);
 }
 
