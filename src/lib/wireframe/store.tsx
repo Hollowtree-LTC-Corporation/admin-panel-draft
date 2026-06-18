@@ -52,7 +52,7 @@ const RESOURCE_CAPS: Record<Resource, Partial<Record<Action, boolean>>> = {
   billing_groups: { create: true, update: true },
   payment_ledger: {},
   account_adjustments: { create: true, approve: true },
-  fee_config: { create: true, update: true },
+  fee_schedules: { create: true, update: true },
   rate_config: { create: true, update: true },
   enrollment_responses: {},
   carriers: { create: true, update: true },
