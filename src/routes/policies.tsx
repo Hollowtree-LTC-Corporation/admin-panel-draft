@@ -359,7 +359,6 @@ function emptyPolicy(product: "DI" | "LTC"): Policy {
     original_enrollee_count: null,
     original_monthly_premium: null,
     ltc_bronze: null, ltc_silver: null, ltc_gold: null, ltc_platinum: null, ltc_diamond: null,
-    payment_method: "hollowtree_paid",
   };
 }
 
