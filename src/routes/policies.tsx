@@ -39,7 +39,8 @@ const PAYEE_LABEL: Record<PayeeType, string> = {
   house: "House", internal_rep: "Internal Rep", channel_partner: "Channel Partner", override: "Override",
 };
 const PAYMENT_LABEL: Record<PaymentMethodSetting, string> = {
-  hollowtree_paid: "Hollowtree-paid", carrier_direct: "Carrier-direct",
+  hollowtree_paid: "Hollowtree Paid",
+  carrier_direct: "Carrier Direct",
 };
 
 const carrierProductLabel = (cpId: string) => {
@@ -358,6 +359,7 @@ function emptyPolicy(product: "DI" | "LTC"): Policy {
     original_enrollee_count: null,
     original_monthly_premium: null,
     ltc_bronze: null, ltc_silver: null, ltc_gold: null, ltc_platinum: null, ltc_diamond: null,
+    payment_method: "hollowtree_paid",
   };
 }
 
@@ -615,13 +617,18 @@ function PolicyDrawer({
           }
           return (
             <div>
-              <div className="inline-flex rounded border border-black/15 overflow-hidden text-xs">
+              <div className="inline-flex gap-2 text-xs">
                 {(["hollowtree_paid", "carrier_direct"] as PaymentMethodSetting[]).map((v) => (
                   <button
                     key={v}
                     type="button"
+                    disabled={!canEdit}
                     onClick={() => setDraft((d) => ({ ...d, payment_method: v }))}
-                    className={`px-3 py-1 ${current === v ? "bg-[#0a3d3e] text-white" : "bg-white text-black/70 hover:bg-black/5"}`}
+                    className={`px-3 py-1 rounded-full border transition-colors ${
+                      current === v
+                        ? "bg-[#0a3d3e] text-white border-[#0a3d3e]"
+                        : "bg-white text-black/70 border-black/20 hover:bg-black/5"
+                    }`}
                   >
                     {v === "hollowtree_paid" ? "Hollowtree Paid" : "Carrier Direct"}
                   </button>
