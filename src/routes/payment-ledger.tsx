@@ -123,6 +123,7 @@ function View() {
           {rows.map((p) => (
             <TRow key={p.id}>
               <TCell className="font-mono text-[11px]">{p.event_date}</TCell>
+              <TCell className="font-mono text-[11px]">{p.billing_cycle_month}</TCell>
               <TCell>{p.individual_name}</TCell>
               <TCell className="text-black/60">{p.billing_group_id}</TCell>
               <TCell className="capitalize">{p.event_type.replace(/_/g, " ")}</TCell>
