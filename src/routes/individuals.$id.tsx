@@ -152,7 +152,7 @@ function synthesize(base: typeof INDIVIDUALS[number]) {
     enrollment_cycle: "2025-Q3",
     persona: ["standard","high_value","new_hire"][n % 3],
     employee_plan_selected: isLTC ? base.purchased_plan : "",
-    benefit_class_name: isLTC ? (n % 2 === 0 ? "All Employees" : "Management") : "",
+    benefit_class_id: isLTC ? (n % 2 === 0 ? "bc_1" : "bc_2") : null,
     upgrade_carrier_decision: isLTC && base.applied_for_upgrade ? UPGRADE_DECISIONS[n % 3] : null,
     pre_upgrade_premium_cents: isLTC && base.applied_for_upgrade ? Math.round(base.monthly_premium_cents * 0.8) : null,
     upgrade_submitted_at: isLTC && base.applied_for_upgrade ? `2025-05-1${n % 9}` : null,
