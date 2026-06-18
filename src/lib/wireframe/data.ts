@@ -648,13 +648,16 @@ export const POLICIES: Policy[] = [
   { id: "pol_12", policy_name: "GI Life Group Policy", policy_number: "LIFE-2025-001", organization_id: "org_1", org_name: "Acme Widgets Co", carrier_product_id: "cp_10", product: "DI", enrollment_status: "active", policy_owner_type: "employer_group", individual_id: null, carrier_commission_pct: 10, override_pct: null, channel_partner_id: "cpn_1", commission_schedule_id: null, initial_effective_date: "2025-08-01", attio_synced_at: null, updated_at: "2025-08-01T10:00:00Z", attio_record_id: "att_pol_12", attio_policy_id: null, account_manager: "Guy Livingstone", google_drive_folder: null, original_enrollee_count: 4, original_monthly_premium: 200, ..._NO_TIERS },
 ];
 
+// partner_type vocabulary: Benefits Broker, CPA Firm, P&C Firm, Individual Broker,
+// Financial Advisory, IMO-BGA, PEO, Internal. House/Override are payee_type concepts,
+// not partner_type. Override payees live on commission_splits with payee_type='override_partner'.
 export const CHANNEL_PARTNERS = [
-  { id: "cpn_1", partner_name: "WTC Benefits", partner_type: "Broker", default_split_pct: 40, payment_method: "hollowtree_paid" },
-  { id: "cpn_2", partner_name: "Westfield Brokers", partner_type: "Broker", default_split_pct: 60, payment_method: "hollowtree_paid" },
-  { id: "cpn_3", partner_name: "Hollowtree House", partner_type: "House", default_split_pct: 45, payment_method: "hollowtree_paid" },
+  { id: "cpn_1", partner_name: "WTC Benefits", partner_type: "Benefits Broker", default_split_pct: 40, payment_method: "hollowtree_paid" },
+  { id: "cpn_2", partner_name: "Westfield Brokers", partner_type: "Benefits Broker", default_split_pct: 60, payment_method: "hollowtree_paid" },
+  { id: "cpn_3", partner_name: "Hollowtree House", partner_type: "Internal", default_split_pct: 45, payment_method: "hollowtree_paid" },
   { id: "cpn_4", partner_name: "Jamie Rep", partner_type: "Internal", default_split_pct: 10, payment_method: "hollowtree_paid" },
-  { id: "cpn_5", partner_name: "Gallagher", partner_type: "Override", default_split_pct: 5, payment_method: "carrier_direct" },
-  { id: "cpn_6", partner_name: "Override Group LLC", partner_type: "Override", default_split_pct: 5, payment_method: "carrier_direct" },
+  { id: "cpn_5", partner_name: "Gallagher", partner_type: "Benefits Broker", default_split_pct: 5, payment_method: "carrier_direct" },
+  { id: "cpn_6", partner_name: "Override Group LLC", partner_type: "Benefits Broker", default_split_pct: 5, payment_method: "carrier_direct" },
 ];
 
 export const INTERNAL_REPS = [
