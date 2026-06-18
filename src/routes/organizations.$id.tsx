@@ -3277,12 +3277,7 @@ function SystemRefsSection({ org, product, variant }: { org: OrgDetail; product:
         <Ref label="Attio Company ID" value={org.attio_company_id} />
         <Ref label="Rate Sheet ID (legacy)" value={org.rate_sheet_id} muted />
         <Ref label="Gmail Label ID" value={org.gmail_label_id} muted />
-        {product === "LTC" && (
-          <>
-            <Ref label="LTC Enrollment Phase" value={org.ltc_enrollment_phase} />
-            <Ref label="LTC One Week To Go" value={fmtDate(org.ltc_one_week_to_go)} />
-          </>
-        )}
+        {/* ltc_enrollment_phase / ltc_one_week_to_go dropped in v3.17. */}
       </div>
     </SectionCard>
   );
