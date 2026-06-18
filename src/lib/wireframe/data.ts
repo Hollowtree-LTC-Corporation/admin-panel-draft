@@ -1181,11 +1181,11 @@ for (const age of BC2_AGES) {
 export const LTC_RATE_CELLS: LTCRateCell[] = _ltcCells;
 
 
-export const ENROLLMENT_RESPONSES_LTC = [
-  { id: "er_1", individual_name: "Test Person 3", question: "Smoker (last 12mo)?", answer: "No", submitted_at: "2025-05-01" },
-  { id: "er_2", individual_name: "Test Person 3", question: "Family LTC claim history?", answer: "No", submitted_at: "2025-05-01" },
-  { id: "er_3", individual_name: "Test Person 5", question: "Height", answer: "5'8\"", submitted_at: "2025-05-04" },
-];
+// ENROLLMENT_RESPONSES_LTC removed — the prior shape did not align with canonical
+// enrollment_responses (which uses question_code/respondent_type/created_at). The
+// /enrollment-responses route redirects to /si-applications. SiResponse in
+// src/lib/wireframe/si-applications.ts is the canonical reference shape.
+
 
 export function formatCents(cents: number): string {
   const n = (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
