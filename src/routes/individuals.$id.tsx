@@ -314,6 +314,7 @@ function IndividualDetail() {
         {isLTC ? (
           <>
             <LTCCoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <EZValueSection i={i} />
             <PaymentSection i={i} bg={bg} readOnly={readOnly} />
             <ContributionSection i={i} readOnly={readOnly} />
             <EmploymentStatusSection i={i} onOpenDeparture={() => setDepartureOpen(true)} />
