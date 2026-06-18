@@ -984,14 +984,21 @@ export const TOKEN_AUDIT_LOG: TokenAuditEntry[] = Array.from({ length: 38 }, (_,
 });
 
 export type AuditAction = "create" | "update" | "soft_delete" | "view_phi" | "export_phi";
+// v15 agent-readiness columns: actor_type, on_behalf_of, created_at.
+export type AuditActorType = "human" | "agent" | "system";
 export type AuditEntry = {
   id: string;
   timestamp: string;
+  // v15: server-assigned created_at (distinct from caller-supplied timestamp).
+  created_at: string;
   table_name: string;
   record_id: string;
   action: AuditAction;
   actor_id: string;
   actor_name: string;
+  actor_type: AuditActorType;
+  // For agent actions, the authorizing Clerk user ID; null otherwise.
+  on_behalf_of: string | null;
   old_values: Record<string, unknown> | null;
   new_values: Record<string, unknown> | null;
 };
