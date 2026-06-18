@@ -212,7 +212,7 @@ function View() {
         if (!inGroup) return false;
       }
       if (org !== "all" && g.organization_id !== org) return false;
-      if (pm !== "all" && pmTypeLabel(g.payment_method_type) !== pm) return false;
+      if (pm !== "all" && pmTypeFilterLabel(g.payment_method_type) !== pm) return false;
       if (status !== "all" && g.status !== status) return false;
       return true;
     }).map((g) => ({ ...g, _members: memberMap[g.id] ?? [] }));
