@@ -3811,11 +3811,11 @@ function LTCRatePanel({ benefitClass }: { benefitClass: BCRow }) {
 
   // Tiers defined on the class (face amount present and not zero for non-bronze)
   const classTierFace: Record<TierKey, number | null> = {
-    bronze: benefitClass.gi_offer_cents > CENT_50K ? (benefitClass.bronze ?? null) : null,
-    silver: benefitClass.silver,
+    bronze: benefitClass.gi_offer_cents > CENT_50K ? (benefitClass.tier_bronze_cents ?? null) : null,
+    silver: benefitClass.tier_silver_cents,
     gold: benefitClass.gi_offer_cents,
-    platinum: benefitClass.platinum,
-    diamond: benefitClass.diamond,
+    platinum: benefitClass.tier_platinum_cents,
+    diamond: benefitClass.tier_diamond_cents,
   };
   const definedTiers = TIER_KEYS.filter((t) => classTierFace[t] != null && classTierFace[t]! > 0);
   const tiersWithData = new Set(visible.map((r) => r.tier));
