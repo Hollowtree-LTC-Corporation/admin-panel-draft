@@ -414,9 +414,12 @@ export const PAYMENT_LEDGER = Array.from({ length: 60 }, (_, i) => {
   const event_type = ["premium", "premium", "premium", "fee", "refund", "adjustment"][i % 6];
   // funding_source canonical values.
   const funding_source = i % 3 === 0 ? "employer_account" : "employee_account";
+  const event_date = `2025-${String((i % 12) + 1).padStart(2, "0")}-${String((i % 27) + 1).padStart(2, "0")}`;
   return {
     id: `pl_${i + 1}`,
-    event_date: `2025-${String((i % 12) + 1).padStart(2, "0")}-${String((i % 27) + 1).padStart(2, "0")}`,
+    event_date,
+    // v3.15: canonical billing-period identifier (YYYY-MM). UNIQUE(billing_group_id, billing_cycle_month).
+    billing_cycle_month: event_date.slice(0, 7),
     enrollment_id: ind.id,
     individual_name: ind.full_name,
     billing_group_id: ind.billing_group_id,
