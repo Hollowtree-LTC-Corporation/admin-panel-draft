@@ -409,7 +409,7 @@ function synthesize(org: typeof ORGS[number]) {
     max_age: 75,
     // LTC carrier/operational
     case_id: `CASE-${10000 + idx}`,
-    enrollment_id_carrier: `ENR-${50000 + idx}`,
+    enrollment_id_carrier: 50000 + idx,
     form_number: "LTC-2024-A",
     agent_number: `AGT-${1000 + idx}`,
     // benefit_system set above with snake_case canonical value
