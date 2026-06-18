@@ -139,7 +139,8 @@ function View() {
                 <div className="mt-1"><Pill tone={m.status === "not_an_employee" ? "ok" : m.status === "employee_added" ? "info" : "warn"}>{m.status}</Pill></div>
               </TCell>
               <TCell>{m.status === "unreviewed" ? "—" : (m.reviewed_by ?? "—")}</TCell>
-              <TCell>{m.status === "unreviewed" ? "—" : (m.reviewed_at ?? "—")}</TCell>
+              <TCell>{m.status === "unreviewed" ? "—" : fmtReviewedAt(m.reviewed_at)}</TCell>
+
             </TRow>
           ))}
         </tbody>
