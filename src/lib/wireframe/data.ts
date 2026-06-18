@@ -207,7 +207,7 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     id: `ind_${n}`,
     full_name: `Test Person ${n}`,
     email: `person${n}@example.com`,
-    personal_email: `person${n}.personal@example.net`,
+    phone: `555-0${100 + n}`,
     phone: `555-0${100 + n}`,
     organization_id: org.id,
     org_name: org.name,
