@@ -39,7 +39,8 @@ const PAYEE_LABEL: Record<PayeeType, string> = {
   house: "House", internal_rep: "Internal Rep", channel_partner: "Channel Partner", override: "Override",
 };
 const PAYMENT_LABEL: Record<PaymentMethodSetting, string> = {
-  hollowtree_paid: "Hollowtree-paid", carrier_direct: "Carrier-direct",
+  hollowtree_paid: "Hollowtree Paid",
+  carrier_direct: "Carrier Direct",
 };
 
 const carrierProductLabel = (cpId: string) => {
