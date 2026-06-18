@@ -36,7 +36,7 @@ type Draft = {
   enrollment_start_date: string;
   enrollment_end_date: string;
   default_effective_date: string;
-  carrier: string;
+  carrier_id: string;
   gi_eligible: boolean;
   status: "upcoming" | "open" | "closed";
   notes: string;
