@@ -455,7 +455,7 @@ function OrgDetail() {
   // Per-org benefit classes; synthesize a default for orgs with none
   let classes = BENEFIT_CLASSES.filter((b) => b.organization_id === id);
   if (product === "LTC" && classes.length === 0) {
-    classes = [{ id: `bc_synth_${id}`, organization_id: id, name: "All Employees", gi_offer_cents: 15000000, bronze: 0, silver: 7500000, gold: 15000000, platinum: 20000000, diamond: 25000000, is_default: true }];
+    classes = [{ id: `bc_synth_${id}`, organization_id: id, name: "All Employees", gi_offer_cents: 15000000, bronze: 0, silver: 7500000, gold: 15000000, platinum: 20000000, diamond: 25000000, is_default: true, spouse_gi_offer_cents: null }];
   }
 
   // Summary metrics
@@ -3507,6 +3507,9 @@ function BenefitClassDrawerBody({
         </div>
       </Field>
 
+      <SpouseGiOfferField initial={initial?.spouse_gi_offer_cents ?? null} />
+
+
       {showBronze ? (
         <Field label="Bronze">
           <div className="flex items-center gap-2">
@@ -3574,6 +3577,34 @@ function BenefitClassDrawerBody({
         Org: {orgName}. Values are stored as cents on save.
       </div>
     </div>
+  );
+}
+
+/** v16: Spouse GI Offer field (Layer 2 of LTC spouse cap waterfall). */
+function SpouseGiOfferField({ initial }: { initial: number | null }) {
+  const [val, setVal] = useState(centsToDollarStr(initial));
+  const cents = dollarsToCents(val);
+  const populated = cents != null && cents > 0;
+  const invalid = populated && cents % 500000 !== 0; // $5K increments (carrier convention)
+  return (
+    <Field label="Spouse GI Offer (optional)">
+      <DollarInput value={val} onChange={setVal} error={invalid ? "Spouse GI must be in $5K increments" : undefined} />
+      <div className="text-[11px] text-black/55 mt-1">
+        Most groups do not offer spouse GI. Populate only when the employer group has
+        specifically negotiated a spouse GI offer with the carrier. Atypical.
+      </div>
+      <div className="text-[11px] mt-1">
+        {populated ? (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800">
+            Spouse GI on — Layer 2 of cap waterfall active for this class.
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/5 border border-black/10 text-black/60">
+            Spouse GI off — spouses default to SI-only up to employee face.
+          </span>
+        )}
+      </div>
+    </Field>
   );
 }
 
@@ -3662,7 +3693,7 @@ function BenefitClassesTab({ classes, onNew, onEdit, canEdit, canCreate }: {
                   <TCell>
                     {bronzeAbsent
                       ? <span className="text-black/30 italic">---</span>
-                      : formatCents(c.bronze)}
+                      : formatCents(c.bronze ?? 0)}
                   </TCell>
                   <TCell>{formatCents(c.silver)}</TCell>
                   <TCell>{formatCents(c.gi_offer_cents)} <span className="text-[10px] text-black/40">(= GI)</span></TCell>

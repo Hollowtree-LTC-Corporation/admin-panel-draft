@@ -4,7 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Btn, ProductBadge } from "@/components/wireframe/Bits";
 import { Switch } from "@/components/ui/switch";
 import { ChevronLeft, ChevronDown, ChevronRight, Lock, Pencil, AlertTriangle, Copy, ExternalLink, Eye, EyeOff } from "lucide-react";
-import { INDIVIDUALS, ORGS, BILLING_GROUPS, formatCents, DEPARTURE_REASON_LABELS, type DepartureReason } from "@/lib/wireframe/data";
+import { INDIVIDUALS, ORGS, BILLING_GROUPS, formatCents, DEPARTURE_REASON_LABELS, getEzValueForIndividual, type DepartureReason, type EzValueStatus } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 
 export const Route = createFileRoute("/individuals/$id")({ component: IndividualDetail });
@@ -314,6 +314,7 @@ function IndividualDetail() {
         {isLTC ? (
           <>
             <LTCCoverageSection i={i} readOnly={readOnly} setConfirm={setConfirm} />
+            <EZValueSection i={i} />
             <PaymentSection i={i} bg={bg} readOnly={readOnly} />
             <ContributionSection i={i} readOnly={readOnly} />
             <EmploymentStatusSection i={i} onOpenDeparture={() => setDepartureOpen(true)} />
@@ -532,7 +533,14 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
             : <IssueTypeBadge value={i.issue_type} />}
         </RField>
         <RField label="Employee Plan Selected" value={i.employee_plan_selected || "—"} />
-        <RField label="Face Amount" value={unfunded ? "—" : formatCents(i.face_amount_cents)} />
+        <RField label="Face Amount">
+          {unfunded ? "—" : (
+            <div>
+              <div>{formatCents(i.face_amount_cents)}</div>
+              {i.relationship_type === "spouse" ? <EffectiveSpouseCapBreakdown i={i} /> : null}
+            </div>
+          )}
+        </RField>
         <RField label="Monthly Premium" value={unfunded ? "—" : formatCents(i.monthly_premium_cents)} />
 
         <RField label="Premium Structure" editing={editing}>
@@ -1575,6 +1583,250 @@ function ConvertCoverageModal({ i, onClose }: { i: Detail; onClose: () => void }
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ========================================================================== */
+/* v16: EZ Value Rider section (LTC, Trustmark inflation protection)          */
+/* One-way state machine. Opt-out is permanent. Not available in MA.          */
+/* ========================================================================== */
+type EzValueModal = null | { kind: "optout" } | { kind: "activate" };
+
+function EZValueSection({ i }: { i: any }) {
+  const { role } = useStore();
+  const isAdmin = role === "admin";
+  const isOps = role === "ops";
+  const readOnly = role === "read-only";
+  const isMA = i.state === "MA";
+  const initial = getEzValueForIndividual({ id: i.id, state: i.state, product: "LTC" });
+  const [status, setStatus] = useState<EzValueStatus>(initial.status);
+  const [optedOutAt, setOptedOutAt] = useState<string | null>(initial.opted_out_at);
+  const [modal, setModal] = useState<EzValueModal>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 3200);
+  }
+
+  return (
+    <SectionCard title="EZ Value Rider" defaultOpen>
+      <div className="space-y-2">
+        {status === "active" && (
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-100 text-emerald-800">EZ Value Active</span>
+              <span className="ml-2 text-sm text-black/80">— annual inflation protection running.</span>
+              <div className="text-[11px] text-black/55 mt-1">Premium increases $1/week each year. Opt-out is permanent.</div>
+            </div>
+            {!readOnly && (
+              <Btn variant="secondary" onClick={() => setModal({ kind: "optout" })}>Opt Out…</Btn>
+            )}
+          </div>
+        )}
+
+        {status === "opted_out" && (
+          <div>
+            <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-200 text-stone-700">EZ Value Opted Out</span>
+            <span className="ml-2 text-sm text-black/60">— Opted out on {fmtDateTime(optedOutAt)}.</span>
+            <div className="text-[11px] text-black/55 mt-1">Opt-out is permanent. EZ Value cannot be resumed for this enrollee.</div>
+          </div>
+        )}
+
+        {status === "not_elected" && (
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-black/5 text-black/70 border border-black/10">EZ Value Not Elected</span>
+              <span className="ml-2 text-sm text-black/80">— enrollee declined during enrollment.</span>
+              <div className="text-[11px] text-black/55 mt-1">Activation outside enrollment requires carrier approval (admin override).</div>
+            </div>
+            {!readOnly && (
+              <Btn
+                variant="secondary"
+                onClick={() => { if (isAdmin) setModal({ kind: "activate" }); }}
+                disabled={!isAdmin}
+                title={!isAdmin && isOps ? "Admin override required" : undefined}
+              >
+                Activate…
+              </Btn>
+            )}
+          </div>
+        )}
+
+        {status === "not_available" && (
+          <div>
+            <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-100 text-amber-800">EZ Value Not Available</span>
+            <div className="text-[11px] text-black/55 mt-1">
+              {isMA ? "Not offered in Massachusetts." : "Product does not support EZ Value."}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {modal?.kind === "optout" && (
+        <EZValueOptOutModal
+          onClose={() => setModal(null)}
+          onConfirm={() => {
+            setStatus("opted_out");
+            setOptedOutAt(new Date().toISOString());
+            setModal(null);
+            showToast("EZ Value opt-out recorded. This action cannot be undone.");
+          }}
+        />
+      )}
+      {modal?.kind === "activate" && (
+        <EZValueActivateModal
+          onClose={() => setModal(null)}
+          onConfirm={() => {
+            setStatus("active");
+            setOptedOutAt(null);
+            setModal(null);
+            showToast("EZ Value activated.");
+          }}
+        />
+      )}
+
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 bg-stone-900 text-white text-xs px-3 py-2 rounded shadow-lg">
+          {toast}
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
+function fmtDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+}
+
+function EZValueOptOutModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  const [ack, setAck] = useState(false);
+  const [reason, setReason] = useState("");
+  const valid = ack && reason.trim().length >= 10;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-5">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-full bg-red-50 text-red-600"><AlertTriangle className="h-5 w-5" /></div>
+          <div className="flex-1">
+            <h3 className="text-base font-semibold text-gray-900">Opt this enrollee out of EZ Value?</h3>
+            <p className="text-sm text-gray-700 mt-2">
+              EZ Value opt-out is <b>permanent</b>. Once recorded, this enrollee cannot resume EZ Value for the duration of this certificate. Annual inflation protection will stop at the next renewal cycle.
+            </p>
+            <p className="text-sm text-gray-700 mt-2">
+              Trustmark requires opt-out to be acknowledged in writing. Confirm you have the written acknowledgment on file before proceeding.
+            </p>
+            <label className="flex items-start gap-2 mt-3 text-xs text-gray-800">
+              <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="mt-0.5" />
+              <span>I confirm I have the enrollee&rsquo;s written acknowledgment of opt-out on file.</span>
+            </label>
+            <div className="mt-3">
+              <div className="text-xs text-gray-600 mb-1">Reason for opt-out <span className="text-red-600">*</span></div>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                placeholder="Min 10 characters."
+                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <Btn onClick={onClose}>Cancel</Btn>
+          <Btn variant="danger" disabled={!valid} onClick={onConfirm}>Record Permanent Opt-Out</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EZValueActivateModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  const [reason, setReason] = useState("");
+  const valid = reason.trim().length >= 5;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-5">
+        <h3 className="text-base font-semibold text-gray-900">Activate EZ Value for this enrollee?</h3>
+        <p className="text-sm text-gray-700 mt-2">
+          Activating EZ Value outside the enrollment window requires carrier approval. Confirm Trustmark has approved this before proceeding.
+        </p>
+        <div className="mt-3">
+          <div className="text-xs text-gray-600 mb-1">Activation rationale / Trustmark approval reference <span className="text-red-600">*</span></div>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+          />
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <Btn onClick={onClose}>Cancel</Btn>
+          <Btn variant="primary" disabled={!valid} onClick={onConfirm}>Activate EZ Value</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ========================================================================== */
+/* v16: Effective Spouse Cap Breakdown (LTC, spouse rows only)                */
+/* ========================================================================== */
+function EffectiveSpouseCapBreakdown({ i }: { i: any }) {
+  const [open, setOpen] = useState(false);
+  // Hardcoded demo scenarios per spec.
+  // - ind_7 (Trustmark spouse): no carrier hard cap, employee face binding
+  // - ind_14 (Transamerica NE spouse): state 50% rule binding
+  const isNE = i.state === "NE";
+  // Default: Trustmark-style (no L1 cap). Toggle to Transamerica NE if state matches.
+  const scenario = isNE ? "ne_state_binding" : (i.id === "ind_14" ? "ne_state_binding" : "ee_face_binding");
+
+  let rows: Array<{ label: string; value: string; binding?: boolean; muted?: boolean }>;
+  let effective: string;
+  if (scenario === "ee_face_binding") {
+    rows = [
+      { label: "Layer 1 — Carrier hard cap", value: "— (no carrier hard cap)", muted: true },
+      { label: "Layer 2 — Group spouse GI offer", value: "— (not offered)", muted: true },
+      { label: "Layer 3a — Employee face amount", value: "$50,000", binding: true },
+      { label: "Layer 3b — State cap", value: "— (no state override)", muted: true },
+    ];
+    effective = "$50,000";
+  } else {
+    rows = [
+      { label: "Layer 1 — Carrier hard cap", value: "$100,000 (Transamerica UL10)" },
+      { label: "Layer 2 — Group spouse GI offer", value: "— (not offered)", muted: true },
+      { label: "Layer 3a — Employee face amount", value: "$50,000" },
+      { label: "Layer 3b — State cap (NE 50%)", value: "$25,000", binding: true },
+    ];
+    effective = "$25,000";
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="text-[11px] text-[#0a3d3e] hover:underline inline-flex items-center gap-1"
+      >
+        Effective Cap Breakdown {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+      </button>
+      {open && (
+        <div className="mt-1 p-2 bg-[#f7f3eb] border border-black/10 rounded text-[11px] font-mono leading-relaxed">
+          <div className="mb-1">Effective spouse cap: <b>{effective}</b></div>
+          <div className="text-black/60 mb-1">Derived from:</div>
+          {rows.map((r) => (
+            <div key={r.label} className={r.muted ? "text-black/45" : "text-black/80"}>
+              {"  "}{r.label.padEnd(36, " ")}{r.value}
+              {r.binding ? <span className="ml-2 text-amber-700">← binding</span> : null}
+            </div>
+          ))}
+          <div className="mt-1">Effective: LEAST = <b>{effective}</b></div>
+        </div>
+      )}
     </div>
   );
 }

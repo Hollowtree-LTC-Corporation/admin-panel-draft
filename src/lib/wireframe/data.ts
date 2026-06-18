@@ -23,10 +23,16 @@ export const ORGS: Array<{
 
 export const LTC_FACE_TIERS_CENTS = [2500000, 5000000, 7500000, 10000000, 15000000, 20000000, 25000000]; // $25K..$250K
 
-export const BENEFIT_CLASSES = [
-  { id: "bc_1", organization_id: "org_3", name: "Class A — Full Time", gi_offer_cents: 200000, bronze: 50000, silver: 100000, gold: 150000, platinum: 200000, diamond: 250000, is_default: true },
-  { id: "bc_2", organization_id: "org_3", name: "Class B — Part Time", gi_offer_cents: 100000, bronze: 25000, silver: 50000, gold: 75000, platinum: 100000, diamond: 125000, is_default: false },
-  { id: "bc_3", organization_id: "org_5", name: "Default Class", gi_offer_cents: 150000, bronze: 50000, silver: 75000, gold: 100000, platinum: 150000, diamond: 200000, is_default: true },
+// v16: spouse_gi_offer_cents added (nullable). Layer 2 of LTC spouse cap waterfall.
+// Populated only when employer group has specifically negotiated spouse GI with carrier (atypical).
+export const BENEFIT_CLASSES: Array<{
+  id: string; organization_id: string; name: string; gi_offer_cents: number;
+  bronze: number | null; silver: number; gold: number; platinum: number; diamond: number;
+  is_default: boolean; spouse_gi_offer_cents: number | null;
+}> = [
+  { id: "bc_1", organization_id: "org_3", name: "Class A — Full Time", gi_offer_cents: 200000, bronze: 50000, silver: 100000, gold: 150000, platinum: 200000, diamond: 250000, is_default: true, spouse_gi_offer_cents: 2500000 },
+  { id: "bc_2", organization_id: "org_3", name: "Class B — Part Time", gi_offer_cents: 100000, bronze: 25000, silver: 50000, gold: 75000, platinum: 100000, diamond: 125000, is_default: false, spouse_gi_offer_cents: null },
+  { id: "bc_3", organization_id: "org_5", name: "Default Class", gi_offer_cents: 150000, bronze: 50000, silver: 75000, gold: 100000, platinum: 150000, diamond: 200000, is_default: true, spouse_gi_offer_cents: null },
 ];
 
 export const COVERAGE_STATUSES = ["not_started", "in_progress", "purchased", "active", "suspended", "canceled", "lapsed"] as const;
@@ -518,6 +524,10 @@ export type CarrierConstraint = {
   increment: number;
   tier_floor_cents: number;
   round_preference_threshold_cents: number;
+  // v16: Layer 1 of spouse cap waterfall; nullable (e.g., Trustmark has no hard cap).
+  spouse_max_face_cents: number | null;
+  // v16: Carrier hard cap on child face; Transamerica caps to MIN(this, applicant face).
+  child_max_face_cents: number | null;
   effective_from: string;
   effective_to: string | null;
   verified_by: string;
@@ -527,13 +537,17 @@ export type CarrierConstraint = {
 };
 
 export const CARRIER_CONSTRAINTS: CarrierConstraint[] = [
-  { id: "cc_1", carrier_product_id: "cp_6", si_max_cents: 50000000, increment: 2500000, tier_floor_cents: 10000000, round_preference_threshold_cents: 1000000, effective_from: "2024-01-01", effective_to: null, verified_by: "Guy Livingstone", last_verified: "2025-08-15", source: "Trustmark Producer Guide 2024", notes: "Placeholder values, not validated production rules." },
-  { id: "cc_2", carrier_product_id: "cp_7", si_max_cents: 30000000, increment: 1000000, tier_floor_cents: 5000000, round_preference_threshold_cents: 500000, effective_from: "2024-01-01", effective_to: null, verified_by: "Guy Livingstone", last_verified: "2025-08-15", source: "Trustmark GTL Producer Guide 2024", notes: "Placeholder values." },
-  { id: "cc_3", carrier_product_id: "cp_8", si_max_cents: 50000000, increment: 2500000, tier_floor_cents: 10000000, round_preference_threshold_cents: 1000000, effective_from: "2024-01-01", effective_to: null, verified_by: "Casey Rep", last_verified: "2025-07-20", source: "Transamerica TransElite Producer Manual", notes: "Placeholder values." },
-  { id: "cc_4", carrier_product_id: "cp_9", si_max_cents: 25000000, increment: 1000000, tier_floor_cents: 5000000, round_preference_threshold_cents: 500000, effective_from: "2024-01-01", effective_to: null, verified_by: "Casey Rep", last_verified: "2025-07-20", source: "Transamerica UL10 Producer Manual", notes: "Placeholder values." },
+  { id: "cc_1", carrier_product_id: "cp_6", si_max_cents: 50000000, increment: 2500000, tier_floor_cents: 10000000, round_preference_threshold_cents: 1000000, spouse_max_face_cents: null, child_max_face_cents: null, effective_from: "2024-01-01", effective_to: null, verified_by: "Guy Livingstone", last_verified: "2025-08-15", source: "Trustmark Producer Guide 2024", notes: "Placeholder values, not validated production rules." },
+  { id: "cc_2", carrier_product_id: "cp_7", si_max_cents: 30000000, increment: 1000000, tier_floor_cents: 5000000, round_preference_threshold_cents: 500000, spouse_max_face_cents: null, child_max_face_cents: null, effective_from: "2024-01-01", effective_to: null, verified_by: "Guy Livingstone", last_verified: "2025-08-15", source: "Trustmark GTL Producer Guide 2024", notes: "Placeholder values." },
+  { id: "cc_3", carrier_product_id: "cp_8", si_max_cents: 50000000, increment: 2500000, tier_floor_cents: 10000000, round_preference_threshold_cents: 1000000, spouse_max_face_cents: 10000000, child_max_face_cents: 2500000, effective_from: "2024-01-01", effective_to: null, verified_by: "Casey Rep", last_verified: "2025-07-20", source: "Transamerica TransElite Producer Manual", notes: "Placeholder values." },
+  { id: "cc_4", carrier_product_id: "cp_9", si_max_cents: 25000000, increment: 1000000, tier_floor_cents: 5000000, round_preference_threshold_cents: 500000, spouse_max_face_cents: 10000000, child_max_face_cents: 2500000, effective_from: "2024-01-01", effective_to: null, verified_by: "Casey Rep", last_verified: "2025-07-20", source: "Transamerica UL10 Producer Manual", notes: "Placeholder values." },
 ];
 
 export type RiderAvailability = "available" | "not_available" | "requires_state_proposal";
+// v16: documents whether the source carrier form treats a rider as inherent (bundled
+// into product) or elected (form checkbox per insured). Reference only — Hollowtree
+// bundles the richest rider package at the org level regardless.
+export type RiderType = "inherent" | "elected";
 export type CarrierRiderAvailability = {
   id: string;
   carrier_product_id: string;
@@ -541,6 +555,7 @@ export type CarrierRiderAvailability = {
   rider_code: string;
   rider_full_name: string;
   available: RiderAvailability;
+  rider_type: RiderType;
   effective_from: string | null;
   effective_to: string | null;
   last_verified: string | null;
@@ -550,15 +565,16 @@ export type CarrierRiderAvailability = {
 };
 
 export const CARRIER_RIDER_AVAILABILITY: CarrierRiderAvailability[] = [
-  { id: "cra_1", carrier_product_id: "cp_6", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark NY Filing 2024", notes: "" },
-  { id: "cra_2", carrier_product_id: "cp_6", state: "CA", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark CA Filing 2024", notes: "" },
-  { id: "cra_3", carrier_product_id: "cp_6", state: "FL", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark FL Filing 2024", notes: "" },
-  { id: "cra_4", carrier_product_id: "cp_6", state: "NY", rider_code: "CI", rider_full_name: "Chronic Illness Rider", available: "requires_state_proposal", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark NY Filing 2024", notes: "Requires state proposal review before issue." },
-  { id: "cra_5", carrier_product_id: "cp_6", state: "CA", rider_code: "CI", rider_full_name: "Chronic Illness Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark CA Filing 2024", notes: "" },
-  { id: "cra_6", carrier_product_id: "cp_8", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "not_available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica NY Filing 2024", notes: "Not filed in NY." },
-  { id: "cra_7", carrier_product_id: "cp_8", state: "CA", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica CA Filing 2024", notes: "" },
-  { id: "cra_8", carrier_product_id: "cp_9", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "not_available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica NY Filing 2024", notes: "" },
-  { id: "cra_9", carrier_product_id: "cp_9", state: "TX", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica TX Filing 2024", notes: "" },
+  // Trustmark L-205 (UL & LifeEvents) — elected on the carrier form per v16 spec.
+  { id: "cra_1", carrier_product_id: "cp_6", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", rider_type: "elected", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark NY Filing 2024", notes: "" },
+  { id: "cra_2", carrier_product_id: "cp_6", state: "CA", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", rider_type: "elected", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark CA Filing 2024", notes: "" },
+  { id: "cra_3", carrier_product_id: "cp_6", state: "FL", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", rider_type: "elected", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark FL Filing 2024", notes: "" },
+  { id: "cra_4", carrier_product_id: "cp_6", state: "NY", rider_code: "CI", rider_full_name: "Chronic Illness Rider", available: "requires_state_proposal", rider_type: "elected", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark NY Filing 2024", notes: "Requires state proposal review before issue." },
+  { id: "cra_5", carrier_product_id: "cp_6", state: "CA", rider_code: "CI", rider_full_name: "Chronic Illness Rider", available: "available", rider_type: "elected", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark CA Filing 2024", notes: "" },
+  { id: "cra_6", carrier_product_id: "cp_8", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "not_available", rider_type: "inherent", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica NY Filing 2024", notes: "Not filed in NY." },
+  { id: "cra_7", carrier_product_id: "cp_8", state: "CA", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", rider_type: "inherent", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica CA Filing 2024", notes: "" },
+  { id: "cra_8", carrier_product_id: "cp_9", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "not_available", rider_type: "inherent", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica NY Filing 2024", notes: "" },
+  { id: "cra_9", carrier_product_id: "cp_9", state: "TX", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", rider_type: "inherent", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica TX Filing 2024", notes: "" },
 ];
 
 // 5 canonical PolicyStatus CHECK values (renamed from `status` to `enrollment_status` on Policy).
@@ -1162,3 +1178,84 @@ export function formatCents(cents: number): string {
   const n = (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
   return n;
 }
+
+// ============================================================================
+// v16 additions — EZ Value rider state, Enrollment Question Templates,
+// Carrier Spouse State Caps. All LTC-only reference data.
+// ============================================================================
+
+// --- F1: EZ Value rider (Trustmark inflation protection) ----------------------
+// One-way state machine on individuals. Default 'not_elected'. Opt-out is
+// permanent and irreversible. Not available in Massachusetts.
+export type EzValueStatus = "active" | "opted_out" | "not_elected" | "not_available";
+export type EzValueRow = { status: EzValueStatus; opted_out_at: string | null };
+
+// Deterministic mock — distributes 4 LTC test individuals across all 4 states.
+// MA individuals always show 'not_available' (state law override).
+export function getEzValueForIndividual(ind: { id: string; state?: string | null; product?: string }): EzValueRow {
+  if ((ind.product ?? "LTC") !== "LTC") return { status: "not_elected", opted_out_at: null };
+  if (ind.state === "MA") return { status: "not_available", opted_out_at: null };
+  const n = parseInt(String(ind.id).replace(/\D/g, ""), 10) || 0;
+  const mod = n % 4;
+  if (mod === 0) return { status: "active", opted_out_at: null };
+  if (mod === 1) return { status: "opted_out", opted_out_at: "2026-03-14T15:22:00Z" };
+  if (mod === 2) return { status: "not_elected", opted_out_at: null };
+  return { status: "not_available", opted_out_at: null };
+}
+
+// --- F2: Enrollment Question Templates --------------------------------------
+// Read-only reference data. Phase A is sparse — Phase B will load ~150 rows.
+export type QuestionTier = "eligibility" | "base" | "si";
+export type QuestionAppliesTo = "employee" | "spouse" | "children";
+export type EnrollmentQuestionTemplate = {
+  id: string;
+  carrier_product_id: string;
+  carrier_product_label: string;
+  state_code: string | null; // null = default (all states)
+  tier: QuestionTier;
+  question_code: string;
+  question_text: string;
+  applies_to: QuestionAppliesTo[];
+  display_order: number;
+  requires_detail: boolean;
+  active: boolean;
+};
+
+export const ENROLLMENT_QUESTION_TEMPLATES: EnrollmentQuestionTemplate[] = [
+  // Trustmark GTL-121 — default (all states)
+  { id: "eqt_1", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: null, tier: "base", question_code: "TOBACCO_12MO", question_text: "Has the proposed insured used any form of tobacco or nicotine in the past 12 months?", applies_to: ["employee", "spouse"], display_order: 10, requires_detail: false, active: true },
+  { id: "eqt_2", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: null, tier: "base", question_code: "REPLACEMENT", question_text: "Is this insurance intended to replace any existing life or disability coverage?", applies_to: ["employee", "spouse"], display_order: 20, requires_detail: true, active: true },
+  { id: "eqt_3", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: null, tier: "si", question_code: "MGI_DISABLED", question_text: "Are you currently disabled or unable to perform the duties of your occupation?", applies_to: ["employee", "spouse"], display_order: 110, requires_detail: false, active: true },
+  { id: "eqt_4", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: null, tier: "si", question_code: "MGI_PHYSICIAN_6MO", question_text: "In the past 6 months, have you been treated by a physician or hospitalized for any condition?", applies_to: ["employee", "spouse"], display_order: 120, requires_detail: true, active: true },
+  { id: "eqt_5", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: null, tier: "si", question_code: "MGI_HEALTH_5YR", question_text: "In the past 5 years, have you been diagnosed with or treated for cancer, heart disease, stroke, diabetes, or HIV/AIDS?", applies_to: ["employee", "spouse"], display_order: 130, requires_detail: true, active: true },
+  { id: "eqt_6", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: null, tier: "eligibility", question_code: "ACTIVELY_AT_WORK", question_text: "Is the proposed insured actively at work performing the regular duties of their job?", applies_to: ["employee"], display_order: 1, requires_detail: false, active: true },
+
+  // Trustmark GTL-121 — California variant (omits HIV per CA law)
+  { id: "eqt_7", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: "CA", tier: "base", question_code: "TOBACCO_12MO", question_text: "Has the proposed insured used any form of tobacco or nicotine in the past 12 months?", applies_to: ["employee", "spouse"], display_order: 10, requires_detail: false, active: true },
+  { id: "eqt_8", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: "CA", tier: "base", question_code: "REPLACEMENT", question_text: "Is this insurance intended to replace any existing life or disability coverage?", applies_to: ["employee", "spouse"], display_order: 20, requires_detail: true, active: true },
+  { id: "eqt_9", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: "CA", tier: "si", question_code: "MGI_DISABLED", question_text: "Are you currently disabled or unable to perform the duties of your occupation?", applies_to: ["employee", "spouse"], display_order: 110, requires_detail: false, active: true },
+  { id: "eqt_10", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: "CA", tier: "si", question_code: "MGI_PHYSICIAN_6MO", question_text: "In the past 6 months, have you been treated by a physician or hospitalized for any condition?", applies_to: ["employee", "spouse"], display_order: 120, requires_detail: true, active: true },
+  { id: "eqt_11", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: "CA", tier: "si", question_code: "MGI_HEALTH_5YR_CA", question_text: "In the past 5 years, have you been diagnosed with or treated for cancer, heart disease, stroke, or diabetes?", applies_to: ["employee", "spouse"], display_order: 130, requires_detail: true, active: true },
+  { id: "eqt_12", carrier_product_id: "cp_7", carrier_product_label: "Trustmark GTL-121", state_code: "CA", tier: "eligibility", question_code: "ACTIVELY_AT_WORK", question_text: "Is the proposed insured actively at work performing the regular duties of their job?", applies_to: ["employee"], display_order: 1, requires_detail: false, active: true },
+];
+
+// --- F3: Carrier Spouse State Caps ------------------------------------------
+// Layer 3b of the spouse cap waterfall. Sparse — most states have no override.
+export type SpouseCapBasis = "employee_face" | "employee_gi";
+export type CarrierSpouseStateCap = {
+  id: string;
+  carrier_product_id: string;
+  carrier_product_label: string;
+  state_code: string;
+  spouse_cap_pct: number; // 0.50 = 50%
+  cap_basis: SpouseCapBasis;
+  effective_from: string;
+  notes: string;
+};
+
+export const CARRIER_SPOUSE_STATE_CAPS: CarrierSpouseStateCap[] = [
+  { id: "cssc_1", carrier_product_id: "cp_9", carrier_product_label: "Transamerica UL10", state_code: "NE", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", notes: "NE 50% rule per Transamerica response 2026-06-18" },
+  { id: "cssc_2", carrier_product_id: "cp_9", carrier_product_label: "Transamerica UL10", state_code: "PR", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", notes: "PR 50% rule per Transamerica response 2026-06-18" },
+  { id: "cssc_3", carrier_product_id: "cp_8", carrier_product_label: "Transamerica TransElite", state_code: "NE", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", notes: "NE 50% rule per Transamerica response 2026-06-18" },
+  { id: "cssc_4", carrier_product_id: "cp_8", carrier_product_label: "Transamerica TransElite", state_code: "PR", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", notes: "PR 50% rule per Transamerica response 2026-06-18" },
+];

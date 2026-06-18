@@ -8,6 +8,7 @@ import {
 import {
   CARRIERS, CARRIER_PRODUCTS, CARRIER_COMMISSION_SCHEDULES, COMMISSION_RATE_TIERS,
   CARRIER_CONSTRAINTS, CARRIER_RIDER_AVAILABILITY,
+  CARRIER_SPOUSE_STATE_CAPS, ENROLLMENT_QUESTION_TEMPLATES,
   formatCents,
   type Carrier, type CarrierType, type CarrierProduct, type CarrierCommissionSchedule,
   type ScheduleType, type CarrierConstraint, type CarrierRiderAvailability,
@@ -505,6 +506,10 @@ function ProductDrawerBody({
   const [showNewRider, setShowNewRider] = useState(false);
   const [riderStateFilter, setRiderStateFilter] = useState<string>("all");
   const [riderAvailFilter, setRiderAvailFilter] = useState<RiderAvailability | "all">("all");
+  // v16: rider_type filter (inherent vs elected)
+  const [riderTypeFilter, setRiderTypeFilter] = useState<"all" | "inherent" | "elected">("all");
+  // v16: sub-tab inside Constraints section — 'constraints' | 'spouse_caps'
+  const [constraintsTab, setConstraintsTab] = useState<"constraints" | "spouse_caps">("constraints");
 
   const stateOptions = useMemo(() => {
     const set = new Set(riders.map((r) => r.state));
@@ -513,7 +518,8 @@ function ProductDrawerBody({
 
   const filteredRiders = riders.filter((r) =>
     (riderStateFilter === "all" || r.state === riderStateFilter) &&
-    (riderAvailFilter === "all" || r.available === riderAvailFilter)
+    (riderAvailFilter === "all" || r.available === riderAvailFilter) &&
+    (riderTypeFilter === "all" || r.rider_type === riderTypeFilter)
   );
 
   return (
@@ -670,78 +676,123 @@ function ProductDrawerBody({
         </div>
       ) : null}
 
-      {/* Section 4: Constraints — LTC only */}
+      {/* Section 4: Constraints (+ v16 Spouse State Caps sub-tab) — LTC only */}
       {productMode === "LTC" && mode === "view" ? (
         <div>
           <div className="flex items-center justify-between mb-2">
             <div className="text-[10px] uppercase tracking-wider text-black/50">Constraints</div>
-            <Btn variant="secondary" onClick={() => setShowNewConstraint((v) => !v)}>
-              <Plus className="h-3 w-3" /> New Constraint
-            </Btn>
-          </div>
-          <div className="text-[11px] text-black/50 mb-2">
-            Add a new constraint when carrier rules change. Set effective to on the prior row to today.
+            {constraintsTab === "constraints" ? (
+              <Btn variant="secondary" onClick={() => setShowNewConstraint((v) => !v)}>
+                <Plus className="h-3 w-3" /> New Constraint
+              </Btn>
+            ) : null}
           </div>
 
-          {showNewConstraint ? (
-            <NewConstraintForm
-              productId={product.id}
-              onCancel={() => setShowNewConstraint(false)}
-              onSave={(c) => { onAddConstraint(c); setShowNewConstraint(false); }}
-            />
-          ) : null}
-
-          <div className="bg-white border border-black/10 rounded-md overflow-hidden">
-            <table className="w-full text-xs">
-              <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
-                <tr>
-                  <th className="text-left font-medium px-3 py-2">SI Max</th>
-                  <th className="text-left font-medium px-3 py-2">Increment</th>
-                  <th className="text-left font-medium px-3 py-2">Tier Floor</th>
-                  <th className="text-left font-medium px-3 py-2">Round Threshold</th>
-                  <th className="text-left font-medium px-3 py-2">Effective</th>
-                  <th className="text-left font-medium px-3 py-2">Last Verified</th>
-                </tr>
-              </thead>
-              <tbody>
-                {constraints.length === 0 ? (
-                  <tr><td colSpan={6} className="px-3 py-3 text-black/50 italic">No constraints recorded.</td></tr>
+          {/* Sub-tabs: Constraints | Spouse State Caps (v16) */}
+          <div className="inline-flex rounded-md border border-black/15 overflow-hidden text-[11px] mb-2">
+            {(["constraints", "spouse_caps"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setConstraintsTab(t)}
+                className={`px-3 py-1 ${constraintsTab === t ? "bg-[#0a3d3e] text-white" : "bg-white text-[#0a3d3e] hover:bg-black/5"}`}
+              >
+                {t === "constraints" ? "Constraints" : "Spouse State Caps"}
+                {t === "spouse_caps" ? (
+                  <span className="ml-1 text-[9px] px-1 rounded bg-black/10 text-black/60 align-middle">Read-only</span>
                 ) : null}
-                {constraints.map((c) => {
-                  const expanded = expandedConstraintId === c.id;
-                  return (
-                    <Fragment key={c.id}>
-                      <tr
-                        onClick={() => setExpandedConstraintId(expanded ? null : c.id)}
-                        className="border-t border-black/5 cursor-pointer hover:bg-[#f7f3eb]/60"
-                      >
-                        <td className="px-3 py-2 font-medium" title="Stored as integer cents per schema">
-                          <span className="inline-flex items-center gap-1">
-                            {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3 text-black/40" />}
-                            {formatCents(c.si_max_cents)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2" title="Stored as integer cents per schema">{formatCents(c.increment)}</td>
-                        <td className="px-3 py-2" title="Stored as integer cents per schema">{formatCents(c.tier_floor_cents)}</td>
-                        <td className="px-3 py-2" title="Stored as integer cents per schema">{formatCents(c.round_preference_threshold_cents)}</td>
-                        <td className="px-3 py-2 text-black/70">{c.effective_from} → {c.effective_to ?? "Current"}</td>
-                        <td className="px-3 py-2 text-black/70">{c.last_verified}</td>
-                      </tr>
-                      {expanded ? (
-                        <tr className="bg-[#f7f3eb]/40">
-                          <td colSpan={6} className="px-3 py-3 space-y-1 text-xs">
-                            <div><span className="text-black/50">Verified by:</span> {c.verified_by}</div>
-                            <div><span className="text-black/50">Source:</span> {c.source}</div>
-                            <div><span className="text-black/50">Notes:</span> {c.notes || "—"}</div>
-                          </td>
-                        </tr>
-                      ) : null}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+              </button>
+            ))}
           </div>
+
+          {constraintsTab === "constraints" ? (
+            <>
+              <div className="text-[11px] text-black/50 mb-2">
+                Add a new constraint when carrier rules change. Set effective to on the prior row to today.
+              </div>
+
+              {showNewConstraint ? (
+                <NewConstraintForm
+                  productId={product.id}
+                  onCancel={() => setShowNewConstraint(false)}
+                  onSave={(c) => { onAddConstraint(c); setShowNewConstraint(false); }}
+                />
+              ) : null}
+
+              <div className="bg-white border border-black/10 rounded-md overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
+                    <tr>
+                      <th className="text-left font-medium px-3 py-2">SI Max</th>
+                      <th className="text-left font-medium px-3 py-2">Increment</th>
+                      <th className="text-left font-medium px-3 py-2">Tier Floor</th>
+                      <th className="text-left font-medium px-3 py-2">Round Threshold</th>
+                      <th className="text-left font-medium px-3 py-2">Effective</th>
+                      <th className="text-left font-medium px-3 py-2">Last Verified</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {constraints.length === 0 ? (
+                      <tr><td colSpan={6} className="px-3 py-3 text-black/50 italic">No constraints recorded.</td></tr>
+                    ) : null}
+                    {constraints.map((c) => {
+                      const expanded = expandedConstraintId === c.id;
+                      return (
+                        <Fragment key={c.id}>
+                          <tr
+                            onClick={() => setExpandedConstraintId(expanded ? null : c.id)}
+                            className="border-t border-black/5 cursor-pointer hover:bg-[#f7f3eb]/60"
+                          >
+                            <td className="px-3 py-2 font-medium" title="Stored as integer cents per schema">
+                              <span className="inline-flex items-center gap-1">
+                                {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3 text-black/40" />}
+                                {formatCents(c.si_max_cents)}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2" title="Stored as integer cents per schema">{formatCents(c.increment)}</td>
+                            <td className="px-3 py-2" title="Stored as integer cents per schema">{formatCents(c.tier_floor_cents)}</td>
+                            <td className="px-3 py-2" title="Stored as integer cents per schema">{formatCents(c.round_preference_threshold_cents)}</td>
+                            <td className="px-3 py-2 text-black/70">{c.effective_from} → {c.effective_to ?? "Current"}</td>
+                            <td className="px-3 py-2 text-black/70">{c.last_verified}</td>
+                          </tr>
+                          {expanded ? (
+                            <tr className="bg-[#f7f3eb]/40">
+                              <td colSpan={6} className="px-3 py-3 space-y-2 text-xs">
+                                <div><span className="text-black/50">Verified by:</span> {c.verified_by}</div>
+                                <div><span className="text-black/50">Source:</span> {c.source}</div>
+                                <div><span className="text-black/50">Notes:</span> {c.notes || "—"}</div>
+
+                                {/* v16: Spouse and Child Caps sub-section */}
+                                <div className="mt-2 pt-2 border-t border-black/10">
+                                  <div className="text-[10px] uppercase tracking-wider text-black/50 mb-1">Spouse and Child Caps</div>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                      <div className="text-[10px] text-black/50 uppercase">Spouse Max Face</div>
+                                      <div className="inline-flex items-center gap-2">
+                                        <span>{c.spouse_max_face_cents != null ? formatCents(c.spouse_max_face_cents) : <span className="text-black/40 italic">No hard cap</span>}</span>
+                                        {c.spouse_max_face_cents != null ? <Pill tone="info">Layer 1 enforced</Pill> : null}
+                                      </div>
+                                      <div className="text-[10px] text-black/50 mt-0.5">Carrier hard cap on spouse face. Layer 1 of spouse cap waterfall. Leave blank if carrier imposes no hard cap (e.g., Trustmark).</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-[10px] text-black/50 uppercase">Child Max Face</div>
+                                      <div>{c.child_max_face_cents != null ? formatCents(c.child_max_face_cents) : <span className="text-black/40 italic">—</span>}</div>
+                                      <div className="text-[10px] text-black/50 mt-0.5">For Transamerica, child face is capped at this OR applicant face, whichever is less.</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <SpouseStateCapsPanel productId={product.id} />
+          )}
         </div>
       ) : null}
 
@@ -756,6 +807,11 @@ function ProductDrawerBody({
           </div>
           <div className="text-[11px] text-black/50 mb-2">One row per rider per state.</div>
 
+          {/* v16: contextual banner */}
+          <div className="mb-2 p-2 border border-[#0a3d3e]/20 bg-[#0a3d3e]/5 rounded text-[11px] text-[#0a3d3e]/90 leading-snug">
+            Hollowtree bundles the richest rider package at the org level via <code className="font-mono">organizations.rider_codes</code>. This <b>Rider Type</b> column documents how the source carrier form treats riders (inherent in product vs. selectable per insured). It is reference documentation; Hollowtree&rsquo;s enrollment flow does not present per-insured rider selection regardless of this value.
+          </div>
+
           <div className="flex gap-2 mb-2">
             <select className={`${FIELD_INPUT} w-28`} value={riderStateFilter} onChange={(e) => setRiderStateFilter(e.target.value)}>
               <option value="all">All states</option>
@@ -766,6 +822,11 @@ function ProductDrawerBody({
               <option value="available">Available</option>
               <option value="not_available">Not Available</option>
               <option value="requires_state_proposal">Requires State Proposal</option>
+            </select>
+            <select className={`${FIELD_INPUT} w-44`} value={riderTypeFilter} onChange={(e) => setRiderTypeFilter(e.target.value as "all" | "inherent" | "elected")}>
+              <option value="all">All rider types</option>
+              <option value="inherent">Inherent only</option>
+              <option value="elected">Elected only</option>
             </select>
           </div>
 
@@ -785,13 +846,14 @@ function ProductDrawerBody({
                   <th className="text-left font-medium px-3 py-2">Rider Name</th>
                   <th className="text-left font-medium px-3 py-2">State</th>
                   <th className="text-left font-medium px-3 py-2">Availability</th>
+                  <th className="text-left font-medium px-3 py-2">Rider Type</th>
                   <th className="text-left font-medium px-3 py-2">Effective</th>
                   <th className="text-left font-medium px-3 py-2">Last Verified</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRiders.length === 0 ? (
-                  <tr><td colSpan={6} className="px-3 py-3 text-black/50 italic">No rider rows match.</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-3 text-black/50 italic">No rider rows match.</td></tr>
                 ) : null}
                 {filteredRiders.map((r) => (
                   <tr key={r.id} className="border-t border-black/5">
@@ -799,6 +861,11 @@ function ProductDrawerBody({
                     <td className="px-3 py-2">{r.rider_full_name}</td>
                     <td className="px-3 py-2">{r.state}</td>
                     <td className="px-3 py-2"><AvailabilityPill value={r.available} /></td>
+                    <td className="px-3 py-2">
+                      {r.rider_type === "inherent"
+                        ? <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-[#0a3d3e] text-white">Inherent (bundled)</span>
+                        : <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-800 border border-amber-300">Elected (form checkbox)</span>}
+                    </td>
                     <td className="px-3 py-2 text-black/70">{r.effective_from ?? "—"} → {r.effective_to ?? "Current"}</td>
                     <td className="px-3 py-2 text-black/70">{r.last_verified ?? "—"}</td>
                   </tr>
@@ -808,6 +875,12 @@ function ProductDrawerBody({
           </div>
         </div>
       ) : null}
+
+      {/* Section 6 (v16): Enrollment Question Templates — LTC, read-only */}
+      {productMode === "LTC" && mode === "view" ? (
+        <QuestionTemplatesPanel productId={product.id} />
+      ) : null}
+
 
       {/* Section 2 (footer): Sync */}
       <div className="pt-3 border-t border-black/5 text-[11px] text-black/50">
@@ -956,6 +1029,8 @@ function NewConstraintForm({
       increment: Math.round(Number(increment) * 100),
       tier_floor_cents: Math.round(Number(tierFloor) * 100),
       round_preference_threshold_cents: Math.round(Number(roundThreshold) * 100),
+      spouse_max_face_cents: null,
+      child_max_face_cents: null,
       effective_from: effFrom,
       effective_to: effTo || null,
       verified_by: verifiedBy,
@@ -1033,7 +1108,7 @@ function NewRiderForm({
     onSave({
       id, carrier_product_id: productId,
       state, rider_code: riderCode.trim(), rider_full_name: riderFullName,
-      available,
+      available, rider_type: "inherent",
       effective_from: effFrom, effective_to: effTo || null,
       last_verified: lastVerified, verified_by: verifiedBy,
       source_document: sourceDoc, notes,
@@ -1085,6 +1160,194 @@ function NewRiderForm({
         <Btn variant="primary" onClick={submit}>Save Rider Row</Btn>
         <Btn variant="ghost" onClick={onCancel}>Cancel</Btn>
       </div>
+    </div>
+  );
+}
+
+/* ========================================================================== */
+/* v16: Spouse State Caps panel (read-only, sub-tab of Constraints)           */
+/* ========================================================================== */
+function SpouseStateCapsPanel({ productId }: { productId: string }) {
+  const rows = CARRIER_SPOUSE_STATE_CAPS.filter((r) => r.carrier_product_id === productId);
+  return (
+    <div>
+      <div className="text-[11px] text-black/55 mb-2">
+        Layer 3b of the spouse cap waterfall. Sparse — most states have no override.{" "}
+        <span className="inline-block ml-1 px-1.5 py-0.5 rounded bg-black/5 border border-black/10 text-[10px] text-black/60">Read-only</span>
+      </div>
+      <div className="mb-2 p-2 border border-[#0a3d3e]/20 bg-[#0a3d3e]/5 rounded text-[11px] text-[#0a3d3e]/90 leading-snug">
+        The spouse cap waterfall combines four layers in this order: (1) carrier hard cap from <code className="font-mono">carrier_constraints.spouse_max_face_cents</code>, (2) optional group spouse GI offer from <code className="font-mono">benefit_classes.spouse_gi_offer_cents</code>, (3a) employee face amount, (3b) state percentage cap from this table. The effective cap is the <b>LEAST</b> of all applicable layers. Hollowtree business rule overrides: spouse always requires employee purchase first; spouse GI is atypical.
+      </div>
+      <div className="bg-white border border-black/10 rounded-md overflow-hidden">
+        <table className="w-full text-xs">
+          <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
+            <tr>
+              <th className="text-left font-medium px-3 py-2">Carrier Product</th>
+              <th className="text-left font-medium px-3 py-2">State</th>
+              <th className="text-left font-medium px-3 py-2">Spouse Cap %</th>
+              <th className="text-left font-medium px-3 py-2">Cap Basis</th>
+              <th className="text-left font-medium px-3 py-2">Effective From</th>
+              <th className="text-left font-medium px-3 py-2">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr><td colSpan={6} className="px-3 py-3 text-black/50 italic">No spouse state cap overrides for this product.</td></tr>
+            ) : null}
+            {rows.map((r) => (
+              <tr key={r.id} className="border-t border-black/5">
+                <td className="px-3 py-2">{r.carrier_product_label}</td>
+                <td className="px-3 py-2 font-mono text-[11px]">{r.state_code}</td>
+                <td className="px-3 py-2 font-medium">{Math.round(r.spouse_cap_pct * 100)}%</td>
+                <td className="px-3 py-2">
+                  <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-[#0a3d3e]/10 text-[#0a3d3e] border border-[#0a3d3e]/20">
+                    {r.cap_basis === "employee_face" ? "Employee Face" : "Employee GI"}
+                  </span>
+                </td>
+                <td className="px-3 py-2 text-black/70">{r.effective_from}</td>
+                <td className="px-3 py-2 text-black/70">{r.notes || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="text-[10px] italic text-black/45 mt-1">Phase A: read-only. Editing is a Phase B+ workflow.</div>
+    </div>
+  );
+}
+
+/* ========================================================================== */
+/* v16: Enrollment Question Templates panel (read-only)                       */
+/* ========================================================================== */
+function QuestionTemplatesPanel({ productId }: { productId: string }) {
+  const [stateFilter, setStateFilter] = useState<string>("all");
+  const [tierFilter, setTierFilter] = useState<"all" | "eligibility" | "base" | "si">("all");
+
+  const allForProduct = ENROLLMENT_QUESTION_TEMPLATES.filter((q) => q.carrier_product_id === productId);
+  const filtered = allForProduct.filter((q) =>
+    (stateFilter === "all" || (stateFilter === "__default__" ? q.state_code == null : q.state_code === stateFilter)) &&
+    (tierFilter === "all" || q.tier === tierFilter)
+  );
+
+  const stateOpts = useMemo(() => {
+    const set = new Set<string>();
+    allForProduct.forEach((q) => { if (q.state_code) set.add(q.state_code); });
+    return Array.from(set).sort();
+  }, [allForProduct]);
+
+  // Group by state_code (null first as "Default")
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof filtered>();
+    filtered.forEach((q) => {
+      const key = q.state_code ?? "__default__";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(q);
+    });
+    return Array.from(map.entries()).map(([k, items]) => ({
+      key: k,
+      label: k === "__default__" ? "Default (all states)" : k,
+      caNote: k === "CA",
+      items: [...items].sort((a, b) => a.display_order - b.display_order),
+    }));
+  }, [filtered]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] uppercase tracking-wider text-black/50">
+          Enrollment Question Templates
+          <span className="ml-2 inline-block px-1.5 py-0.5 rounded bg-black/5 border border-black/10 text-[10px] text-black/60 normal-case tracking-normal">Read-only</span>
+        </div>
+      </div>
+      <div className="text-[11px] text-black/55 mb-2">
+        Reference data — SI medical and eligibility questions per carrier product per state. Seed data deferred to Phase B pending carrier form upload.
+      </div>
+
+      {allForProduct.length === 0 ? (
+        <div className="bg-white border border-dashed border-black/15 rounded-md p-6 text-center">
+          <div className="text-sm font-medium text-black/70">No question templates loaded yet.</div>
+          <div className="text-[11px] text-black/55 mt-1">
+            Seed data is deferred to Phase B. Templates will be loaded once Transamerica UL10 application and Trustmark state variant forms are uploaded.
+          </div>
+          <div className="text-[10px] text-black/40 mt-2 font-mono">
+            Schema ready: 13 columns, indexed on (carrier_product_id, state_code, question_code).
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-2 mb-2">
+            <select className={`${FIELD_INPUT} w-44`} value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
+              <option value="all">All states</option>
+              <option value="__default__">Default (all states)</option>
+              {stateOpts.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select className={`${FIELD_INPUT} w-44`} value={tierFilter} onChange={(e) => setTierFilter(e.target.value as "all" | "eligibility" | "base" | "si")}>
+              <option value="all">All tiers</option>
+              <option value="eligibility">Eligibility</option>
+              <option value="base">Base</option>
+              <option value="si">SI</option>
+            </select>
+          </div>
+
+          <div className="text-[10px] italic text-black/45 mb-1">Phase A: read-only. Editing question templates is a Phase B+ workflow.</div>
+
+          <div className="bg-white border border-black/10 rounded-md overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
+                <tr>
+                  <th className="text-left font-medium px-3 py-2">Question Code</th>
+                  <th className="text-left font-medium px-3 py-2">Tier</th>
+                  <th className="text-left font-medium px-3 py-2">Question Text</th>
+                  <th className="text-left font-medium px-3 py-2">Applies To</th>
+                  <th className="text-left font-medium px-3 py-2">Order</th>
+                  <th className="text-left font-medium px-3 py-2">Detail?</th>
+                  <th className="text-left font-medium px-3 py-2">Active</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grouped.length === 0 ? (
+                  <tr><td colSpan={7} className="px-3 py-3 text-black/50 italic">No questions match filters.</td></tr>
+                ) : null}
+                {grouped.map((g) => (
+                  <Fragment key={g.key}>
+                    <tr className="bg-[#f7f3eb]/70 sticky">
+                      <td colSpan={7} className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-black/60 font-medium">
+                        {g.label}
+                        {g.caNote ? <span className="ml-2 normal-case tracking-normal text-[10px] text-amber-700 italic">CA-specific: omits HIV per CA law</span> : null}
+                      </td>
+                    </tr>
+                    {g.items.map((q) => (
+                      <tr key={q.id} className="border-t border-black/5">
+                        <td className="px-3 py-2 font-mono text-[11px]">{q.question_code}</td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${
+                            q.tier === "eligibility" ? "bg-sky-100 text-sky-800" :
+                            q.tier === "base" ? "bg-emerald-100 text-emerald-800" :
+                            "bg-purple-100 text-purple-800"
+                          }`}>{q.tier}</span>
+                        </td>
+                        <td className="px-3 py-2 max-w-md" title={q.question_text}>
+                          <span className="line-clamp-1">{q.question_text}</span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="inline-flex flex-wrap gap-1">
+                            {q.applies_to.map((a) => (
+                              <span key={a} className="inline-block px-1 py-0.5 rounded text-[10px] bg-black/5 text-black/70">{a}</span>
+                            ))}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 font-mono text-[11px] text-black/60">{q.display_order}</td>
+                        <td className="px-3 py-2">{q.requires_detail ? <Check className="h-3.5 w-3.5 text-emerald-700" /> : <span className="text-black/30">—</span>}</td>
+                        <td className="px-3 py-2">{q.active ? <Check className="h-3.5 w-3.5 text-emerald-700" /> : <span className="text-black/30">—</span>}</td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }
