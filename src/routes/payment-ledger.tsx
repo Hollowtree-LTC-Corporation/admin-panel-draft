@@ -94,6 +94,7 @@ function View() {
         <FilterCombobox value={ind} onChange={setInd} placeholder="All individuals" options={indOptions} />
         <FilterSelect value={status} onChange={setStatus} allLabel="All statuses" options={[{ value: "successful", label: "Successful" }, { value: "failed", label: "Failed" }, { value: "pending", label: "Pending" }, { value: "reversed", label: "Reversed" }]} />
         <FilterSelect value={ctype} onChange={setCtype} allLabel="All charge types" options={chargeOptions} />
+        <FilterSelect value={cycleMonth} onChange={setCycleMonth} allLabel="All cycles" options={cycleOptions} />
         <FilterSelect value={source} onChange={setSource} allLabel="All sources" options={[
           { value: "voluntary", label: "Voluntary" },
           { value: "employer_paid", label: "Employer" },
