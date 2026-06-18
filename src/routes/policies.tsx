@@ -609,7 +609,7 @@ function PolicyDrawer({
 
       <Field label="Payment Method">
         {(() => {
-          const current: PaymentMethodSetting = (draft.payment_method ?? "hollowtree_paid") as PaymentMethodSetting;
+          const current: PaymentMethodSetting = (draft.payment_method ?? getPolicyPaymentMethod(draft.id)) as PaymentMethodSetting;
           if (readOnly) {
             return <div className="text-sm text-black/80 py-1">{PAYMENT_LABEL[current]}</div>;
           }
