@@ -608,38 +608,19 @@ function PolicyDrawer({
         )}
       </Field>
 
-      <Field label="Payment Method">
-        {(() => {
-          const current: PaymentMethodSetting = (draft.payment_method ?? getPolicyPaymentMethod(draft.id)) as PaymentMethodSetting;
-          if (readOnly) {
-            return <div className="text-sm text-black/80 py-1">{PAYMENT_LABEL[current]}</div>;
-          }
-          return (
-            <div>
-              <div className="inline-flex gap-2 text-xs">
-                {(["hollowtree_paid", "carrier_direct"] as PaymentMethodSetting[]).map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    disabled={!canEdit}
-                    onClick={() => setDraft((d) => ({ ...d, payment_method: v }))}
-                    className={`px-3 py-1 rounded-full border transition-colors ${
-                      current === v
-                        ? "bg-[#0a3d3e] text-white border-[#0a3d3e]"
-                        : "bg-white text-black/70 border-black/20 hover:bg-black/5"
-                    }`}
-                  >
-                    {v === "hollowtree_paid" ? "Hollowtree Paid" : "Carrier Direct"}
-                  </button>
-                ))}
-              </div>
-              <div className="text-[11px] text-black/50 mt-1">
-                Hollowtree collects and remits premium, or the carrier collects directly. Carrier-direct policies show <code>payable: false</code> on commission statements.
-              </div>
-            </div>
-          );
-        })()}
+      {/* Payment Method intentionally removed: not a policies column. Per-payee setting lives
+          on commission_splits / commission_split_defaults. Derived display below for context. */}
+      <Field label="Payment Method (derived)">
+        <div className="text-sm text-black/80 py-1">
+          {PAYMENT_LABEL[getPolicyPaymentMethod(draft.id) as PaymentMethodSetting]}
+          <span className="ml-2 text-[11px] text-black/50">
+            Derived from the policy's override commission split, or the default split for the carrier product.
+          </span>
+        </div>
       </Field>
+
+
+
 
 
 
