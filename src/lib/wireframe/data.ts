@@ -544,6 +544,10 @@ export const CARRIER_CONSTRAINTS: CarrierConstraint[] = [
 ];
 
 export type RiderAvailability = "available" | "not_available" | "requires_state_proposal";
+// v16: documents whether the source carrier form treats a rider as inherent (bundled
+// into product) or elected (form checkbox per insured). Reference only — Hollowtree
+// bundles the richest rider package at the org level regardless.
+export type RiderType = "inherent" | "elected";
 export type CarrierRiderAvailability = {
   id: string;
   carrier_product_id: string;
@@ -551,6 +555,7 @@ export type CarrierRiderAvailability = {
   rider_code: string;
   rider_full_name: string;
   available: RiderAvailability;
+  rider_type: RiderType;
   effective_from: string | null;
   effective_to: string | null;
   last_verified: string | null;
@@ -560,15 +565,16 @@ export type CarrierRiderAvailability = {
 };
 
 export const CARRIER_RIDER_AVAILABILITY: CarrierRiderAvailability[] = [
-  { id: "cra_1", carrier_product_id: "cp_6", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark NY Filing 2024", notes: "" },
-  { id: "cra_2", carrier_product_id: "cp_6", state: "CA", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark CA Filing 2024", notes: "" },
-  { id: "cra_3", carrier_product_id: "cp_6", state: "FL", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark FL Filing 2024", notes: "" },
-  { id: "cra_4", carrier_product_id: "cp_6", state: "NY", rider_code: "CI", rider_full_name: "Chronic Illness Rider", available: "requires_state_proposal", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark NY Filing 2024", notes: "Requires state proposal review before issue." },
-  { id: "cra_5", carrier_product_id: "cp_6", state: "CA", rider_code: "CI", rider_full_name: "Chronic Illness Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark CA Filing 2024", notes: "" },
-  { id: "cra_6", carrier_product_id: "cp_8", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "not_available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica NY Filing 2024", notes: "Not filed in NY." },
-  { id: "cra_7", carrier_product_id: "cp_8", state: "CA", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica CA Filing 2024", notes: "" },
-  { id: "cra_8", carrier_product_id: "cp_9", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "not_available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica NY Filing 2024", notes: "" },
-  { id: "cra_9", carrier_product_id: "cp_9", state: "TX", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica TX Filing 2024", notes: "" },
+  // Trustmark L-205 (UL & LifeEvents) — elected on the carrier form per v16 spec.
+  { id: "cra_1", carrier_product_id: "cp_6", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", rider_type: "elected", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark NY Filing 2024", notes: "" },
+  { id: "cra_2", carrier_product_id: "cp_6", state: "CA", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", rider_type: "elected", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark CA Filing 2024", notes: "" },
+  { id: "cra_3", carrier_product_id: "cp_6", state: "FL", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", rider_type: "elected", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark FL Filing 2024", notes: "" },
+  { id: "cra_4", carrier_product_id: "cp_6", state: "NY", rider_code: "CI", rider_full_name: "Chronic Illness Rider", available: "requires_state_proposal", rider_type: "elected", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark NY Filing 2024", notes: "Requires state proposal review before issue." },
+  { id: "cra_5", carrier_product_id: "cp_6", state: "CA", rider_code: "CI", rider_full_name: "Chronic Illness Rider", available: "available", rider_type: "elected", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-08-15", verified_by: "Guy Livingstone", source_document: "Trustmark CA Filing 2024", notes: "" },
+  { id: "cra_6", carrier_product_id: "cp_8", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "not_available", rider_type: "inherent", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica NY Filing 2024", notes: "Not filed in NY." },
+  { id: "cra_7", carrier_product_id: "cp_8", state: "CA", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", rider_type: "inherent", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica CA Filing 2024", notes: "" },
+  { id: "cra_8", carrier_product_id: "cp_9", state: "NY", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "not_available", rider_type: "inherent", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica NY Filing 2024", notes: "" },
+  { id: "cra_9", carrier_product_id: "cp_9", state: "TX", rider_code: "LTC", rider_full_name: "Long-Term Care Rider", available: "available", rider_type: "inherent", effective_from: "2024-01-01", effective_to: null, last_verified: "2025-07-20", verified_by: "Casey Rep", source_document: "Transamerica TX Filing 2024", notes: "" },
 ];
 
 // 5 canonical PolicyStatus CHECK values (renamed from `status` to `enrollment_status` on Policy).
