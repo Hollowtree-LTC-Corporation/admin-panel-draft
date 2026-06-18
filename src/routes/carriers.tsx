@@ -1163,3 +1163,191 @@ function NewRiderForm({
     </div>
   );
 }
+
+/* ========================================================================== */
+/* v16: Spouse State Caps panel (read-only, sub-tab of Constraints)           */
+/* ========================================================================== */
+function SpouseStateCapsPanel({ productId }: { productId: string }) {
+  const rows = CARRIER_SPOUSE_STATE_CAPS.filter((r) => r.carrier_product_id === productId);
+  return (
+    <div>
+      <div className="text-[11px] text-black/55 mb-2">
+        Layer 3b of the spouse cap waterfall. Sparse — most states have no override.{" "}
+        <span className="inline-block ml-1 px-1.5 py-0.5 rounded bg-black/5 border border-black/10 text-[10px] text-black/60">Read-only</span>
+      </div>
+      <div className="mb-2 p-2 border border-[#0a3d3e]/20 bg-[#0a3d3e]/5 rounded text-[11px] text-[#0a3d3e]/90 leading-snug">
+        The spouse cap waterfall combines four layers in this order: (1) carrier hard cap from <code className="font-mono">carrier_constraints.spouse_max_face_cents</code>, (2) optional group spouse GI offer from <code className="font-mono">benefit_classes.spouse_gi_offer_cents</code>, (3a) employee face amount, (3b) state percentage cap from this table. The effective cap is the <b>LEAST</b> of all applicable layers. Hollowtree business rule overrides: spouse always requires employee purchase first; spouse GI is atypical.
+      </div>
+      <div className="bg-white border border-black/10 rounded-md overflow-hidden">
+        <table className="w-full text-xs">
+          <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
+            <tr>
+              <th className="text-left font-medium px-3 py-2">Carrier Product</th>
+              <th className="text-left font-medium px-3 py-2">State</th>
+              <th className="text-left font-medium px-3 py-2">Spouse Cap %</th>
+              <th className="text-left font-medium px-3 py-2">Cap Basis</th>
+              <th className="text-left font-medium px-3 py-2">Effective From</th>
+              <th className="text-left font-medium px-3 py-2">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr><td colSpan={6} className="px-3 py-3 text-black/50 italic">No spouse state cap overrides for this product.</td></tr>
+            ) : null}
+            {rows.map((r) => (
+              <tr key={r.id} className="border-t border-black/5">
+                <td className="px-3 py-2">{r.carrier_product_label}</td>
+                <td className="px-3 py-2 font-mono text-[11px]">{r.state_code}</td>
+                <td className="px-3 py-2 font-medium">{Math.round(r.spouse_cap_pct * 100)}%</td>
+                <td className="px-3 py-2">
+                  <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-[#0a3d3e]/10 text-[#0a3d3e] border border-[#0a3d3e]/20">
+                    {r.cap_basis === "employee_face" ? "Employee Face" : "Employee GI"}
+                  </span>
+                </td>
+                <td className="px-3 py-2 text-black/70">{r.effective_from}</td>
+                <td className="px-3 py-2 text-black/70">{r.notes || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="text-[10px] italic text-black/45 mt-1">Phase A: read-only. Editing is a Phase B+ workflow.</div>
+    </div>
+  );
+}
+
+/* ========================================================================== */
+/* v16: Enrollment Question Templates panel (read-only)                       */
+/* ========================================================================== */
+function QuestionTemplatesPanel({ productId }: { productId: string }) {
+  const [stateFilter, setStateFilter] = useState<string>("all");
+  const [tierFilter, setTierFilter] = useState<"all" | "eligibility" | "base" | "si">("all");
+
+  const allForProduct = ENROLLMENT_QUESTION_TEMPLATES.filter((q) => q.carrier_product_id === productId);
+  const filtered = allForProduct.filter((q) =>
+    (stateFilter === "all" || (stateFilter === "__default__" ? q.state_code == null : q.state_code === stateFilter)) &&
+    (tierFilter === "all" || q.tier === tierFilter)
+  );
+
+  const stateOpts = useMemo(() => {
+    const set = new Set<string>();
+    allForProduct.forEach((q) => { if (q.state_code) set.add(q.state_code); });
+    return Array.from(set).sort();
+  }, [allForProduct]);
+
+  // Group by state_code (null first as "Default")
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof filtered>();
+    filtered.forEach((q) => {
+      const key = q.state_code ?? "__default__";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(q);
+    });
+    return Array.from(map.entries()).map(([k, items]) => ({
+      key: k,
+      label: k === "__default__" ? "Default (all states)" : k,
+      caNote: k === "CA",
+      items: [...items].sort((a, b) => a.display_order - b.display_order),
+    }));
+  }, [filtered]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] uppercase tracking-wider text-black/50">
+          Enrollment Question Templates
+          <span className="ml-2 inline-block px-1.5 py-0.5 rounded bg-black/5 border border-black/10 text-[10px] text-black/60 normal-case tracking-normal">Read-only</span>
+        </div>
+      </div>
+      <div className="text-[11px] text-black/55 mb-2">
+        Reference data — SI medical and eligibility questions per carrier product per state. Seed data deferred to Phase B pending carrier form upload.
+      </div>
+
+      {allForProduct.length === 0 ? (
+        <div className="bg-white border border-dashed border-black/15 rounded-md p-6 text-center">
+          <div className="text-sm font-medium text-black/70">No question templates loaded yet.</div>
+          <div className="text-[11px] text-black/55 mt-1">
+            Seed data is deferred to Phase B. Templates will be loaded once Transamerica UL10 application and Trustmark state variant forms are uploaded.
+          </div>
+          <div className="text-[10px] text-black/40 mt-2 font-mono">
+            Schema ready: 13 columns, indexed on (carrier_product_id, state_code, question_code).
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-2 mb-2">
+            <select className={`${FIELD_INPUT} w-44`} value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
+              <option value="all">All states</option>
+              <option value="__default__">Default (all states)</option>
+              {stateOpts.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select className={`${FIELD_INPUT} w-44`} value={tierFilter} onChange={(e) => setTierFilter(e.target.value as "all" | "eligibility" | "base" | "si")}>
+              <option value="all">All tiers</option>
+              <option value="eligibility">Eligibility</option>
+              <option value="base">Base</option>
+              <option value="si">SI</option>
+            </select>
+          </div>
+
+          <div className="text-[10px] italic text-black/45 mb-1">Phase A: read-only. Editing question templates is a Phase B+ workflow.</div>
+
+          <div className="bg-white border border-black/10 rounded-md overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-[#f7f3eb] text-[10px] uppercase tracking-wider text-black/60">
+                <tr>
+                  <th className="text-left font-medium px-3 py-2">Question Code</th>
+                  <th className="text-left font-medium px-3 py-2">Tier</th>
+                  <th className="text-left font-medium px-3 py-2">Question Text</th>
+                  <th className="text-left font-medium px-3 py-2">Applies To</th>
+                  <th className="text-left font-medium px-3 py-2">Order</th>
+                  <th className="text-left font-medium px-3 py-2">Detail?</th>
+                  <th className="text-left font-medium px-3 py-2">Active</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grouped.length === 0 ? (
+                  <tr><td colSpan={7} className="px-3 py-3 text-black/50 italic">No questions match filters.</td></tr>
+                ) : null}
+                {grouped.map((g) => (
+                  <Fragment key={g.key}>
+                    <tr className="bg-[#f7f3eb]/70 sticky">
+                      <td colSpan={7} className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-black/60 font-medium">
+                        {g.label}
+                        {g.caNote ? <span className="ml-2 normal-case tracking-normal text-[10px] text-amber-700 italic">CA-specific: omits HIV per CA law</span> : null}
+                      </td>
+                    </tr>
+                    {g.items.map((q) => (
+                      <tr key={q.id} className="border-t border-black/5">
+                        <td className="px-3 py-2 font-mono text-[11px]">{q.question_code}</td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${
+                            q.tier === "eligibility" ? "bg-sky-100 text-sky-800" :
+                            q.tier === "base" ? "bg-emerald-100 text-emerald-800" :
+                            "bg-purple-100 text-purple-800"
+                          }`}>{q.tier}</span>
+                        </td>
+                        <td className="px-3 py-2 max-w-md" title={q.question_text}>
+                          <span className="line-clamp-1">{q.question_text}</span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="inline-flex flex-wrap gap-1">
+                            {q.applies_to.map((a) => (
+                              <span key={a} className="inline-block px-1 py-0.5 rounded text-[10px] bg-black/5 text-black/70">{a}</span>
+                            ))}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 font-mono text-[11px] text-black/60">{q.display_order}</td>
+                        <td className="px-3 py-2">{q.requires_detail ? <Check className="h-3.5 w-3.5 text-emerald-700" /> : <span className="text-black/30">—</span>}</td>
+                        <td className="px-3 py-2">{q.active ? <Check className="h-3.5 w-3.5 text-emerald-700" /> : <span className="text-black/30">—</span>}</td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
