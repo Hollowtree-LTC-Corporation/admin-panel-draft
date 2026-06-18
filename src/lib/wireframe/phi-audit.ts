@@ -8,7 +8,7 @@ import { useSyncExternalStore } from "react";
 export type PhiAuditEntry = {
   id: string;
   ts: string; // ISO
-  table_name: "enrollment_responses";
+  table_name: "individuals" | "enrollment_responses";
   record_id: string; // individual_id
   action: "view_phi" | "export_phi";
   actor_id: string;
