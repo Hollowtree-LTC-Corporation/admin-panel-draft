@@ -1257,20 +1257,26 @@ function QuestionTemplatesPanel({ productId }: { productId: string }) {
         <div className="text-[10px] uppercase tracking-wider text-black/50">
           Enrollment Question Templates
           <span className="ml-2 inline-block px-1.5 py-0.5 rounded bg-black/5 border border-black/10 text-[10px] text-black/60 normal-case tracking-normal">Read-only</span>
+          <span
+            className="ml-1 inline-block px-1.5 py-0.5 rounded bg-sky-50 border border-sky-200 text-[10px] text-sky-800 normal-case tracking-normal"
+            title="Source: apps/microsite/questions/<carrier>/<form>/<state>.yaml"
+          >
+            Synced from microsite repo
+          </span>
         </div>
       </div>
       <div className="text-[11px] text-black/55 mb-2">
-        Reference data — SI medical and eligibility questions per carrier product per state. Seed data deferred to Phase B pending carrier form upload.
+        Reference view — SI medical and eligibility questions per carrier product per state. Source: static config in microsite repo (read-only here; edits go through PR).
       </div>
 
       {allForProduct.length === 0 ? (
         <div className="bg-white border border-dashed border-black/15 rounded-md p-6 text-center">
-          <div className="text-sm font-medium text-black/70">No question templates loaded yet.</div>
+          <div className="text-sm font-medium text-black/70">No questions defined for this combination yet.</div>
           <div className="text-[11px] text-black/55 mt-1">
-            Seed data is deferred to Phase B. Templates will be loaded once Transamerica UL10 application and Trustmark state variant forms are uploaded.
+            Question content for this carrier product and state has not been loaded. If the form exists, the YAML config in <span className="font-mono">apps/microsite/questions/</span> is missing or incomplete.
           </div>
           <div className="text-[10px] text-black/40 mt-2 font-mono">
-            Schema ready: 13 columns, indexed on (carrier_product_id, state_code, question_code).
+            Expected: apps/microsite/questions/&lt;carrier&gt;/&lt;form&gt;/&lt;state&gt;.yaml
           </div>
         </div>
       ) : (
@@ -1278,7 +1284,7 @@ function QuestionTemplatesPanel({ productId }: { productId: string }) {
           <div className="flex gap-2 mb-2">
             <select className={`${FIELD_INPUT} w-44`} value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
               <option value="all">All states</option>
-              <option value="__default__">Default (all states)</option>
+              <option value="__default__">Generic (default form)</option>
               {stateOpts.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
             <select className={`${FIELD_INPUT} w-44`} value={tierFilter} onChange={(e) => setTierFilter(e.target.value as "all" | "eligibility" | "base" | "si")}>
@@ -1289,7 +1295,8 @@ function QuestionTemplatesPanel({ productId }: { productId: string }) {
             </select>
           </div>
 
-          <div className="text-[10px] italic text-black/45 mb-1">Phase A: read-only. Editing question templates is a Phase B+ workflow.</div>
+          <div className="text-[10px] italic text-black/45 mb-1">Content sourced from microsite repo config. Edits go through PR review in the engineering repo.</div>
+
 
           <div className="bg-white border border-black/10 rounded-md overflow-hidden">
             <table className="w-full text-xs">
