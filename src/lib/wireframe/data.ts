@@ -823,6 +823,7 @@ export type AffiliateOrganization = {
   affiliation_level: AffiliationLevel;
   industry: AffiliateIndustry | null;
   is_external: boolean;
+  // v3.18 / v16: affiliate_organizations.is_active boolean NOT NULL DEFAULT true.
   is_active: boolean;
   legal_entity_status: LegalEntityStatus | null;
   notes: string;
