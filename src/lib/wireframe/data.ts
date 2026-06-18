@@ -181,10 +181,21 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     last_payment_status = n % 2 === 0 ? "successful" : null;
   }
   const monthly_premium_cents = 2500 + (n * 137) % 8000;
+  // v15-audit: coverage lifecycle dates (display-only on Payment & Billing)
+  const cov_effective = (cov === "active" || cov === "suspended" || cov === "lapsed" || cov === "purchased" || cov === "canceled")
+    ? (effective_date ?? `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-15`)
+    : (n % 10 < 3 ? `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-15` : null);
+  const cov_end = (cov === "canceled" || cov === "lapsed")
+    ? `2026-${String(((n * 3) % 12) + 1).padStart(2, "0")}-10`
+    : null;
+  // v15-audit: realistic job titles (both products)
+  const JOB_TITLES = ["Operations Manager", "Staff Accountant", "Warehouse Supervisor", "Senior Engineer", "Account Analyst", "Director of HR", "Project Manager", "Field Technician"];
+  const orgSlug = org.name.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 12) || "org";
   return {
     id: `ind_${n}`,
     full_name: `Test Person ${n}`,
     email: `person${n}@example.com`,
+    work_email: `test.person${n}@${orgSlug}.com`,
     phone: `555-0${100 + n}`,
     organization_id: org.id,
     org_name: org.name,
@@ -194,17 +205,19 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     plan: isLTC ? PLANS_LTC[n % PLANS_LTC.length] : PLANS_DI[n % PLANS_DI.length],
     monthly_premium_cents,
     effective_date,
+    coverage_effective_date: cov_effective,
+    coverage_end_date: cov_end,
     billing_group_id: `bg_${(n % 8) + 1}`,
     // DI fields (null for LTC)
     coverage_plan: isLTC ? null : PLANS_DI[n % PLANS_DI.length],
     di_type: isLTC ? null : (org.type_of_rate as "STD+LTD" | "LTD" | null),
-    monthly_benefit_cents: 300000 + (n % 5) * 50000,
+    monthly_benefit_cents: 150000 + (n % 10) * 50000,
     weekly_covered_benefit_cents: 80000 + (n % 4) * 10000,
     // std_premium / ltd_premium stored as whole dollars (DI only).
     std_premium: isLTC ? null : Math.round((monthly_premium_cents * 0.4) / 100),
     ltd_premium: isLTC ? null : Math.round((monthly_premium_cents * 0.6) / 100),
     assigned_rep: ["Jamie Rep", "Casey Rep", "Morgan Rep"][n % 3],
-    title: isLTC ? null : ["Manager", "Engineer", "Analyst", "Director"][n % 4],
+    title: JOB_TITLES[n % JOB_TITLES.length],
     greeting: ["Mr.", "Ms.", "Mx."][n % 3],
     is_union_member: isLTC ? null : (n % 7 === 0),
     union_local_name: isLTC ? null : (n % 7 === 0 ? `Local ${100 + n}` : null),
