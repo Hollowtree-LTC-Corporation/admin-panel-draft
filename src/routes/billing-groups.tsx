@@ -317,7 +317,7 @@ function View() {
                 <TCell>
                   {members.length} · <span className="text-black/50 text-[11px]">{preview || "—"}{members.length > 2 ? "…" : ""}</span>
                 </TCell>
-                <TCell>{g.payment_method_display_label ?? pmTypeLabel(g.payment_method_type)}</TCell>
+                <TCell>{g.payment_method_display_label ?? pmTypeLabel(g.payment_method_type, g.card_last4)}</TCell>
                 <TCell><Pill tone={statusPillTone(g.status)}>{STATUS_LABELS[g.status]}</Pill></TCell>
                 <TCell className="font-mono text-[11px]">
                   {g.moov_account_id ?? (
