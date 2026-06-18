@@ -116,7 +116,7 @@ function View() {
       if (wtype !== "all" && w.window_type !== wtype) return false;
       if (status !== "all" && w.status !== status) return false;
       if (sponsor !== "all" && !w.sponsor_type.includes(sponsor)) return false;
-      if (carrier !== "all" && w.carrier !== carrier) return false;
+      if (carrier !== "all" && w.carrier_id !== carrier) return false;
       return true;
     });
     return sort.applySort(filtered, (r, k) => (r as unknown as Record<string, string | number>)[k] ?? "");
@@ -145,7 +145,7 @@ function View() {
       status: isNewJoiner ? "open" : draft.status,
       // CHECK constraint: only "employer" | "affiliate" — composite shape derived in display.
       sponsor_type: (draft.sponsor_type === "affiliate" ? "affiliate" : "employer") as SponsorStored,
-      carrier: draft.carrier,
+      carrier_id: draft.carrier_id,
       gi_eligible: draft.gi_eligible,
       notes: draft.notes,
       channel_partners: draft.channel_partners.filter((p) => p.channel_partner_id),
@@ -209,7 +209,7 @@ function View() {
               <TCell className="text-black/70">{w.enrollment_end_date ?? <span className="text-black/30">—</span>}</TCell>
               <TCell><Pill tone={w.status === "open" ? "ok" : w.status === "upcoming" ? "info" : "bad"}>{w.status}</Pill></TCell>
               <TCell>{w.sponsor_type}</TCell>
-              <TCell>{w.carrier}</TCell>
+              <TCell>{carrierNameById(w.carrier_id)}</TCell>
               <TCell><Btn disabled={!can("enrollment_windows", "update")} onClick={() => openEdit(w)}>Edit</Btn></TCell>
             </TRow>
           ))}
@@ -426,11 +426,11 @@ function WindowForm({
 
           <Field label="Carrier">
             <select
-              value={draft.carrier}
-              onChange={(e) => update("carrier", e.target.value)}
+              value={draft.carrier_id}
+              onChange={(e) => update("carrier_id", e.target.value)}
               className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white"
             >
-              {CARRIERS.map((c) => <option key={c.id} value={c.carrier_name}>{c.carrier_name}</option>)}
+              {CARRIERS.map((c) => <option key={c.id} value={c.id}>{c.carrier_name}</option>)}
             </select>
           </Field>
 
