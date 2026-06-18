@@ -119,8 +119,9 @@ function View() {
           {rows.map((m) => (
             <TRow key={m.id}>
               <TCell className="font-medium">{m.full_name}</TCell>
-              <TCell>{m.created_at}</TCell>
+              <TCell>{fmtSubmitted(m.created_at)}</TCell>
               <TCell>{m.email}</TCell>
+
               <TCell>{m.phone ?? "—"}</TCell>
               <TCell>{m.org_name ?? <span className="text-black/40">unknown</span>}</TCell>
               <TCell className="font-mono text-[11px]">{m.origin_url}</TCell>
