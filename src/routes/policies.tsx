@@ -991,7 +991,8 @@ function PayeeNameSelect({ type, value, onChange }: { type: PayeeType; value: st
     );
   }
   if (type === "channel_partner") {
-    const opts = CHANNEL_PARTNERS.filter((p) => p.partner_type === "Broker" || p.partner_type === "Agency" || p.partner_type === "Other");
+    // Canonical partner_type vocabulary (House/Override are payee_type, not partner_type).
+    const opts = CHANNEL_PARTNERS.filter((p) => p.partner_type !== "Internal");
     return (
       <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-1 py-0.5 text-xs border border-black/15 rounded bg-white">
         <option value="">Select partner…</option>
