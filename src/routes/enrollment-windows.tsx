@@ -71,7 +71,7 @@ function toDraft(w: EnrollmentWindow): Draft {
     enrollment_start_date: w.enrollment_start_date ?? "",
     enrollment_end_date: w.enrollment_end_date ?? "",
     default_effective_date: w.default_effective_date ?? "",
-    carrier: w.carrier,
+    carrier_id: w.carrier_id,
     gi_eligible: w.gi_eligible,
     status: w.status,
     notes: w.notes,
