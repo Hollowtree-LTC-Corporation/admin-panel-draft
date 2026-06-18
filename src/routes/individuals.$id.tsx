@@ -297,7 +297,7 @@ function IndividualDetail() {
             <SummaryChip label="Issue Type" value={<IssueTypeBadge value={i.issue_type} />} />
           )}
           {isLTC && (
-            <SummaryChip label="Benefit Class" value={i.benefit_class_name || "—"} />
+            <SummaryChip label="Benefit Class" value={BENEFIT_CLASSES.find((b) => b.id === i.benefit_class_id)?.name ?? "—"} />
           )}
           <SummaryChip label="Last Payment"
             value={<span className="inline-flex items-center gap-1">{paymentBadge(i.last_payment_status, i.retry_count)}<span className="text-[11px] text-black/50">{fmtDate(i.last_charge_date)}</span></span>}
