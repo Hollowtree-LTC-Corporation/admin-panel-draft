@@ -822,9 +822,7 @@ function IdentitySection({ i, readOnly, setConfirm, isLTC }: { i: Detail; readOn
             <select defaultValue={i.employment_relationship} className={inputCls}>{EMPLOYMENT_REL.map((o) => <option key={o}>{o}</option>)}</select>
           </RField>
         )}
-        {!isLTC && (
-          <RField label="Title" value={i.title ?? "—"} editing={editing}><input defaultValue={i.title ?? ""} className={inputCls} /></RField>
-        )}
+        <RField label="Job Title" value={i.title ?? "—"} editing={editing}><input defaultValue={i.title ?? ""} className={inputCls} placeholder="e.g., Operations Manager" /></RField>
         <RField label="Hire Date" value={fmtDate(i.hire_date)} editing={editing}><input type="date" defaultValue={i.hire_date} className={inputCls} /></RField>
         <RField label="Gender" value={i.gender} editing={editing}>
           <select defaultValue={i.gender} className={inputCls}>{GENDERS.map((o) => <option key={o}>{o}</option>)}</select>
