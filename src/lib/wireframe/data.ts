@@ -619,9 +619,8 @@ export type Policy = {
   ltc_gold: number | null;
   ltc_platinum: number | null;
   ltc_diamond: number | null;
-  // v15-audit: hollowtree_paid (default) vs carrier_direct affects commission payable.
-  // Optional in data layer; consumers default to 'hollowtree_paid'. See getPolicyPaymentMethod().
-  payment_method?: "hollowtree_paid" | "carrier_direct";
+  // NOTE: payment_method does not live on policies. It is a per-payee setting on
+  // commission_splits / commission_split_defaults. Derived display via getPolicyPaymentMethod().
 };
 
 // Whole-dollar tier defaults for LTC policies.
