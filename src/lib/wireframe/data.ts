@@ -1245,17 +1245,19 @@ export type SpouseCapBasis = "employee_face" | "employee_gi";
 export type CarrierSpouseStateCap = {
   id: string;
   carrier_product_id: string;
+  /** Denormalized display — resolved via carrier_product_id. Not a schema column. */
   carrier_product_label: string;
   state_code: string;
   spouse_cap_pct: number; // 0.50 = 50%
   cap_basis: SpouseCapBasis;
   effective_from: string;
+  effective_to: string | null;
   notes: string;
 };
 
 export const CARRIER_SPOUSE_STATE_CAPS: CarrierSpouseStateCap[] = [
-  { id: "cssc_1", carrier_product_id: "cp_9", carrier_product_label: "Transamerica UL10", state_code: "NE", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", notes: "NE 50% rule per Transamerica response 2026-06-18" },
-  { id: "cssc_2", carrier_product_id: "cp_9", carrier_product_label: "Transamerica UL10", state_code: "PR", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", notes: "PR 50% rule per Transamerica response 2026-06-18" },
-  { id: "cssc_3", carrier_product_id: "cp_8", carrier_product_label: "Transamerica TransElite", state_code: "NE", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", notes: "NE 50% rule per Transamerica response 2026-06-18" },
-  { id: "cssc_4", carrier_product_id: "cp_8", carrier_product_label: "Transamerica TransElite", state_code: "PR", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", notes: "PR 50% rule per Transamerica response 2026-06-18" },
+  { id: "cssc_1", carrier_product_id: "cp_9", carrier_product_label: "Transamerica UL10", state_code: "NE", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", effective_to: null, notes: "NE 50% rule per Transamerica response 2026-06-18" },
+  { id: "cssc_2", carrier_product_id: "cp_9", carrier_product_label: "Transamerica UL10", state_code: "PR", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", effective_to: null, notes: "PR 50% rule per Transamerica response 2026-06-18" },
+  { id: "cssc_3", carrier_product_id: "cp_8", carrier_product_label: "Transamerica TransElite", state_code: "NE", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", effective_to: null, notes: "NE 50% rule per Transamerica response 2026-06-18" },
+  { id: "cssc_4", carrier_product_id: "cp_8", carrier_product_label: "Transamerica TransElite", state_code: "PR", spouse_cap_pct: 0.5, cap_basis: "employee_face", effective_from: "2024-01-01", effective_to: null, notes: "PR 50% rule per Transamerica response 2026-06-18" },
 ];
