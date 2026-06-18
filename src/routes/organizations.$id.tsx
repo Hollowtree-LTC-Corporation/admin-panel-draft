@@ -353,9 +353,7 @@ function synthesize(org: typeof ORGS[number]) {
     // Coverage / Billing
     contribution_type: cca ? "voluntary" : "employer_paid",
     available_premium_structures: (product === "LTC" ? (idx % 3 === 0 ? ["lifetime","ten_pay"] : ["lifetime"]) : ["lifetime"]) as PremiumStructure[],
-    tpa_fee_cents: cca ? 2000 : 800,
-    service_fee_retained_cents: cca ? 500 : null,
-    tpa_fee_name: cca ? "CCA Membership Fee" : "Processing Fee",
+    // tpa_fee_cents, tpa_fee_name, service_fee_retained_cents migrated to fee_schedules in v3.13.
     // Versioned TPA fee schedules (DI v12 / LTC v3.12)
     fee_schedules: (cca
       ? [
