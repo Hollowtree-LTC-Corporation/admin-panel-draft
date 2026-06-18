@@ -658,7 +658,7 @@ function ProductDrawerBody({
                                 {sTiers.map((t) => (
                                   <tr key={t.id}>
                                     <td className="pr-8 py-0.5">{t.from_year}</td>
-                                    <td className="pr-8 py-0.5">{t.to_year >= 99 ? "—" : t.to_year}</td>
+                                    <td className="pr-8 py-0.5">{t.to_year == null ? "+" : t.to_year}</td>
                                     <td className="py-0.5 font-mono">{t.rate_pct.toFixed(2)}%</td>
                                   </tr>
                                 ))}
