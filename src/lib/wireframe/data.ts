@@ -524,6 +524,10 @@ export type CarrierConstraint = {
   increment: number;
   tier_floor_cents: number;
   round_preference_threshold_cents: number;
+  // v16: Layer 1 of spouse cap waterfall; nullable (e.g., Trustmark has no hard cap).
+  spouse_max_face_cents: number | null;
+  // v16: Carrier hard cap on child face; Transamerica caps to MIN(this, applicant face).
+  child_max_face_cents: number | null;
   effective_from: string;
   effective_to: string | null;
   verified_by: string;
@@ -533,10 +537,10 @@ export type CarrierConstraint = {
 };
 
 export const CARRIER_CONSTRAINTS: CarrierConstraint[] = [
-  { id: "cc_1", carrier_product_id: "cp_6", si_max_cents: 50000000, increment: 2500000, tier_floor_cents: 10000000, round_preference_threshold_cents: 1000000, effective_from: "2024-01-01", effective_to: null, verified_by: "Guy Livingstone", last_verified: "2025-08-15", source: "Trustmark Producer Guide 2024", notes: "Placeholder values, not validated production rules." },
-  { id: "cc_2", carrier_product_id: "cp_7", si_max_cents: 30000000, increment: 1000000, tier_floor_cents: 5000000, round_preference_threshold_cents: 500000, effective_from: "2024-01-01", effective_to: null, verified_by: "Guy Livingstone", last_verified: "2025-08-15", source: "Trustmark GTL Producer Guide 2024", notes: "Placeholder values." },
-  { id: "cc_3", carrier_product_id: "cp_8", si_max_cents: 50000000, increment: 2500000, tier_floor_cents: 10000000, round_preference_threshold_cents: 1000000, effective_from: "2024-01-01", effective_to: null, verified_by: "Casey Rep", last_verified: "2025-07-20", source: "Transamerica TransElite Producer Manual", notes: "Placeholder values." },
-  { id: "cc_4", carrier_product_id: "cp_9", si_max_cents: 25000000, increment: 1000000, tier_floor_cents: 5000000, round_preference_threshold_cents: 500000, effective_from: "2024-01-01", effective_to: null, verified_by: "Casey Rep", last_verified: "2025-07-20", source: "Transamerica UL10 Producer Manual", notes: "Placeholder values." },
+  { id: "cc_1", carrier_product_id: "cp_6", si_max_cents: 50000000, increment: 2500000, tier_floor_cents: 10000000, round_preference_threshold_cents: 1000000, spouse_max_face_cents: null, child_max_face_cents: null, effective_from: "2024-01-01", effective_to: null, verified_by: "Guy Livingstone", last_verified: "2025-08-15", source: "Trustmark Producer Guide 2024", notes: "Placeholder values, not validated production rules." },
+  { id: "cc_2", carrier_product_id: "cp_7", si_max_cents: 30000000, increment: 1000000, tier_floor_cents: 5000000, round_preference_threshold_cents: 500000, spouse_max_face_cents: null, child_max_face_cents: null, effective_from: "2024-01-01", effective_to: null, verified_by: "Guy Livingstone", last_verified: "2025-08-15", source: "Trustmark GTL Producer Guide 2024", notes: "Placeholder values." },
+  { id: "cc_3", carrier_product_id: "cp_8", si_max_cents: 50000000, increment: 2500000, tier_floor_cents: 10000000, round_preference_threshold_cents: 1000000, spouse_max_face_cents: 10000000, child_max_face_cents: 2500000, effective_from: "2024-01-01", effective_to: null, verified_by: "Casey Rep", last_verified: "2025-07-20", source: "Transamerica TransElite Producer Manual", notes: "Placeholder values." },
+  { id: "cc_4", carrier_product_id: "cp_9", si_max_cents: 25000000, increment: 1000000, tier_floor_cents: 5000000, round_preference_threshold_cents: 500000, spouse_max_face_cents: 10000000, child_max_face_cents: 2500000, effective_from: "2024-01-01", effective_to: null, verified_by: "Casey Rep", last_verified: "2025-07-20", source: "Transamerica UL10 Producer Manual", notes: "Placeholder values." },
 ];
 
 export type RiderAvailability = "available" | "not_available" | "requires_state_proposal";
