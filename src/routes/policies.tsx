@@ -616,13 +616,18 @@ function PolicyDrawer({
           }
           return (
             <div>
-              <div className="inline-flex rounded border border-black/15 overflow-hidden text-xs">
+              <div className="inline-flex gap-2 text-xs">
                 {(["hollowtree_paid", "carrier_direct"] as PaymentMethodSetting[]).map((v) => (
                   <button
                     key={v}
                     type="button"
+                    disabled={!canEdit}
                     onClick={() => setDraft((d) => ({ ...d, payment_method: v }))}
-                    className={`px-3 py-1 ${current === v ? "bg-[#0a3d3e] text-white" : "bg-white text-black/70 hover:bg-black/5"}`}
+                    className={`px-3 py-1 rounded-full border transition-colors ${
+                      current === v
+                        ? "bg-[#0a3d3e] text-white border-[#0a3d3e]"
+                        : "bg-white text-black/70 border-black/20 hover:bg-black/5"
+                    }`}
                   >
                     {v === "hollowtree_paid" ? "Hollowtree Paid" : "Carrier Direct"}
                   </button>
