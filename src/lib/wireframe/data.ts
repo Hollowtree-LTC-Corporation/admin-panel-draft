@@ -835,8 +835,10 @@ export const AFFILIATE_ORGANIZATIONS: AffiliateOrganization[] = [
 export type EnrollmentWindow = {
   id: string;
   organization_id: string | null;
+  /** Denormalized display — resolved via organization_id. Not a schema column. */
   org_name: string | null;
   affiliate_organization_id: string | null;
+  /** Denormalized display — resolved via affiliate_organization_id. Not a schema column. */
   affiliate_org: string | null;
   window_type: "initial" | "annual" | "new_joiner" | "special";
   enrollment_start_date: string | null;
@@ -844,19 +846,20 @@ export type EnrollmentWindow = {
   default_effective_date: string | null;
   status: "upcoming" | "open" | "closed";
   sponsor_type: "employer" | "affiliate";
-  carrier: string;
+  // v3.17: carrier_id uuid NOT NULL REFERENCES carriers(id). Free-text 'carrier' removed.
+  carrier_id: string;
   gi_eligible: boolean;
   notes: string;
   channel_partners: Array<{ id: string; channel_partner_id: string; role: string }>;
 };
 
 export const ENROLLMENT_WINDOWS: EnrollmentWindow[] = [
-  { id: "ew_1", organization_id: "org_1", org_name: "Acme Widgets Co", affiliate_organization_id: null, affiliate_org: null, window_type: "initial", enrollment_start_date: "2025-01-01", enrollment_end_date: "2025-01-31", default_effective_date: "2025-02-01", status: "closed", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "", channel_partners: [] },
-  { id: "ew_2", organization_id: "org_1", org_name: "Acme Widgets Co", affiliate_organization_id: null, affiliate_org: null, window_type: "annual", enrollment_start_date: "2025-09-01", enrollment_end_date: "2025-09-30", default_effective_date: "2025-10-01", status: "upcoming", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "", channel_partners: [] },
+  { id: "ew_1", organization_id: "org_1", org_name: "Acme Widgets Co", affiliate_organization_id: null, affiliate_org: null, window_type: "initial", enrollment_start_date: "2025-01-01", enrollment_end_date: "2025-01-31", default_effective_date: "2025-02-01", status: "closed", sponsor_type: "employer", carrier_id: "car_1", gi_eligible: true, notes: "", channel_partners: [] },
+  { id: "ew_2", organization_id: "org_1", org_name: "Acme Widgets Co", affiliate_organization_id: null, affiliate_org: null, window_type: "annual", enrollment_start_date: "2025-09-01", enrollment_end_date: "2025-09-30", default_effective_date: "2025-10-01", status: "upcoming", sponsor_type: "employer", carrier_id: "car_1", gi_eligible: true, notes: "", channel_partners: [] },
   // ew_3: employer sponsor with linked affiliate — display badge derives "Employer + Affiliate".
-  { id: "ew_3", organization_id: "org_3", org_name: "Coastal Credit Union", affiliate_organization_id: "aff_1", affiliate_org: "CCU Member Foundation", window_type: "annual", enrollment_start_date: "2025-08-01", enrollment_end_date: "2025-08-31", default_effective_date: "2025-09-01", status: "open", sponsor_type: "employer", carrier: "Heritage LTC Group", gi_eligible: true, notes: "", channel_partners: [{ id: "ewcp_1", channel_partner_id: "cpn_1", role: "primary" }] },
-  { id: "ew_4", organization_id: null, org_name: null, affiliate_organization_id: "aff_2", affiliate_org: "Foxtail Alumni Assoc", window_type: "special", enrollment_start_date: "2025-07-15", enrollment_end_date: "2025-08-15", default_effective_date: null, status: "open", sponsor_type: "affiliate", carrier: "Sequoia Care Partners", gi_eligible: false, notes: "", channel_partners: [] },
-  { id: "ew_5", organization_id: "org_1", org_name: "Acme Widgets Co", affiliate_organization_id: null, affiliate_org: null, window_type: "new_joiner", enrollment_start_date: null, enrollment_end_date: null, default_effective_date: null, status: "open", sponsor_type: "employer", carrier: "Northstar Mutual", gi_eligible: true, notes: "Always open. Per-individual deadlines computed from hire date.", channel_partners: [] },
+  { id: "ew_3", organization_id: "org_3", org_name: "Coastal Credit Union", affiliate_organization_id: "aff_1", affiliate_org: "CCU Member Foundation", window_type: "annual", enrollment_start_date: "2025-08-01", enrollment_end_date: "2025-08-31", default_effective_date: "2025-09-01", status: "open", sponsor_type: "employer", carrier_id: "car_5", gi_eligible: true, notes: "", channel_partners: [{ id: "ewcp_1", channel_partner_id: "cpn_1", role: "primary" }] },
+  { id: "ew_4", organization_id: null, org_name: null, affiliate_organization_id: "aff_2", affiliate_org: "Foxtail Alumni Assoc", window_type: "special", enrollment_start_date: "2025-07-15", enrollment_end_date: "2025-08-15", default_effective_date: null, status: "open", sponsor_type: "affiliate", carrier_id: "car_6", gi_eligible: false, notes: "", channel_partners: [] },
+  { id: "ew_5", organization_id: "org_1", org_name: "Acme Widgets Co", affiliate_organization_id: null, affiliate_org: null, window_type: "new_joiner", enrollment_start_date: null, enrollment_end_date: null, default_effective_date: null, status: "open", sponsor_type: "employer", carrier_id: "car_1", gi_eligible: true, notes: "Always open. Per-individual deadlines computed from hire date.", channel_partners: [] },
 ];
 
 // v14 magic_tokens — 14 columns; raw token never exposed in UI.
