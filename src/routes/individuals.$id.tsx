@@ -846,7 +846,6 @@ function IdentitySection({ i, readOnly, setConfirm, isLTC }: { i: Detail; readOn
         {!isLTC && (
           <RField label="Union Local Name" value={i.union_local_name ?? "—"} editing={editing}><input defaultValue={i.union_local_name ?? ""} className={inputCls} /></RField>
         )}
-        {/* TODO: v14 schema add individuals.assigned_rep TEXT for LTC parity with DI. Currently shared free-text from dummy data. */}
         <RField label="Assigned Rep" value={i.assigned_rep ?? "—"} editing={editing}>
           <input defaultValue={i.assigned_rep ?? ""} className={inputCls} placeholder="e.g., Casey Rep" />
         </RField>
