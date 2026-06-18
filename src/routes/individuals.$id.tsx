@@ -4,7 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Btn, ProductBadge } from "@/components/wireframe/Bits";
 import { Switch } from "@/components/ui/switch";
 import { ChevronLeft, ChevronDown, ChevronRight, Lock, Pencil, AlertTriangle, Copy, ExternalLink, Eye, EyeOff } from "lucide-react";
-import { INDIVIDUALS, ORGS, BILLING_GROUPS, formatCents, DEPARTURE_REASON_LABELS, type DepartureReason } from "@/lib/wireframe/data";
+import { INDIVIDUALS, ORGS, BILLING_GROUPS, formatCents, DEPARTURE_REASON_LABELS, getEzValueForIndividual, type DepartureReason, type EzValueStatus } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 
 export const Route = createFileRoute("/individuals/$id")({ component: IndividualDetail });
