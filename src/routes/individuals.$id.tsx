@@ -472,6 +472,11 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
         <RField label="Coverage Plan" value={unfunded ? "—" : i.coverage_plan} editing={editing}>
           <select defaultValue={i.coverage_plan ?? ""} className={inputCls}>{DI_PLANS.map((p) => <option key={p}>{p}</option>)}</select>
         </RField>
+        <RField label="Monthly Benefit" editing={editing}>
+          {editing
+            ? <input type="number" defaultValue={i.monthly_benefit_cents != null ? Math.round(i.monthly_benefit_cents / 100) : ""} className={inputCls} placeholder="3500" />
+            : (i.monthly_benefit_cents != null ? formatCents(i.monthly_benefit_cents) : "—")}
+        </RField>
         <RField label="Monthly Premium">
           {unfunded ? <span className="text-gray-400">—</span> : (
             <span className="inline-flex items-center gap-1">
@@ -481,7 +486,6 @@ function DICoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: b
           )}
         </RField>
         <RField label="Weekly Covered Benefit" value={unfunded ? "—" : formatCents(i.weekly_covered_benefit_cents)} />
-        <RField label="Monthly Benefit" value={i.monthly_benefit_cents != null ? formatCents(i.monthly_benefit_cents) : "—"} />
         <RField label="Current Stage" editing={editing}>
           {editing
             ? <select defaultValue={i.current_stage} className={inputCls}>{DI_STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}</select>
@@ -646,8 +650,16 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
         <RField label="Canceled Date">
           {i.canceled_date ? <span className="text-red-700">{fmtDate(i.canceled_date)}</span> : <span className="text-gray-400">—</span>}
         </RField>
-        <div />
-        <div />
+        <RField label="Coverage Effective" value={fmtDate((i as unknown as { coverage_effective_date: string | null }).coverage_effective_date)} editing={editing}>
+          <input type="date" defaultValue={(i as unknown as { coverage_effective_date: string | null }).coverage_effective_date ?? ""} className={inputCls} />
+        </RField>
+        <RField label="Coverage End" editing={editing}>
+          {editing
+            ? <input type="date" defaultValue={(i as unknown as { coverage_end_date: string | null }).coverage_end_date ?? ""} className={inputCls} />
+            : ((i as unknown as { coverage_end_date: string | null }).coverage_end_date
+                ? <span className="text-red-700">{fmtDate((i as unknown as { coverage_end_date: string | null }).coverage_end_date)}</span>
+                : <span className="text-gray-400">—</span>)}
+        </RField>
       </Grid>
       <div className="mt-3">
         <Link to="/payment-ledger" className="text-xs text-[#0a3d3e] hover:underline inline-flex items-center gap-1">
@@ -775,7 +787,10 @@ function IdentitySection({ i, readOnly, setConfirm, isLTC }: { i: Detail; readOn
         <RField label="First Name" value={i.first_name} editing={editing}><input defaultValue={i.first_name} className={inputCls} /></RField>
         <RField label="Last Name" value={i.last_name} editing={editing}><input defaultValue={i.last_name} className={inputCls} /></RField>
         <RField label="Email" value={i.email} editing={editing}><input type="email" defaultValue={i.email} className={inputCls} /></RField>
-        <div />
+        <RField label="Work Email" value={(i as unknown as { work_email?: string }).work_email ?? "—"} editing={editing}>
+          <input type="email" defaultValue={(i as unknown as { work_email?: string }).work_email ?? ""} placeholder="name@company.com" className={inputCls} />
+        </RField>
+
         <RField label="Phone" value={i.phone} editing={editing}><input defaultValue={i.phone} className={inputCls} /></RField>
         <RField label="Secondary Phone" value={i.secondary_phone ?? "—"} editing={editing}><input defaultValue={i.secondary_phone ?? ""} className={inputCls} /></RField>
         <RField label="Language" editing={editing}>
@@ -807,9 +822,7 @@ function IdentitySection({ i, readOnly, setConfirm, isLTC }: { i: Detail; readOn
             <select defaultValue={i.employment_relationship} className={inputCls}>{EMPLOYMENT_REL.map((o) => <option key={o}>{o}</option>)}</select>
           </RField>
         )}
-        {!isLTC && (
-          <RField label="Title" value={i.title ?? "—"} editing={editing}><input defaultValue={i.title ?? ""} className={inputCls} /></RField>
-        )}
+        <RField label="Job Title" value={i.title ?? "—"} editing={editing}><input defaultValue={i.title ?? ""} className={inputCls} placeholder="e.g., Operations Manager" /></RField>
         <RField label="Hire Date" value={fmtDate(i.hire_date)} editing={editing}><input type="date" defaultValue={i.hire_date} className={inputCls} /></RField>
         <RField label="Gender" value={i.gender} editing={editing}>
           <select defaultValue={i.gender} className={inputCls}>{GENDERS.map((o) => <option key={o}>{o}</option>)}</select>

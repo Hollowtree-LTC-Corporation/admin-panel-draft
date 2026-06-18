@@ -25,7 +25,14 @@ function statusPillTone(s: BillingGroupStatus): "ok" | "warn" | "neutral" | "bad
   if (s === "suspended") return "neutral";
   return "bad";
 }
-function pmTypeLabel(t: BillingGroup["payment_method_type"]): string {
+function pmTypeLabel(t: BillingGroup["payment_method_type"], last4?: string | null): string {
+  if (!t) return "No payment method";
+  if (t === "ach") return "Bank Account (ACH)";
+  if (t === "card" || t === "card-payment") return last4 ? `Card ending ${last4}` : "Card";
+  return "Apple Pay";
+}
+// Short label for the filter dropdown (group multiple cards together).
+function pmTypeFilterLabel(t: BillingGroup["payment_method_type"]): string {
   if (!t) return "—";
   if (t === "ach") return "ACH";
   if (t === "card" || t === "card-payment") return "Card";
@@ -184,7 +191,7 @@ function View() {
   const productGroups = useMemo(() => workingGroups.filter((g) => orgIds.has(g.organization_id)), [workingGroups, orgIds]);
 
   const orgOptions = orgsByProduct.map((o) => ({ value: o.id, label: o.name }));
-  const pmOptions = Array.from(new Set(productGroups.map((g) => pmTypeLabel(g.payment_method_type)).filter((v) => v !== "—"))).map((v) => ({ value: v }));
+  const pmOptions = Array.from(new Set(productGroups.map((g) => pmTypeFilterLabel(g.payment_method_type)).filter((v) => v !== "—"))).map((v) => ({ value: v }));
   const statusOptions: { value: BillingGroupStatus; label: string }[] = [
     { value: "pending", label: STATUS_LABELS.pending },
     { value: "active", label: STATUS_LABELS.active },
@@ -205,7 +212,7 @@ function View() {
         if (!inGroup) return false;
       }
       if (org !== "all" && g.organization_id !== org) return false;
-      if (pm !== "all" && pmTypeLabel(g.payment_method_type) !== pm) return false;
+      if (pm !== "all" && pmTypeFilterLabel(g.payment_method_type) !== pm) return false;
       if (status !== "all" && g.status !== status) return false;
       return true;
     }).map((g) => ({ ...g, _members: memberMap[g.id] ?? [] }));
@@ -306,11 +313,20 @@ function View() {
             return (
               <TRow key={g.id} onClick={() => detail.open(g)}>
                 <TCell className="font-medium underline decoration-dotted underline-offset-2">{g.name}</TCell>
-                <TCell className="text-black/70">{g.org_name}</TCell>
+                <TCell>
+                  <Link
+                    to="/organizations/$id"
+                    params={{ id: g.organization_id }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-[#0a3d3e] hover:underline"
+                  >
+                    {g.org_name}
+                  </Link>
+                </TCell>
                 <TCell>
                   {members.length} · <span className="text-black/50 text-[11px]">{preview || "—"}{members.length > 2 ? "…" : ""}</span>
                 </TCell>
-                <TCell>{g.payment_method_display_label ?? pmTypeLabel(g.payment_method_type)}</TCell>
+                <TCell>{g.payment_method_display_label ?? pmTypeLabel(g.payment_method_type, g.card_last4)}</TCell>
                 <TCell><Pill tone={statusPillTone(g.status)}>{STATUS_LABELS[g.status]}</Pill></TCell>
                 <TCell className="font-mono text-[11px]">
                   {g.moov_account_id ?? (
@@ -401,7 +417,7 @@ function View() {
                 </div>
               </div>
             )}
-            <Field label="Payment Method Type"><div className="text-sm">{pmTypeLabel(detailGroup.payment_method_type)}</div></Field>
+            <Field label="Payment Method Type"><div className="text-sm">{pmTypeLabel(detailGroup.payment_method_type, detailGroup.card_last4)}</div></Field>
             <Field label="Display Label"><div className="text-sm">{detailGroup.payment_method_display_label ?? "—"}</div></Field>
             <Field label="Moov Account ID"><CopyChip value={detailGroup.moov_account_id} /></Field>
             <Field label="Payment Method ID"><CopyChip value={detailGroup.payment_method_id} /></Field>

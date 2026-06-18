@@ -181,10 +181,21 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     last_payment_status = n % 2 === 0 ? "successful" : null;
   }
   const monthly_premium_cents = 2500 + (n * 137) % 8000;
+  // v15-audit: coverage lifecycle dates (display-only on Payment & Billing)
+  const cov_effective = (cov === "active" || cov === "suspended" || cov === "lapsed" || cov === "purchased" || cov === "canceled")
+    ? (effective_date ?? `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-15`)
+    : (n % 10 < 3 ? `2025-${String(((n * 2) % 12) + 1).padStart(2, "0")}-15` : null);
+  const cov_end = (cov === "canceled" || cov === "lapsed")
+    ? `2026-${String(((n * 3) % 12) + 1).padStart(2, "0")}-10`
+    : null;
+  // v15-audit: realistic job titles (both products)
+  const JOB_TITLES = ["Operations Manager", "Staff Accountant", "Warehouse Supervisor", "Senior Engineer", "Account Analyst", "Director of HR", "Project Manager", "Field Technician"];
+  const orgSlug = org.name.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 12) || "org";
   return {
     id: `ind_${n}`,
     full_name: `Test Person ${n}`,
     email: `person${n}@example.com`,
+    work_email: `test.person${n}@${orgSlug}.com`,
     phone: `555-0${100 + n}`,
     organization_id: org.id,
     org_name: org.name,
@@ -194,17 +205,19 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     plan: isLTC ? PLANS_LTC[n % PLANS_LTC.length] : PLANS_DI[n % PLANS_DI.length],
     monthly_premium_cents,
     effective_date,
+    coverage_effective_date: cov_effective,
+    coverage_end_date: cov_end,
     billing_group_id: `bg_${(n % 8) + 1}`,
     // DI fields (null for LTC)
     coverage_plan: isLTC ? null : PLANS_DI[n % PLANS_DI.length],
     di_type: isLTC ? null : (org.type_of_rate as "STD+LTD" | "LTD" | null),
-    monthly_benefit_cents: 300000 + (n % 5) * 50000,
+    monthly_benefit_cents: 150000 + (n % 10) * 50000,
     weekly_covered_benefit_cents: 80000 + (n % 4) * 10000,
     // std_premium / ltd_premium stored as whole dollars (DI only).
     std_premium: isLTC ? null : Math.round((monthly_premium_cents * 0.4) / 100),
     ltd_premium: isLTC ? null : Math.round((monthly_premium_cents * 0.6) / 100),
     assigned_rep: ["Jamie Rep", "Casey Rep", "Morgan Rep"][n % 3],
-    title: isLTC ? null : ["Manager", "Engineer", "Analyst", "Director"][n % 4],
+    title: JOB_TITLES[n % JOB_TITLES.length],
     greeting: ["Mr.", "Ms.", "Mx."][n % 3],
     is_union_member: isLTC ? null : (n % 7 === 0),
     union_local_name: isLTC ? null : (n % 7 === 0 ? `Local ${100 + n}` : null),
@@ -403,10 +416,16 @@ export const PAYMENT_LEDGER = Array.from({ length: 60 }, (_, i) => {
 });
 
 export const ACCOUNT_ADJUSTMENTS = [
-  { id: "aa_1", individual_id: "ind_3", individual_name: "Test Person 3", adjustment_type: "premium_correction", amount_cents: -1500, reason: "Mid-cycle plan downgrade", notes: "Confirmed via support ticket #4821.", effective_date: "2025-03-15", applied_to_next_charge: true, approved_by: "Guy (admin)", approved_at: "2025-03-15T14:22Z" },
-  { id: "aa_2", individual_id: "ind_11", individual_name: "Test Person 11", adjustment_type: "penalty_waiver", amount_cents: -2500, reason: "Bank holiday processing delay", notes: "", effective_date: "2025-04-02", applied_to_next_charge: true, approved_by: "Guy (admin)", approved_at: "2025-04-02T09:10Z" },
-  { id: "aa_3", individual_id: "ind_22", individual_name: "Test Person 22", adjustment_type: "refund", amount_cents: -8500, reason: "Coverage canceled in cooling-off window", notes: "Refund issued via Moov reversal.", effective_date: "2025-05-19", applied_to_next_charge: false, approved_by: "Guy (admin)", approved_at: "2025-05-19T11:45Z" },
-  { id: "aa_4", individual_id: "ind_7", individual_name: "Test Person 7", adjustment_type: "write_off", amount_cents: -4200, reason: "Uncollectible after 90 days", notes: "", effective_date: "2025-06-01", applied_to_next_charge: false, approved_by: "Guy (admin)", approved_at: "2025-06-01T16:30Z" },
+  { id: "aa_1", individual_id: "ind_3", individual_name: "Test Person 3", adjustment_type: "premium_correction", amount_cents: -1500, reason: "Mid-cycle plan downgrade", notes: "Confirmed via support ticket #4821.", effective_date: "2025-03-15", applied_to_balance: true, approved_by: "Guy (admin)", approved_at: "2025-03-15T14:22Z" },
+  { id: "aa_2", individual_id: "ind_11", individual_name: "Test Person 11", adjustment_type: "penalty_waiver", amount_cents: -2500, reason: "Bank holiday processing delay", notes: "", effective_date: "2025-04-02", applied_to_balance: true, approved_by: "Guy (admin)", approved_at: "2025-04-02T09:10Z" },
+  { id: "aa_3", individual_id: "ind_22", individual_name: "Test Person 22", adjustment_type: "refund", amount_cents: -8500, reason: "Coverage canceled in cooling-off window", notes: "Refund issued via Moov reversal.", effective_date: "2025-05-19", applied_to_balance: true, approved_by: "Guy (admin)", approved_at: "2025-05-19T11:45Z" },
+  { id: "aa_4", individual_id: "ind_7", individual_name: "Test Person 7", adjustment_type: "write_off", amount_cents: -4200, reason: "Uncollectible after 90 days", notes: "", effective_date: "2025-06-01", applied_to_balance: true, approved_by: "Guy (admin)", approved_at: "2025-06-01T16:30Z" },
+  { id: "aa_5", individual_id: "ind_5", individual_name: "Test Person 5", adjustment_type: "premium_correction", amount_cents: -750, reason: "Rate cell update applied retroactively", notes: "", effective_date: "2025-06-05", applied_to_balance: true, approved_by: "Guy (admin)", approved_at: "2025-06-05T10:00Z" },
+  { id: "aa_6", individual_id: "ind_14", individual_name: "Test Person 14", adjustment_type: "penalty_waiver", amount_cents: -1200, reason: "Auto-retry false positive", notes: "Awaiting batch run.", effective_date: "2025-06-10", applied_to_balance: false, approved_by: "Guy (admin)", approved_at: "2025-06-10T11:00Z" },
+  { id: "aa_7", individual_id: "ind_18", individual_name: "Test Person 18", adjustment_type: "refund", amount_cents: -3000, reason: "Duplicate charge reversal", notes: "", effective_date: "2025-06-12", applied_to_balance: true, approved_by: "Guy (admin)", approved_at: "2025-06-12T13:30Z" },
+  { id: "aa_8", individual_id: "ind_24", individual_name: "Test Person 24", adjustment_type: "other", amount_cents: 1500, reason: "Manual debit — late premium", notes: "Pending review by ops lead.", effective_date: "2025-06-14", applied_to_balance: false, approved_by: "Guy (admin)", approved_at: "2025-06-14T09:00Z" },
+  { id: "aa_9", individual_id: "ind_9", individual_name: "Test Person 9", adjustment_type: "premium_correction", amount_cents: -425, reason: "Mid-month tier change proration", notes: "", effective_date: "2025-06-15", applied_to_balance: true, approved_by: "Guy (admin)", approved_at: "2025-06-15T08:00Z" },
+  { id: "aa_10", individual_id: "ind_30", individual_name: "Test Person 30", adjustment_type: "write_off", amount_cents: -2100, reason: "Bad address — uncollectible", notes: "", effective_date: "2025-06-16", applied_to_balance: true, approved_by: "Guy (admin)", approved_at: "2025-06-16T14:00Z" },
 ];
 
 // Carriers — schema-aligned (DI v13 / LTC v3.13 `carriers` table).
@@ -576,11 +595,18 @@ export type Policy = {
   ltc_gold: number | null;
   ltc_platinum: number | null;
   ltc_diamond: number | null;
+  // v15-audit: hollowtree_paid (default) vs carrier_direct affects commission payable.
+  // Optional in data layer; consumers default to 'hollowtree_paid'. See getPolicyPaymentMethod().
+  payment_method?: "hollowtree_paid" | "carrier_direct";
 };
 
 // Whole-dollar tier defaults for LTC policies.
 const _LTC_TIERS = { ltc_bronze: 50000, ltc_silver: 100000, ltc_gold: 150000, ltc_platinum: 200000, ltc_diamond: 250000 };
 const _NO_TIERS = { ltc_bronze: null, ltc_silver: null, ltc_gold: null, ltc_platinum: null, ltc_diamond: null };
+const _CARRIER_DIRECT_POL_IDS = new Set(["pol_4", "pol_8"]);
+export function getPolicyPaymentMethod(id: string): "hollowtree_paid" | "carrier_direct" {
+  return _CARRIER_DIRECT_POL_IDS.has(id) ? "carrier_direct" : "hollowtree_paid";
+}
 
 export const POLICIES: Policy[] = [
   { id: "pol_1", policy_name: "Acme Widgets Group DI 2025", policy_number: "DI-AC-2025-001", organization_id: "org_1", org_name: "Acme Widgets Co", carrier_product_id: "cp_1", product: "DI", enrollment_status: "active", policy_owner_type: "affiliate", carrier_commission_pct: 12, override_pct: 3, channel_partner_id: "cpn_1", commission_schedule_id: null, initial_effective_date: "2025-02-01", attio_synced_at: "2025-06-10T14:14:00Z", updated_at: "2025-06-09T11:00:00Z", attio_record_id: "att_pol_1", attio_policy_id: "att_pol_1", account_manager: "Guy Livingstone", google_drive_folder: "https://drive.google.com/drive/folders/acme-2025", original_enrollee_count: 12, original_monthly_premium: 2450, ..._NO_TIERS },
@@ -1018,10 +1044,10 @@ export type MissingSubmission = {
   reviewed_at: string | null;
 };
 export const MISSING_SUBMISSIONS: MissingSubmission[] = [
-  { id: "ms_1", full_name: "Test Person A", email: "a@example.com", phone: "555-0001", org_name: "Acme Widgets Co", origin_url: "/enroll/acme", status: "unreviewed", created_at: "2026-06-14", reviewed_by: null, reviewed_at: null },
-  { id: "ms_2", full_name: "Test Person B", email: "b@example.com", phone: "555-0002", org_name: "Bluefin Logistics", origin_url: "/enroll/bluefin", status: "employee_added", created_at: "2026-06-10", reviewed_by: "jordan.ops", reviewed_at: "2026-06-11" },
-  { id: "ms_3", full_name: "Test Person C", email: "c@example.com", phone: null, org_name: null, origin_url: "/enroll/unknown", status: "not_an_employee", created_at: "2026-06-05", reviewed_by: "alex.admin", reviewed_at: "2026-06-07" },
-  { id: "ms_4", full_name: "Test Person D", email: "d@example.com", phone: "555-0004", org_name: "Greylock Partners LLC", origin_url: "/enroll/greylock", status: "unreviewed", created_at: "2026-06-15", reviewed_by: null, reviewed_at: null },
+  { id: "ms_1", full_name: "Test Person A", email: "a@example.com", phone: "555-0001", org_name: "Acme Widgets Co", origin_url: "/enroll/acme", status: "unreviewed", created_at: "2026-06-17T16:42:00Z", reviewed_by: null, reviewed_at: null },
+  { id: "ms_2", full_name: "Test Person B", email: "b@example.com", phone: "555-0002", org_name: "Bluefin Logistics", origin_url: "/enroll/bluefin", status: "employee_added", created_at: "2026-06-10T09:15:00Z", reviewed_by: "jordan.ops", reviewed_at: "2026-06-11T14:30:00Z" },
+  { id: "ms_3", full_name: "Test Person C", email: "c@example.com", phone: null, org_name: null, origin_url: "/enroll/unknown", status: "not_an_employee", created_at: "2026-05-22T08:00:00Z", reviewed_by: "alex.admin", reviewed_at: "2026-05-23T11:05:00Z" },
+  { id: "ms_4", full_name: "Test Person D", email: "d@example.com", phone: "555-0004", org_name: "Greylock Partners LLC", origin_url: "/enroll/greylock", status: "unreviewed", created_at: "2026-06-18T07:20:00Z", reviewed_by: null, reviewed_at: null },
 ];
 
 export type DIRateRow = {

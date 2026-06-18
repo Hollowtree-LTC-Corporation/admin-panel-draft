@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader, TableShell, TRow, TCell, Btn, Drawer, useDrawer, Field, Input, Pill } from "@/components/wireframe/Bits";
+import { Check, Minus } from "lucide-react";
+import { PageHeader, TableShell, TRow, TCell, Btn, Drawer, useDrawer, Field, Input } from "@/components/wireframe/Bits";
 import { ACCOUNT_ADJUSTMENTS, INDIVIDUALS, BILLING_GROUPS, formatCents } from "@/lib/wireframe/data";
 import { usePermission, useStore } from "@/lib/wireframe/store";
 import { FilterRow, FilterSearch, FilterSelect, FilterCombobox, ClearFiltersLink, SortableTHead, useSort } from "@/components/wireframe/Filters";
@@ -8,7 +9,7 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 
 export const Route = createFileRoute("/account-adjustments")({ component: View });
 
-type SortKey = "individual_name" | "billing_group_id" | "adjustment_type" | "amount_cents" | "reason" | "effective_date" | "applied_to_next_charge" | "approved_by";
+type SortKey = "individual_name" | "billing_group_id" | "adjustment_type" | "amount_cents" | "reason" | "effective_date" | "applied_to_balance" | "approved_by";
 
 const ADJ_TYPES = ["premium_correction", "penalty_waiver", "refund", "write_off", "other"] as const;
 const ADJ_TYPE_LABELS: Record<typeof ADJ_TYPES[number], string> = {
@@ -19,16 +20,21 @@ const ADJ_TYPE_LABELS: Record<typeof ADJ_TYPES[number], string> = {
   other: "Other",
 };
 
+type Adjustment = typeof ACCOUNT_ADJUSTMENTS[number];
+
 function View() {
   const can = usePermission();
-  const { product } = useStore();
-  const d = useDrawer();
+  const { product, role } = useStore();
+  const d = useDrawer<Adjustment>();
 
   const [search, setSearch] = useState("");
   const [ind, setInd] = useState("all");
   const [type, setType] = useState("all");
   const [approver, setApprover] = useState("all");
   const sort = useSort<SortKey>("effective_date", "desc");
+
+  const [appliedDraft, setAppliedDraft] = useState<boolean>(true);
+  const isAdmin = role === "admin";
 
   const productInds = INDIVIDUALS.filter((i) => i.product === product);
   const indOptions = productInds.map((i) => ({ value: i.id, label: i.full_name }));
@@ -53,13 +59,24 @@ function View() {
   const active = search !== "" || ind !== "all" || type !== "all" || approver !== "all" || !sort.isDefault;
   const clearAll = () => { setSearch(""); setInd("all"); setType("all"); setApprover("all"); sort.reset(); };
 
+  const openRow = (a: Adjustment) => {
+    setAppliedDraft(a.applied_to_balance);
+    d.open(a);
+  };
+  const openNew = () => {
+    setAppliedDraft(true);
+    d.open();
+  };
+
+  const drawerAdj = d.state.data;
+
   return (
     <div>
       <PageHeader
         title="Account Adjustments"
         subtitle={`${rows.length} of ${ACCOUNT_ADJUSTMENTS.length} adjustments · immutable once created`}
         actions={
-          <Btn variant="primary" disabled={!can("account_adjustments", "create") || !can("account_adjustments", "approve")} onClick={() => d.open()}>
+          <Btn variant="primary" disabled={!can("account_adjustments", "create") || !can("account_adjustments", "approve")} onClick={openNew}>
             + New Adjustment
           </Btn>
         }
@@ -81,9 +98,9 @@ function View() {
             { key: "billing_group_id", label: "Group" },
             { key: "adjustment_type", label: "Type" },
             { key: "amount_cents", label: "Amount" },
+            { key: "applied_to_balance", label: "Applied" },
             { key: "reason", label: "Reason" },
             { key: "effective_date", label: "Effective" },
-            { key: "applied_to_next_charge", label: "Applied" },
             { key: "approved_by", label: "Approved By" },
           ]}
           sortKey={sort.sortKey}
@@ -92,18 +109,18 @@ function View() {
         />
         <tbody>
           {rows.map((a) => (
-            <TRow key={a.id}>
+            <TRow key={a.id} onClick={() => openRow(a)}>
               <TCell className="font-medium">{a.individual_name}</TCell>
               <TCell className="text-black/60">{a.billing_group_id || "—"}</TCell>
               <TCell className="capitalize">{a.adjustment_type.replace(/_/g, " ")}</TCell>
               <TCell className={a.amount_cents < 0 ? "text-rose-700" : ""}>{formatCents(a.amount_cents)}</TCell>
+              <TCell>
+                {a.applied_to_balance
+                  ? <Check className="h-4 w-4 text-emerald-600" aria-label="Applied to balance" />
+                  : <Minus className="h-4 w-4 text-black/30" aria-label="Not applied" />}
+              </TCell>
               <TCell className="text-black/70">{a.reason}</TCell>
               <TCell className="font-mono text-[11px]">{a.effective_date}</TCell>
-              <TCell>
-                {a.applied_to_next_charge
-                  ? <Pill tone="ok">Applied</Pill>
-                  : <Pill tone="warn">Pending</Pill>}
-              </TCell>
               <TCell>{a.approved_by}</TCell>
             </TRow>
           ))}
@@ -113,29 +130,74 @@ function View() {
         </tbody>
       </TableShell>
 
-      <Drawer open={d.state.open} onClose={d.close} title="New Account Adjustment">
-        <Field label="Individual"><Input placeholder="Select individual…" /></Field>
-        <Field label="Billing Group"><Input defaultValue={BILLING_GROUPS[0]?.id ?? ""} /></Field>
+      <Drawer open={d.state.open} onClose={d.close} title={drawerAdj ? `Adjustment · ${drawerAdj.individual_name}` : "New Account Adjustment"}>
+        <Field label="Individual">
+          {drawerAdj ? <div className="text-sm py-1">{drawerAdj.individual_name}</div> : <Input placeholder="Select individual…" />}
+        </Field>
+        <Field label="Billing Group">
+          {drawerAdj
+            ? <div className="text-sm py-1 font-mono text-[11px]">{INDIVIDUALS.find((i) => i.id === drawerAdj.individual_id)?.billing_group_id ?? "—"}</div>
+            : <Input defaultValue={BILLING_GROUPS[0]?.id ?? ""} />}
+        </Field>
         <Field label="Adjustment Type">
-          <select defaultValue="premium_correction" className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
-            {ADJ_TYPES.map((t) => <option key={t} value={t}>{ADJ_TYPE_LABELS[t]}</option>)}
-          </select>
+          {drawerAdj
+            ? <div className="text-sm py-1 capitalize">{drawerAdj.adjustment_type.replace(/_/g, " ")}</div>
+            : (
+              <select defaultValue="premium_correction" className="w-full px-2 py-1 text-sm border border-black/15 rounded bg-white">
+                {ADJ_TYPES.map((t) => <option key={t} value={t}>{ADJ_TYPE_LABELS[t]}</option>)}
+              </select>
+            )}
         </Field>
-        <Field label="Amount (cents)"><Input placeholder="-1500" /></Field>
-        <Field label="Reason"><Input placeholder="Short justification" /></Field>
+        <Field label="Amount (cents)">
+          {drawerAdj
+            ? <div className={`text-sm py-1 ${drawerAdj.amount_cents < 0 ? "text-rose-700" : ""}`}>{formatCents(drawerAdj.amount_cents)}</div>
+            : <Input placeholder="-1500" />}
+        </Field>
+        <Field label="Reason">
+          {drawerAdj ? <div className="text-sm py-1">{drawerAdj.reason}</div> : <Input placeholder="Short justification" />}
+        </Field>
         <Field label="Notes">
-          <textarea placeholder="Internal notes (optional)..." className="w-full px-2 py-1 text-sm border border-black/15 rounded min-h-[60px]" />
+          {drawerAdj
+            ? <div className="text-sm py-1 text-black/70 whitespace-pre-wrap">{drawerAdj.notes || <span className="text-black/40">—</span>}</div>
+            : <textarea placeholder="Internal notes (optional)..." className="w-full px-2 py-1 text-sm border border-black/15 rounded min-h-[60px]" />}
         </Field>
-        <Field label="Effective Date"><Input defaultValue="2025-06-12" /></Field>
-        <label className="flex items-center gap-2 mb-3 text-xs">
-          <input type="checkbox" defaultChecked />
-          <span className="text-[10px] uppercase tracking-wider text-black/60">Apply to Next Charge</span>
-          <span className="text-black/40 text-[11px]">— applies on the next billing cycle</span>
-        </label>
-        <div className="text-[11px] text-black/50 mt-2 mb-3">Once created, this row is immutable.</div>
+        <Field label="Effective Date">
+          {drawerAdj ? <div className="text-sm py-1 font-mono text-[11px]">{drawerAdj.effective_date}</div> : <Input defaultValue="2025-06-12" />}
+        </Field>
+
+        <div className="mt-3 mb-3 pt-3 border-t border-black/10">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={appliedDraft}
+              onChange={(e) => setAppliedDraft(e.target.checked)}
+              disabled={!isAdmin}
+            />
+            <span className="font-medium">Applied to Balance</span>
+          </label>
+          <div className="text-[11px] text-black/50 mt-1 ml-6 leading-snug">
+            When checked, this adjustment is included in the enrollee's balance calculation.
+          </div>
+          {!isAdmin && (
+            <div className="text-[11px] text-amber-700 mt-1 ml-6">Admin role required to change this flag.</div>
+          )}
+        </div>
+
+        {!drawerAdj && (
+          <div className="text-[11px] text-black/50 mt-2 mb-3">Once created, this row is immutable.</div>
+        )}
         <div className="flex gap-2">
-          <Btn variant="primary" disabled={!can("account_adjustments", "approve")}>Create &amp; Approve</Btn>
-          <Btn onClick={d.close}>Cancel</Btn>
+          {drawerAdj ? (
+            <>
+              <Btn variant="primary" disabled={!isAdmin}>Save</Btn>
+              <Btn onClick={d.close}>Close</Btn>
+            </>
+          ) : (
+            <>
+              <Btn variant="primary" disabled={!can("account_adjustments", "approve")}>Create &amp; Approve</Btn>
+              <Btn onClick={d.close}>Cancel</Btn>
+            </>
+          )}
         </div>
       </Drawer>
     </div>

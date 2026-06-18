@@ -8,7 +8,7 @@ import {
 import {
   POLICIES, CARRIER_PRODUCTS, ORGS, CARRIERS, CHANNEL_PARTNERS,
   INTERNAL_REPS, ORG_PRIMARY_CHANNEL_PARTNER, CARRIER_COMMISSION_SCHEDULES,
-  POLICY_SPLITS_INITIAL, INDIVIDUALS,
+  POLICY_SPLITS_INITIAL, INDIVIDUALS, getPolicyPaymentMethod,
   type Policy, type PolicySplit, type PolicyStatus, type PayeeType,
   type PaymentMethodSetting, type PolicyOwnerType,
 } from "@/lib/wireframe/data";
@@ -585,6 +585,57 @@ function PolicyDrawer({
           <FilterCombobox value={draft.carrier_product_id || "all"} onChange={(v) => v !== "all" && setCarrierProduct(v)} placeholder="Select carrier product…" options={cpOptions} width="w-full" />
         )}
       </Field>
+
+      <Field label="Primary Broker">
+        {readOnly ? (
+          <div className="text-sm text-black/80 py-1">
+            {draft.channel_partner_id
+              ? (CHANNEL_PARTNERS.find((c) => c.id === draft.channel_partner_id)?.partner_name ?? draft.channel_partner_id)
+              : <span className="text-black/40">—</span>}
+          </div>
+        ) : (
+          <select
+            value={draft.channel_partner_id ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, channel_partner_id: e.target.value || null }))}
+            className={inputCls}
+          >
+            <option value="">— No broker assigned —</option>
+            {CHANNEL_PARTNERS.map((c) => (
+              <option key={c.id} value={c.id}>{c.partner_name}</option>
+            ))}
+          </select>
+        )}
+      </Field>
+
+      <Field label="Payment Method">
+        {(() => {
+          const current: PaymentMethodSetting = (draft.payment_method ?? getPolicyPaymentMethod(draft.id)) as PaymentMethodSetting;
+          if (readOnly) {
+            return <div className="text-sm text-black/80 py-1">{PAYMENT_LABEL[current]}</div>;
+          }
+          return (
+            <div>
+              <div className="inline-flex rounded border border-black/15 overflow-hidden text-xs">
+                {(["hollowtree_paid", "carrier_direct"] as PaymentMethodSetting[]).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setDraft((d) => ({ ...d, payment_method: v }))}
+                    className={`px-3 py-1 ${current === v ? "bg-[#0a3d3e] text-white" : "bg-white text-black/70 hover:bg-black/5"}`}
+                  >
+                    {v === "hollowtree_paid" ? "Hollowtree Paid" : "Carrier Direct"}
+                  </button>
+                ))}
+              </div>
+              <div className="text-[11px] text-black/50 mt-1">
+                Hollowtree collects and remits premium, or the carrier collects directly. Carrier-direct policies show <code>payable: false</code> on commission statements.
+              </div>
+            </div>
+          );
+        })()}
+      </Field>
+
+
 
       <Field label="Status *">
         {readOnly || isEdit ? (
