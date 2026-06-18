@@ -53,7 +53,7 @@ function emptyDraft(): Draft {
     enrollment_start_date: "",
     enrollment_end_date: "",
     default_effective_date: "",
-    carrier: CARRIERS[0]?.carrier_name ?? "",
+    carrier_id: CARRIERS[0]?.id ?? "",
     gi_eligible: true,
     status: "upcoming",
     notes: "",
