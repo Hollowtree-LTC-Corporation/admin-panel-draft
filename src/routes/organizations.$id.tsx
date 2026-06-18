@@ -1929,8 +1929,8 @@ function CarrierProductSection({ org, product, readOnly, variant }: { org: OrgDe
         </div>
         <RField label="Effective Date">
           {e.editing
-            ? <input className={inputCls} type="date" defaultValue={org.policy_effective_date} />
-            : fmtDate(org.policy_effective_date)}
+            ? <input className={inputCls} type="date" defaultValue={org.group_policy_effective_date ?? ""} />
+            : fmtDate(org.group_policy_effective_date)}
         </RField>
         {product === "LTC" ? (
           <RField label="Carrier Commission Schedule">
