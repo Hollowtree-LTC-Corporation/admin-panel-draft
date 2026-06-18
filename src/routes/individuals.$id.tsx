@@ -519,9 +519,17 @@ function LTCCoverageSection({ i, readOnly, setConfirm }: { i: Detail; readOnly: 
       <Grid cols={4}>
         <CoverageStatusField editing={editing} status={status} setStatus={setStatus} allowed={allowed} current={i.coverage_status} />
         <RField label="Current Stage"><Badge map={STAGE_BADGE} value={i.current_stage} /></RField>
-        <RField label="Benefit Class" value={i.benefit_class_name} editing={editing}>
-          <select defaultValue={i.benefit_class_name} className={inputCls}>{["All Employees","Management"].map((o) => <option key={o}>{o}</option>)}</select>
-        </RField>
+        {(() => {
+          const orgClasses = BENEFIT_CLASSES.filter((b) => b.organization_id === i.organization_id);
+          const className = BENEFIT_CLASSES.find((b) => b.id === i.benefit_class_id)?.name ?? "—";
+          return (
+            <RField label="Benefit Class" value={className} editing={editing}>
+              <select defaultValue={i.benefit_class_id ?? ""} className={inputCls}>
+                {orgClasses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </RField>
+          );
+        })()}
         <RField label="Riders" value={i._riders} />
 
         <RField label="Purchased Plan" value={unfunded ? "—" : i.purchased_plan} editing={editing}>
