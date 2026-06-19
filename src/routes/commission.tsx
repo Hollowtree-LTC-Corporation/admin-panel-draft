@@ -2036,7 +2036,7 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
       id: `${draft.id}_t${i}`,
       schedule_id: draft.id,
       from_year: Number(t.from_year),
-      to_year: t.to_year === null ? 99 : Number(t.to_year),
+      to_year: t.to_year === null ? null : Number(t.to_year),
       rate_pct: Number(t.rate_pct),
     }));
     onSave(sched, newTiers);
