@@ -674,15 +674,8 @@ function PaymentSection({ i, bg, readOnly }: { i: Detail; bg: ReturnType<typeof 
         <RField label="Canceled Date">
           {i.canceled_date ? <span className="text-red-700">{fmtDate(i.canceled_date)}</span> : <span className="text-gray-400">—</span>}
         </RField>
-        <RField label="Coverage Effective" value={fmtDate(i.effective_date)} editing={editing}>
+        <RField label="Effective Date" value={fmtDate(i.effective_date)} editing={editing}>
           <input type="date" defaultValue={i.effective_date ?? ""} className={inputCls} />
-        </RField>
-        <RField label="Coverage End" editing={editing}>
-          {editing
-            ? <input type="date" defaultValue={i.canceled_date ?? ""} className={inputCls} />
-            : (i.canceled_date
-                ? <span className="text-red-700">{fmtDate(i.canceled_date)}</span>
-                : <span className="text-gray-400">—</span>)}
         </RField>
       </Grid>
       <div className="mt-3">
