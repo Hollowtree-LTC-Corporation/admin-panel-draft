@@ -403,7 +403,7 @@ export const PAYMENT_LEDGER = Array.from({ length: 60 }, (_, i) => {
   const ind = INDIVIDUALS[i % INDIVIDUALS.length];
   const org = ORGS.find((o) => o.id === ind.organization_id);
   let contribution_source: "voluntary" | "employer_paid" | "employee_buyup" = "voluntary";
-  const employerEligible = ind.employer_contribution_active && ind.employer_contribution_tier !== "0%";
+  const employerEligible = ind.employer_contribution_active;
   if (employerEligible && i % 3 === 0) contribution_source = "employer_paid";
   else if (ind.product === "LTC" && ind.issue_type === "SI" && i % 4 === 1) contribution_source = "employee_buyup";
   const coverage_type = ind.product === "DI"
