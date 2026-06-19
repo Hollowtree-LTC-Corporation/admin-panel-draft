@@ -1443,7 +1443,7 @@ function StatementDrawerView({ open, stmt, product, onClose, onApprove, onMarkPa
                 <div><span className="text-black/50">Billing period:</span> {fmtPeriod(stmt.period_start, stmt.period_end)}</div>
                 <div><span className="text-black/50">Policy year:</span> <span className="font-mono">Y{polYear}</span></div>
                 {matched ? (
-                  <div><span className="text-black/50">Tier matched:</span> from_year={matched.from_year}, to_year={matched.to_year === 99 ? "perpetual" : matched.to_year}, rate_pct={matched.rate_pct}</div>
+                  <div><span className="text-black/50">Tier matched:</span> from_year={matched.from_year}, to_year={matched.to_year === null ? "+" : matched.to_year}, rate_pct={matched.rate_pct}</div>
                 ) : (
                   <div className="text-rose-700">No tier matches policy year {polYear}.</div>
                 )}
