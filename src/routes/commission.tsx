@@ -1992,7 +1992,7 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
     is_default: schedule?.is_default ?? false,
     effective_from: schedule?.effective_from ?? new Date().toISOString().slice(0, 10),
     effective_to: schedule?.effective_to ?? "",
-    notes: "",
+    notes: schedule?.notes ?? "",
     tiers: initialTiers.map((t, i) => ({ key: `${t.id}_${i}`, from_year: t.from_year, to_year: t.to_year, rate_pct: t.rate_pct })),
   });
 
@@ -2031,6 +2031,7 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
       is_default: onlySchedule ? true : draft.is_default,
       effective_from: draft.effective_from,
       effective_to: draft.effective_to || null,
+      notes: draft.notes.trim() || null,
     };
     const newTiers = draft.tiers.map((t, i) => ({
       id: `${draft.id}_t${i}`,
