@@ -304,7 +304,7 @@ function tierPreview(scheduleId: string): string {
   const tiers = tiersFor(scheduleId);
   if (tiers.length === 0) return "—";
   const fmt = (t: { from_year: number; to_year: number | null; rate_pct: number }) => {
-    if (t.to_year === null || t.to_year >= 99) return `${t.rate_pct}% Y${t.from_year}+`;
+    if (t.to_year === null) return `${t.rate_pct}% Y${t.from_year}+`;
     if (t.to_year === t.from_year) return `${t.rate_pct}% Y${t.from_year}`;
     return `${t.rate_pct}% Y${t.from_year}–${t.to_year}`;
   };
