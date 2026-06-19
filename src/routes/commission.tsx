@@ -826,7 +826,7 @@ function View() {
             const polYear = product === "LTC" && pol ? policyYearFor(pol.initial_effective_date, s.period_start) : null;
             const matched = sched && polYear ? matchTier(sched.id, polYear) : null;
             const rateTooltip = sched && matched
-              ? `Rate derived from ${sched.schedule_name}, Year ${polYear} tier (${matched.from_year}–${matched.to_year === 99 ? "perpetual" : matched.to_year})`
+              ? `Rate derived from ${sched.schedule_name}, Year ${polYear} tier (${matched.from_year}–${matched.to_year === null ? "+" : matched.to_year})`
               : undefined;
             return (
               <TRow key={s.id} onClick={() => setStmtDrawer({ open: true, id: s.id })}>
