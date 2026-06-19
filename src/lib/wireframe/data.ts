@@ -243,7 +243,9 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     // DI-only per-individual language preference (overrides org default)
     preferred_language: isLTC ? null : (n === 4 || n === 17 ? "es" : "en"),
     // Employer contribution
-    employer_contribution_tier: ["100%", "75%", "50%", "0%"][n % 4],
+    // Tier names are opaque CHECK-constrained labels (not percentages).
+    // Dollar amounts live on benefit_classes.tier_<label>_cents joined via benefit_class_id.
+    employer_contribution_tier: (["bronze","silver","gold","platinum","diamond"] as const)[n % 5],
     employer_contribution_duration_months: [12, 24, 36][n % 3],
     employer_contribution_active: n % 5 !== 0,
     employer_contribution_start_date: n % 5 !== 0 ? "2025-01-01" : null,
