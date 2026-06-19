@@ -173,7 +173,7 @@ function View() {
               onChange={(e) => setAppliedDraft(e.target.checked)}
               disabled={!isAdmin}
             />
-            <span className="font-medium">Applied to Balance</span>
+            <span className="font-medium">Applied to Next Charge</span>
           </label>
           <div className="text-[11px] text-black/50 mt-1 ml-6 leading-snug">
             When checked, this adjustment is included in the enrollee's balance calculation.
