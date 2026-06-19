@@ -25,7 +25,8 @@ type SortKey = "window_type" | "org_name" | "enrollment_start_date" | "enrollmen
 type SponsorShape = "employer" | "employer+affiliate" | "affiliate";
 type SponsorStored = "employer" | "affiliate";
 
-type DraftPartner = { id: string; channel_partner_id: string; role: string };
+// _key is a client-only React row key. ew_channel_partners has composite PK (enrollment_window_id, channel_partner_id) — no `id` column.
+type DraftPartner = { _key: string; channel_partner_id: string; role: string };
 
 type Draft = {
   id: string | null;
@@ -487,7 +488,7 @@ function WindowForm({
                 <div className="text-[11px] text-black/40">No partners attributed yet.</div>
               )}
               {draft.channel_partners.map((p, idx) => (
-                <div key={p.id} className="flex items-center gap-2">
+                <div key={p._key} className="flex items-center gap-2">
                   <select
                     value={p.channel_partner_id}
                     onChange={(e) => {
@@ -516,7 +517,7 @@ function WindowForm({
               ))}
               <button
                 type="button"
-                onClick={() => update("channel_partners", [...draft.channel_partners, { id: `ewcp_${Date.now()}`, channel_partner_id: "", role: "" }])}
+                onClick={() => update("channel_partners", [...draft.channel_partners, { _key: `ewcp_${Date.now()}`, channel_partner_id: "", role: "" }])}
                 className="text-xs text-[#0a3d3e] hover:underline"
               >
                 + Add Partner

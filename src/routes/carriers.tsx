@@ -926,8 +926,8 @@ function NewScheduleForm({
       state_code: stateCode.trim() || null, schedule_name: name.trim(),
       schedule_type: type, is_default: isDefault,
       effective_from: effFrom, effective_to: effTo || null,
+      notes: notes.trim() || null,
     };
-    void notes; // notes not on existing schedule type; would be added in production schema
     const newTiers = tierRows.map((t, i) => ({
       id: `${id}_t${i}`, schedule_id: id,
       from_year: Number(t.from), to_year: Number(t.to), rate_pct: Number(t.rate_pct),

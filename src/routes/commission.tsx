@@ -2031,6 +2031,7 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
       is_default: onlySchedule ? true : draft.is_default,
       effective_from: draft.effective_from,
       effective_to: draft.effective_to || null,
+      notes: draft.notes.trim() || null,
     };
     const newTiers = draft.tiers.map((t, i) => ({
       id: `${draft.id}_t${i}`,
