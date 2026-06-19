@@ -214,9 +214,8 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     current_stage,
     plan: isLTC ? PLANS_LTC[n % PLANS_LTC.length] : PLANS_DI[n % PLANS_DI.length],
     monthly_premium_cents,
-    effective_date,
-    coverage_effective_date: cov_effective,
-    coverage_end_date: cov_end,
+    effective_date: effective_date ?? cov_effective,
+    canceled_date: cov_end,
     billing_group_id: `bg_${(n % 8) + 1}`,
     // DI fields (null for LTC)
     coverage_plan: isLTC ? null : PLANS_DI[n % PLANS_DI.length],
@@ -244,7 +243,9 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     // DI-only per-individual language preference (overrides org default)
     preferred_language: isLTC ? null : (n === 4 || n === 17 ? "es" : "en"),
     // Employer contribution
-    employer_contribution_tier: ["100%", "75%", "50%", "0%"][n % 4],
+    // Tier names are opaque CHECK-constrained labels (not percentages).
+    // Dollar amounts live on benefit_classes.tier_<label>_cents joined via benefit_class_id.
+    employer_contribution_tier: (["bronze","silver","gold","platinum","diamond"] as const)[n % 5],
     employer_contribution_duration_months: [12, 24, 36][n % 3],
     employer_contribution_active: n % 5 !== 0,
     employer_contribution_start_date: n % 5 !== 0 ? "2025-01-01" : null,
@@ -402,7 +403,7 @@ export const PAYMENT_LEDGER = Array.from({ length: 60 }, (_, i) => {
   const ind = INDIVIDUALS[i % INDIVIDUALS.length];
   const org = ORGS.find((o) => o.id === ind.organization_id);
   let contribution_source: "voluntary" | "employer_paid" | "employee_buyup" = "voluntary";
-  const employerEligible = ind.employer_contribution_active && ind.employer_contribution_tier !== "0%";
+  const employerEligible = ind.employer_contribution_active;
   if (employerEligible && i % 3 === 0) contribution_source = "employer_paid";
   else if (ind.product === "LTC" && ind.issue_type === "SI" && i % 4 === 1) contribution_source = "employee_buyup";
   const coverage_type = ind.product === "DI"

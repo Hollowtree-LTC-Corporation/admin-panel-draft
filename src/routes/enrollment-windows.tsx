@@ -82,7 +82,7 @@ function toDraft(w: EnrollmentWindow): Draft {
 function View() {
   const can = usePermission();
   const { product, affiliates, setAffiliates } = useStore();
-  const activeAffiliates = useMemo(() => affiliates.filter((a) => !a.is_active === false), [affiliates]);
+  const activeAffiliates = useMemo(() => affiliates.filter((a) => a.is_active), [affiliates]);
   const addAffiliate = (a: AffiliateOrganization): string => {
     const id = `aff_${Date.now()}`;
     const rec: AffiliateOrganization = { ...a, id };

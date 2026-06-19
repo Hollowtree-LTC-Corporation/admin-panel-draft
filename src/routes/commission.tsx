@@ -304,13 +304,13 @@ function tierPreview(scheduleId: string): string {
   const tiers = tiersFor(scheduleId);
   if (tiers.length === 0) return "—";
   const fmt = (t: { from_year: number; to_year: number | null; rate_pct: number }) => {
-    if (t.to_year === null || t.to_year >= 99) return `${t.rate_pct}% Y${t.from_year}+`;
+    if (t.to_year === null) return `${t.rate_pct}% Y${t.from_year}+`;
     if (t.to_year === t.from_year) return `${t.rate_pct}% Y${t.from_year}`;
     return `${t.rate_pct}% Y${t.from_year}–${t.to_year}`;
   };
   if (tiers.length === 1) {
     const t = tiers[0];
-    if ((t.to_year === null || t.to_year >= 99) && t.from_year === 1) return `${t.rate_pct}% all years`;
+    if (t.to_year === null && t.from_year === 1) return `${t.rate_pct}% all years`;
   }
   if (tiers.length <= 4) return tiers.map(fmt).join(" → ");
   return `${tiers.slice(0, 3).map(fmt).join(" → ")} … (${tiers.length} tiers)`;
@@ -826,7 +826,7 @@ function View() {
             const polYear = product === "LTC" && pol ? policyYearFor(pol.initial_effective_date, s.period_start) : null;
             const matched = sched && polYear ? matchTier(sched.id, polYear) : null;
             const rateTooltip = sched && matched
-              ? `Rate derived from ${sched.schedule_name}, Year ${polYear} tier (${matched.from_year}–${matched.to_year === 99 ? "perpetual" : matched.to_year})`
+              ? `Rate derived from ${sched.schedule_name}, Year ${polYear} tier (${matched.from_year}–${matched.to_year === null ? "+" : matched.to_year})`
               : undefined;
             return (
               <TRow key={s.id} onClick={() => setStmtDrawer({ open: true, id: s.id })}>
@@ -1443,7 +1443,7 @@ function StatementDrawerView({ open, stmt, product, onClose, onApprove, onMarkPa
                 <div><span className="text-black/50">Billing period:</span> {fmtPeriod(stmt.period_start, stmt.period_end)}</div>
                 <div><span className="text-black/50">Policy year:</span> <span className="font-mono">Y{polYear}</span></div>
                 {matched ? (
-                  <div><span className="text-black/50">Tier matched:</span> from_year={matched.from_year}, to_year={matched.to_year === 99 ? "perpetual" : matched.to_year}, rate_pct={matched.rate_pct}</div>
+                  <div><span className="text-black/50">Tier matched:</span> from_year={matched.from_year}, to_year={matched.to_year === null ? "+" : matched.to_year}, rate_pct={matched.rate_pct}</div>
                 ) : (
                   <div className="text-rose-700">No tier matches policy year {polYear}.</div>
                 )}
@@ -1993,7 +1993,7 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
     effective_from: schedule?.effective_from ?? new Date().toISOString().slice(0, 10),
     effective_to: schedule?.effective_to ?? "",
     notes: "",
-    tiers: initialTiers.map((t, i) => ({ key: `${t.id}_${i}`, from_year: t.from_year, to_year: t.to_year === 99 ? null : t.to_year, rate_pct: t.rate_pct })),
+    tiers: initialTiers.map((t, i) => ({ key: `${t.id}_${i}`, from_year: t.from_year, to_year: t.to_year, rate_pct: t.rate_pct })),
   });
 
   const otherDefault = allSchedules.find((s) => s.carrier_product_id === draft.carrier_product_id && s.is_default && s.id !== draft.id);
@@ -2036,7 +2036,7 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
       id: `${draft.id}_t${i}`,
       schedule_id: draft.id,
       from_year: Number(t.from_year),
-      to_year: t.to_year === null ? 99 : Number(t.to_year),
+      to_year: t.to_year === null ? null : Number(t.to_year),
       rate_pct: Number(t.rate_pct),
     }));
     onSave(sched, newTiers);

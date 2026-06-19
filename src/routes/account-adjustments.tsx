@@ -116,7 +116,7 @@ function View() {
               <TCell className={a.amount_cents < 0 ? "text-rose-700" : ""}>{formatCents(a.amount_cents)}</TCell>
               <TCell>
                 {a.applied_to_next_charge
-                  ? <Check className="h-4 w-4 text-emerald-600" aria-label="Applied to balance" />
+                  ? <Check className="h-4 w-4 text-emerald-600" aria-label="Applied to next charge" />
                   : <Minus className="h-4 w-4 text-black/30" aria-label="Not applied" />}
               </TCell>
               <TCell className="text-black/70">{a.reason}</TCell>
@@ -173,7 +173,7 @@ function View() {
               onChange={(e) => setAppliedDraft(e.target.checked)}
               disabled={!isAdmin}
             />
-            <span className="font-medium">Applied to Balance</span>
+            <span className="font-medium">Applied to Next Charge</span>
           </label>
           <div className="text-[11px] text-black/50 mt-1 ml-6 leading-snug">
             When checked, this adjustment is included in the enrollee's balance calculation.
