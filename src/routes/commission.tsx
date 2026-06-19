@@ -310,7 +310,7 @@ function tierPreview(scheduleId: string): string {
   };
   if (tiers.length === 1) {
     const t = tiers[0];
-    if ((t.to_year === null || t.to_year >= 99) && t.from_year === 1) return `${t.rate_pct}% all years`;
+    if (t.to_year === null && t.from_year === 1) return `${t.rate_pct}% all years`;
   }
   if (tiers.length <= 4) return tiers.map(fmt).join(" → ");
   return `${tiers.slice(0, 3).map(fmt).join(" → ")} … (${tiers.length} tiers)`;
