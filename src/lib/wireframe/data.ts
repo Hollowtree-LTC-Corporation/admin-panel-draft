@@ -214,9 +214,8 @@ export const INDIVIDUALS = Array.from({ length: 40 }, (_, i) => {
     current_stage,
     plan: isLTC ? PLANS_LTC[n % PLANS_LTC.length] : PLANS_DI[n % PLANS_DI.length],
     monthly_premium_cents,
-    effective_date,
-    coverage_effective_date: cov_effective,
-    coverage_end_date: cov_end,
+    effective_date: effective_date ?? cov_effective,
+    canceled_date: cov_end,
     billing_group_id: `bg_${(n % 8) + 1}`,
     // DI fields (null for LTC)
     coverage_plan: isLTC ? null : PLANS_DI[n % PLANS_DI.length],
