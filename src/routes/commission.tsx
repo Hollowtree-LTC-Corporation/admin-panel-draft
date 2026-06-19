@@ -1993,7 +1993,7 @@ function ScheduleDrawer({ schedule, tiers, allSchedules, onClose, onSave }: {
     effective_from: schedule?.effective_from ?? new Date().toISOString().slice(0, 10),
     effective_to: schedule?.effective_to ?? "",
     notes: "",
-    tiers: initialTiers.map((t, i) => ({ key: `${t.id}_${i}`, from_year: t.from_year, to_year: t.to_year === 99 ? null : t.to_year, rate_pct: t.rate_pct })),
+    tiers: initialTiers.map((t, i) => ({ key: `${t.id}_${i}`, from_year: t.from_year, to_year: t.to_year, rate_pct: t.rate_pct })),
   });
 
   const otherDefault = allSchedules.find((s) => s.carrier_product_id === draft.carrier_product_id && s.is_default && s.id !== draft.id);
