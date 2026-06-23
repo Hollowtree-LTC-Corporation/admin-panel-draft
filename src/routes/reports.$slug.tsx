@@ -25,6 +25,10 @@ function View() {
   const report = findReport(slug);
   if (!report) throw notFound();
 
+  // Custom report dispatch (bespoke screens with their own filters/exports).
+  if (slug === "carrier-premium-remittance") return <CarrierRemittanceReport />;
+  if (slug === "monthly-balances") return <MonthlyBalancesReport />;
+
   // Admin-only gating
   if (report.adminOnly && role !== "admin") {
     return (
