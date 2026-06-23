@@ -56,10 +56,22 @@ type Row = {
   feeCharges: number;
 };
 
-function computeBalances(inds: typeof INDIVIDUALS): Row[] {
+function lastDayOfMonth(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(y, m, 0);
+  return `${y}-${String(m).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function computeBalances(inds: typeof INDIVIDUALS, asOfMonth: string | null): Row[] {
+  const monthBound = asOfMonth; // YYYY-MM or null for live
+  const adjBound = asOfMonth ? lastDayOfMonth(asOfMonth) : null;
   return inds.map((i) => {
     const bg = BILLING_GROUPS.find((b) => b.id === i.billing_group_id);
-    const ledger = PAYMENT_LEDGER.filter((p) => p.enrollment_id === i.id);
+    const ledger = PAYMENT_LEDGER.filter((p) => {
+      if (p.enrollment_id !== i.id) return false;
+      if (monthBound && p.billing_cycle_month > monthBound) return false;
+      return true;
+    });
     // Total Charges: event_type IN ('premium','fee'), funding_source='employee_account', all statuses
     const chargeRows = ledger.filter(
       (p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employee_account",
@@ -69,9 +81,10 @@ function computeBalances(inds: typeof INDIVIDUALS): Row[] {
     const feeCharges = chargeRows.filter((p) => p.event_type === "fee").reduce((s, p) => s + p.amount_cents, 0);
     // Successful Payments: subset of charges with status='successful'
     const paid = chargeRows.filter((p) => p.status === "successful").reduce((s, p) => s + p.amount_cents, 0);
-    // Adjustments: signed sum
+    // Adjustments: signed sum, bounded by effective_date when as-of is active
     const adjusted = ACCOUNT_ADJUSTMENTS
       .filter((a) => a.individual_id === i.id)
+      .filter((a) => !adjBound || a.effective_date <= adjBound)
       .reduce((s, a) => s + a.amount_cents, 0);
     // Employer-paid charges (excluded — surfaced for the drawer caption)
     const employerExcluded = ledger
@@ -89,6 +102,17 @@ function computeBalances(inds: typeof INDIVIDUALS): Row[] {
   });
 }
 
+function monthOptions(): string[] {
+  const months = new Set<string>();
+  for (const p of PAYMENT_LEDGER) months.add(p.billing_cycle_month);
+  return Array.from(months).sort().reverse();
+}
+
+function fmtMonth(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "short", year: "numeric" });
+}
+
 function View() {
   const { product, role } = useStore();
   const [search, setSearch] = useState("");
@@ -97,11 +121,16 @@ function View() {
   const [covStatus, setCovStatus] = useState("all");
   const [openRow, setOpenRow] = useState<Row | null>(null);
   const [gateOpen, setGateOpen] = useState(false);
+  const [asOfMonth, setAsOfMonth] = useState<string>("current");
   const sort = useSort<SortKey>("balance", "asc");
 
+  const months = useMemo(() => monthOptions(), []);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
   const inds = INDIVIDUALS.filter((i) => i.product === product);
-  const computed = useMemo(() => computeBalances(inds), [inds]);
+  const computed = useMemo(
+    () => computeBalances(inds, asOfMonth === "current" ? null : asOfMonth),
+    [inds, asOfMonth],
+  );
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -169,19 +198,28 @@ function View() {
         title={
           <span className="inline-flex items-center gap-2">
             Enrollee Balance
-            <span
-              title="This view recomputes on every page load. No snapshot."
-              className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
-            </span>
+            {asOfMonth === "current" ? (
+              <span
+                title="This view recomputes on every page load. No snapshot."
+                className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+              </span>
+            ) : (
+              <span
+                title="Point-in-time reconstruction from the ledger. Not a stored snapshot."
+                className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> As of {fmtMonth(asOfMonth)}
+              </span>
+            )}
           </span>
         }
         subtitle={
           <div className="space-y-0.5">
             <div>{filtered.length} of {computed.length} enrollees</div>
             <div className="flex items-center gap-1.5">
-              <span>Net Balance = Total Charges − Successful Payments + Adjustments. Live computation (no cache).</span>
+              <span>Net Balance = Total Charges − Successful Payments + Adjustments. Negative = credit owed to the enrollee (refund or write-off). Positive = amount the enrollee owes.</span>
               <span
                 className="inline-flex items-center cursor-help text-black/40 hover:text-black/70"
                 title="Adjustments are signed: negative = credit to enrollee (refund, write-off), positive = additional charge (penalty, correction). Employer-paid charges and refund events are excluded from this view; see Reports → Employer Receivables for those."
@@ -193,11 +231,28 @@ function View() {
           </div>
         }
         actions={
-          <Btn variant="secondary" onClick={() => setGateOpen(true)}>
-            <Download className="h-3 w-3" /> Export CSV
-          </Btn>
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] uppercase tracking-wider text-black/50">Balance as of</label>
+            <select
+              value={asOfMonth}
+              onChange={(e) => setAsOfMonth(e.target.value)}
+              className="px-2 py-1 text-xs border border-black/15 rounded bg-white"
+            >
+              <option value="current">Current (live)</option>
+              {months.map((m) => <option key={m} value={m}>{fmtMonth(m)}</option>)}
+            </select>
+            <Btn variant="secondary" onClick={() => setGateOpen(true)}>
+              <Download className="h-3 w-3" /> Export CSV
+            </Btn>
+          </div>
         }
       />
+
+      {asOfMonth !== "current" && (
+        <div className="mb-3 text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+          Showing balances as they stood at end of {fmtMonth(asOfMonth)}. This is a point-in-time reconstruction from the ledger, not a stored snapshot.
+        </div>
+      )}
 
       <SectionTitle>
         <span className="inline-flex items-center gap-1.5">
@@ -263,7 +318,7 @@ function View() {
             { key: "charges", label: "Total Charged" },
             { key: "paid", label: "(−) Payments" },
             { key: "adjusted", label: "(+) Adjustments" },
-            { key: "balance", label: "Net Balance" },
+            { key: "balance", label: "Net Balance ⓘ" },
           ]}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}

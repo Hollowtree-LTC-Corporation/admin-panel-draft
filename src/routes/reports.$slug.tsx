@@ -7,6 +7,7 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 import { useStore } from "@/lib/wireframe/store";
 import { ORGS } from "@/lib/wireframe/data";
 import { findReport, buildPreview, CATEGORY_LABEL } from "@/lib/wireframe/reports";
+import { CarrierRemittanceReport, MonthlyBalancesReport } from "@/components/wireframe/CustomReports";
 
 export const Route = createFileRoute("/reports/$slug")({
   component: View,
@@ -23,6 +24,10 @@ function View() {
   const { product, role } = useStore();
   const report = findReport(slug);
   if (!report) throw notFound();
+
+  // Custom report dispatch (bespoke screens with their own filters/exports).
+  if (slug === "carrier-premium-remittance") return <CarrierRemittanceReport />;
+  if (slug === "monthly-balances") return <MonthlyBalancesReport />;
 
   // Admin-only gating
   if (report.adminOnly && role !== "admin") {
