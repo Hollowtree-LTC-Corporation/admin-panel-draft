@@ -87,7 +87,7 @@ export function computeRemittance(
     if (!ACCRUED_STATUSES.has(p.status)) continue;
     const ind = INDIVIDUALS.find((i) => i.id === p.enrollment_id);
     if (!ind || ind.product !== product) continue;
-    if (orgFilter !== "all" && ind.organization_id !== orgFilter) return [];
+    if (orgFilter !== "all" && ind.organization_id !== orgFilter) continue;
     const car = carrierForIndividual(ind.id);
     if (!car) continue;
     if (carrierFilter !== "all" && car.id !== carrierFilter) continue;
