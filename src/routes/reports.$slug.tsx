@@ -7,6 +7,7 @@ import { ExportCsvButton } from "@/components/wireframe/ExportCsvButton";
 import { useStore } from "@/lib/wireframe/store";
 import { ORGS } from "@/lib/wireframe/data";
 import { findReport, buildPreview, CATEGORY_LABEL } from "@/lib/wireframe/reports";
+import { CarrierRemittanceReport, MonthlyBalancesReport } from "@/components/wireframe/CustomReports";
 
 export const Route = createFileRoute("/reports/$slug")({
   component: View,
