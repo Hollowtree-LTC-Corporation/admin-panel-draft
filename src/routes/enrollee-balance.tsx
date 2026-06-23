@@ -121,11 +121,16 @@ function View() {
   const [covStatus, setCovStatus] = useState("all");
   const [openRow, setOpenRow] = useState<Row | null>(null);
   const [gateOpen, setGateOpen] = useState(false);
+  const [asOfMonth, setAsOfMonth] = useState<string>("current");
   const sort = useSort<SortKey>("balance", "asc");
 
+  const months = useMemo(() => monthOptions(), []);
   const orgOptions = ORGS.filter((o) => o.product === product).map((o) => ({ value: o.id, label: o.name }));
   const inds = INDIVIDUALS.filter((i) => i.product === product);
-  const computed = useMemo(() => computeBalances(inds), [inds]);
+  const computed = useMemo(
+    () => computeBalances(inds, asOfMonth === "current" ? null : asOfMonth),
+    [inds, asOfMonth],
+  );
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
