@@ -377,7 +377,7 @@ function CarrierDrillContent({ row, month, product, onExport }: { row: Remittanc
               </tr>
             ))}
           </tbody>
-        </Card>
+        </table>
       </Card>
       <div className="mt-3 flex items-center gap-3 text-[11px]">
         <Link to="/payment-ledger" className="text-[#0a3d3e] hover:underline inline-flex items-center gap-1">
