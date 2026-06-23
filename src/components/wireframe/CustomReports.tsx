@@ -250,7 +250,7 @@ export function CarrierRemittanceReport() {
                       </tr>
                     </>
                   )}
-                </>
+                </FragmentWithKey>
               );
             })}
             {rows.length === 0 && (
