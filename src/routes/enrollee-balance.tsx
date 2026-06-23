@@ -56,10 +56,22 @@ type Row = {
   feeCharges: number;
 };
 
-function computeBalances(inds: typeof INDIVIDUALS): Row[] {
+function lastDayOfMonth(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(y, m, 0);
+  return `${y}-${String(m).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function computeBalances(inds: typeof INDIVIDUALS, asOfMonth: string | null): Row[] {
+  const monthBound = asOfMonth; // YYYY-MM or null for live
+  const adjBound = asOfMonth ? lastDayOfMonth(asOfMonth) : null;
   return inds.map((i) => {
     const bg = BILLING_GROUPS.find((b) => b.id === i.billing_group_id);
-    const ledger = PAYMENT_LEDGER.filter((p) => p.enrollment_id === i.id);
+    const ledger = PAYMENT_LEDGER.filter((p) => {
+      if (p.enrollment_id !== i.id) return false;
+      if (monthBound && p.billing_cycle_month > monthBound) return false;
+      return true;
+    });
     // Total Charges: event_type IN ('premium','fee'), funding_source='employee_account', all statuses
     const chargeRows = ledger.filter(
       (p) => (p.event_type === "premium" || p.event_type === "fee") && p.funding_source === "employee_account",
@@ -69,9 +81,10 @@ function computeBalances(inds: typeof INDIVIDUALS): Row[] {
     const feeCharges = chargeRows.filter((p) => p.event_type === "fee").reduce((s, p) => s + p.amount_cents, 0);
     // Successful Payments: subset of charges with status='successful'
     const paid = chargeRows.filter((p) => p.status === "successful").reduce((s, p) => s + p.amount_cents, 0);
-    // Adjustments: signed sum
+    // Adjustments: signed sum, bounded by effective_date when as-of is active
     const adjusted = ACCOUNT_ADJUSTMENTS
       .filter((a) => a.individual_id === i.id)
+      .filter((a) => !adjBound || a.effective_date <= adjBound)
       .reduce((s, a) => s + a.amount_cents, 0);
     // Employer-paid charges (excluded — surfaced for the drawer caption)
     const employerExcluded = ledger
@@ -87,6 +100,17 @@ function computeBalances(inds: typeof INDIVIDUALS): Row[] {
       charges, paid, adjusted, balance, employerExcluded, premiumCharges, feeCharges,
     };
   });
+}
+
+function monthOptions(): string[] {
+  const months = new Set<string>();
+  for (const p of PAYMENT_LEDGER) months.add(p.billing_cycle_month);
+  return Array.from(months).sort().reverse();
+}
+
+function fmtMonth(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "short", year: "numeric" });
 }
 
 function View() {
