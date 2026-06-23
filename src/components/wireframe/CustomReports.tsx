@@ -204,7 +204,7 @@ export function CarrierRemittanceReport() {
               const isOpen = expanded.has(r.carrier.id);
               const showSplit = product === "DI";
               return (
-                <FragmentWithKey k={r.carrier.id}>
+                <Fragment key={r.carrier.id}>
                   <TRow onClick={() => setDrillCarrier(r)}>
                     <TCell onClick={(e) => { e.stopPropagation(); if (showSplit) toggleExpand(r.carrier.id); }}>
                       {showSplit ? (
