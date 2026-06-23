@@ -41,6 +41,7 @@ export const REPORTS: ReportDef[] = [
   { slug: "monthly-premium-collected", title: "Monthly Premium Collected", description: "Actual premium collected vs expected, per enrollee per month.", category: "financial", monthlyPivot: true, scheduled: true },
   { slug: "monthly-fees", title: "Monthly Fees", description: "TPA/CCA membership + processing fees, per enrollee per month. CCA vs non-CCA breakdown.", category: "financial", monthlyPivot: true },
   { slug: "monthly-balances", title: "Monthly Balances", description: "Running net balance per enrollee. Expected minus collected plus adjustments.", category: "financial", monthlyPivot: true },
+  { slug: "carrier-premium-remittance", title: "Carrier Premium Remittance", description: "Premium owed to each carrier per month, accrual basis. Employee + employer premium, net of the TPA fee.", category: "financial", scheduled: true },
   { slug: "cca-remittance", title: "CCA Remittance", description: "Monthly rollup of CCA membership fees: collected, Hollowtree retained ($5), CCA owed ($15), per org.", category: "financial", productOnly: "DI" },
   { slug: "adjustment-summary", title: "Adjustment Summary", description: "Account adjustments by type and period. Applied vs unapplied.", category: "financial" },
 
