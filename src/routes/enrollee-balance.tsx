@@ -318,7 +318,7 @@ function View() {
             { key: "charges", label: "Total Charged" },
             { key: "paid", label: "(−) Payments" },
             { key: "adjusted", label: "(+) Adjustments" },
-            { key: "balance", label: "Net Balance" },
+            { key: "balance", label: "Net Balance ⓘ" },
           ]}
           sortKey={sort.sortKey}
           sortDir={sort.sortDir}
